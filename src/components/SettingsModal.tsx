@@ -1,0 +1,232 @@
+import React from 'react';
+import { X, Settings, ShieldCheck, Cpu, AlertTriangle, Globe, Info, RefreshCw, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useConfigStore } from '../stores/useConfigStore';
+import { useUIStore } from '../stores/useUIStore';
+import { fetchAvailableModelsList, type ModelInfo } from '../services/geminiService';
+import { useState } from 'react';
+
+const AVAILABLE_MODELS = [
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast & Balanced)', description: '兼顾速度与深度的平衡模型，适合绝大多数个股分析场景。' },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Advanced Reasoning)', description: '具备顶级推理能力的进阶模型，适合处理极端复杂的研报逻辑。' },
+  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Ultra Fast)', description: '极速响应模型，适合快速概览和实时市场总结。' },
+];
+
+export function SettingsModal() {
+  const { config, setConfig, tokenUsage, availableModels, setAvailableModels } = useConfigStore();
+  const { isSettingsOpen, setIsSettingsOpen } = useUIStore();
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [fetchMessage, setFetchMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
+
+  const displayModels = availableModels.length > 0 ? availableModels : AVAILABLE_MODELS;
+
+  const handleFetchModels = async () => {
+    setIsFetchingModels(true);
+    setFetchMessage(null);
+    try {
+      const models = await fetchAvailableModelsList(config);
+      setAvailableModels(models);
+      const okCount = models.filter(m => m.status === 'available').length;
+      const quotaCount = models.filter(m => m.status === 'quota_exhausted').length;
+      if (quotaCount > 0) {
+        setFetchMessage({ type: 'success', text: `找到 ${okCount} 个可用模型，${quotaCount} 个配额已耗尽。` });
+      } else {
+        setFetchMessage({ type: 'success', text: `成功接入：找到 ${models.length} 个可用模型。` });
+      }
+    } catch (e: any) {
+      setFetchMessage({ type: 'error', text: e.message || '查询模型失败' });
+    } finally {
+      setIsFetchingModels(false);
+    }
+  };
+
+  const handleOpenKeySelector = async () => {
+    const aiStudio = (window as any).aistudio;
+    if (aiStudio?.openSelectKey) {
+      await aiStudio.openSelectKey();
+    } else {
+      alert('API Key selection is only available in the AI Studio environment.');
+    }
+  };
+
+  const onClose = () => setIsSettingsOpen(false);
+
+  return (
+    <AnimatePresence>
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-zinc-900/10 backdrop-blur-md"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 10 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 p-8">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100/50">
+                  <Settings size={24} strokeWidth={1.5} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-950 tracking-tight">系统配置</h2>
+                  <p className="text-xs font-medium text-zinc-400 mt-0.5">Customizing your analytical engine</p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content - Scrollable area */}
+            <div className="max-h-[60vh] overflow-y-auto p-8 space-y-10 custom-scrollbar">
+              {/* API Key Section */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={16} className="text-indigo-600" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">API 授权认证</span>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <input
+                      type="password"
+                      placeholder="AIzaSy... (输入您的 Gemini API Key)"
+                      id="api-key-input"
+                      value={config.apiKey || ''}
+                      onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                      className="input-premium h-12 pl-4 pr-10 font-mono"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300">
+                      <Globe size={16} />
+                    </div>
+                  </div>
+                  
+                  {(window as any).aistudio?.openSelectKey && (
+                    <button
+                      onClick={handleOpenKeySelector}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.98] shadow-lg shadow-zinc-900/10"
+                    >
+                      从 Google AI Studio 快速同步
+                    </button>
+                  )}
+                  
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50">
+                    <Info size={16} className="text-indigo-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-indigo-600/70 leading-relaxed">
+                      您的密钥仅保存在本地浏览器中。为了保障分析的深度，请确保该 Key 已启用商业配额或属于 Google Cloud 项目。
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50/50 border border-amber-100/50">
+                    <Sparkles size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700/80 leading-relaxed">
+                      <strong>💡 专业提示</strong>：使用个人 API Key 可有效避免"系统高负载"并大幅提升研报生成速度。您可以访问 Google AI Studio 免费获取。
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Model Selection Section */}
+              <section className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Cpu size={16} className="text-indigo-600" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">大语言模型预设</span>
+                  </div>
+                  <button 
+                    onClick={handleFetchModels}
+                    disabled={isFetchingModels}
+                    className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-700 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {isFetchingModels ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                    {isFetchingModels ? '同步中' : '刷新模型列表'}
+                  </button>
+                </div>
+
+                {fetchMessage && (
+                  <p className={`text-[10px] font-bold px-3 py-1 rounded-md ${fetchMessage.type === 'error' ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                    {fetchMessage.text}
+                  </p>
+                )}
+                
+                <div className="grid gap-4">
+                  {displayModels.map((model) => {
+                    const isQuotaExhausted = (model as any).status === 'quota_exhausted';
+                    const isUnavailable = (model as any).status === 'unavailable';
+                    const isDisabled = isQuotaExhausted || isUnavailable;
+                    return (
+                      <button
+                        key={model.id}
+                        onClick={() => !isDisabled && setConfig({ ...config, model: model.id })}
+                        disabled={isDisabled}
+                        className={`flex flex-col gap-1.5 rounded-2xl border p-5 text-left transition-all group ${
+                          isDisabled
+                            ? 'border-zinc-100 bg-zinc-50/50 opacity-60 cursor-not-allowed'
+                            : config.model === model.id
+                            ? 'border-indigo-600 bg-indigo-50/20 ring-1 ring-indigo-600'
+                            : 'border-zinc-100 bg-white hover:border-zinc-200 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-bold ${isDisabled ? 'text-zinc-400' : config.model === model.id ? 'text-indigo-600' : 'text-zinc-900 group-hover:text-zinc-950'}`}>
+                            {model.name}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {isQuotaExhausted && (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                                <AlertTriangle size={10} />
+                                配额耗尽
+                              </span>
+                            )}
+                            {isUnavailable && (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
+                                <X size={10} />
+                                不可用
+                              </span>
+                            )}
+                            {!isDisabled && config.model === model.id && (
+                              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white">
+                                <CheckCircle2 size={12} strokeWidth={3} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                          {(model as any).statusMessage || model.description || model.id}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-zinc-100 bg-zinc-50/50 p-8">
+              <button
+                onClick={onClose}
+                className="btn-primary w-full h-14 rounded-2xl text-base shadow-xl shadow-indigo-600/10"
+              >
+                保存配置并开始分析
+              </button>
+              <p className="mt-4 text-center text-[10px] text-zinc-400 font-medium">
+                配置将立即生效。如有疑问，请访问 Google AI Studio 检查 Key 状态。
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
