@@ -9,7 +9,7 @@ import { Market } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import { useMarketStore } from '../../stores/useMarketStore';
 import { useAnalysisStore } from '../../stores/useAnalysisStore';
-import { ErrorNotice } from '../app-error-notice';
+import { ErrorNotice } from '../ErrorNotice';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

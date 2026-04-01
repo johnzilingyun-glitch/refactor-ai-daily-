@@ -8,7 +8,7 @@ import { useDiscussionStore } from './stores/useDiscussionStore';
 import { useScenarioStore } from './stores/useScenarioStore';
 import { SettingsModal } from './components/SettingsModal';
 import { HistoryModal } from './components/HistoryModal';
-import { ErrorNotice } from './components/app-error-notice';
+import { ErrorNotice } from './components/ErrorNotice';
 import { TokenUsage } from './components/dashboard/TokenUsage';
 import { Header } from './components/layout/Header';
 import { MarketOverview } from './components/dashboard/MarketOverview';
