@@ -38,6 +38,25 @@ router.post('/feishu/send-report', async (req, res) => {
       template = 'green';
     }
 
+    const sections = finalContent.split('---');
+    const cardElements: any[] = [];
+
+    sections.forEach((section: string, index: number) => {
+      const trimmedSection = section.trim();
+      if (trimmedSection) {
+        cardElements.push({
+          tag: 'div',
+          text: {
+            tag: 'lark_md',
+            content: trimmedSection
+          }
+        });
+        if (index < sections.length - 1) {
+          cardElements.push({ tag: 'hr' });
+        }
+      }
+    });
+
     let card: any = {
       config: { wide_screen_mode: true },
       header: {
@@ -45,13 +64,7 @@ router.post('/feishu/send-report', async (req, res) => {
         template: template,
       },
       elements: [
-        {
-          tag: 'div',
-          text: {
-            tag: 'lark_md',
-            content: finalContent
-          }
-        },
+        ...cardElements,
         { tag: 'hr' },
         {
           tag: 'note',

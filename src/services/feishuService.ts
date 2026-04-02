@@ -23,13 +23,6 @@ export async function sendAnalysisToFeishu(analysis: StockAnalysis, webhookUrl: 
           {
             is_short: true,
             text: {
-              content: `**期望中值 (EV)**\n${analysis.expectedValueOutcome?.expectedPrice || "N/A"}`,
-              tag: "lark_md"
-            }
-          },
-          {
-            is_short: true,
-            text: {
               content: `**数据信度**\n${analysis.dataQuality?.score}% (${analysis.dataQuality?.isStale ? "⚠️ 延时" : "✅ 实时"})`,
               tag: "lark_md"
             }
@@ -38,32 +31,7 @@ export async function sendAnalysisToFeishu(analysis: StockAnalysis, webhookUrl: 
     }
   ];
 
-  // 1. Add Core Variable Dynamics if available
-  if (analysis.coreVariables && analysis.coreVariables.length > 0) {
-    elements.push({ tag: "hr" });
-    elements.push({
-      tag: "div",
-      text: {
-        content: "**核心观测系统 (SSoT)**",
-        tag: "lark_md"
-      }
-    });
-    
-    const varFields = analysis.coreVariables.slice(0, 4).map(v => ({
-      is_short: true,
-      text: {
-        content: `**${v.name}**\n${v.value} (${v.delta})`,
-        tag: "lark_md"
-      }
-    }));
-    
-    elements.push({
-      tag: "div",
-      fields: varFields
-    });
-  }
-
-  // 2. Add Risk Matrix Summary
+  // 1. Add Risk Matrix Summary
   if (analysis.quantifiedRisks && analysis.quantifiedRisks.length > 0) {
     elements.push({ tag: "hr" });
     const riskContent = analysis.quantifiedRisks.slice(0, 3).map(r => 

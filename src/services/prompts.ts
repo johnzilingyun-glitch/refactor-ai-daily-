@@ -374,27 +374,18 @@ export const getStockReportPrompt = (analysis: StockAnalysis) => `
     
     报告应包含：
     1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
-    2. 📊 **核心财务指标与基本面透视**：
-       - PE, PB, ROE, EPS 等关键数据及当前估值水位。
-       - **核心指标与预期偏差表** (2026E)。
-       - **行业核心变量与宏观锚点表**。
-    3. 🧠 **AI 核心观点摘要**：
+    2. 🧠 **AI 核心观点摘要**：
        - 技术面、基本面、情绪面、风险管理各方的核心分析结论。
-    4. 🔮 **场景概率分布 (Scenarios)**：
-       ${analysis.scenarios ? analysis.scenarios.map(s => `- **${s.case} Case** (${s.probability}%): 目标价 ${s.targetPrice}, 逻辑: ${s.logic}`).join('\n') : '未提供'}
-    5. 🎯 **AI 最终结论**：明确的操作建议。
-    6. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
-    7. 📈 **交易计划**：建议买入价、目标价、止损价。
-    8. ⚠️ **核心机会与风险提示**。
-    ${analysis.backtestResult ? `9. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
+    3. 🎯 **AI 最终结论**：明确的操作建议。
+    4. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    5. 📈 **交易计划**：建议买入价、目标价、止损价。
+    6. ⚠️ **核心机会与风险提示**。
+    ${analysis.backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
     
-    ${analysis.discussion && analysis.discussion.length > 0 ? `10. **完整研讨记录**：在报告最后，以引用块的形式完整保留每一位分析师的发言。\n\n研讨记录：\n${analysis.discussion.map(m => `[${m.role}]: ${m.content}`).join('\n\n')}` : ''}
-
     分析数据：
     ${JSON.stringify(analysis)}
     
-    请使用 Markdown 格式，语气专业、客观且深度。
-    使用丰富的 Emoji 增加可读性。
+    请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。**不需要包含完整研讨记录**。
     回答语言：简体中文。
 `.trim();
 
@@ -403,22 +394,14 @@ export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: A
     
     报告应包含：
     1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
-    2. 📊 **核心财务指标与基本面透视**：
-       - PE, PB, ROE, EPS 等关键数据及当前估值水位。
-       - **核心指标与预期偏差表** (2026E)。
-       - **行业核心变量与宏观锚点表**。
-    3. 🧠 **AI 专家组研讨摘要**：
+    2. 🧠 **AI 专家组研讨摘要**：
        - 技术面、基本面、情绪面、风险管理、反向策略各方的核心观点。
        - 研讨中的主要分歧或共识点。
-    4. 🔮 **场景概率分布 (Scenarios)**：
-       ${scenarios ? scenarios.map(s => `- **${s.case} Case** (${s.probability}%): 目标价 ${s.targetPrice}, 逻辑: ${s.logic}`).join('\n') : '未提供'}
-    5. 🎯 **首席策略师最终结论**：明确的操作建议。
-    6. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
-    7. 📈 **交易计划**：建议买入价、目标价、止损价。
-    8. ⚠️ **核心机会与风险提示**。
-    ${backtestResult ? `9. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
-    
-    10. **完整研讨记录**：在报告最后，以引用块的形式完整保留每一位分析师的发言。
+    3. 🎯 **首席策略师最终结论**：明确的操作建议。
+    4. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    5. 📈 **交易计划**：建议买入价、目标价、止损价。
+    6. ⚠️ **核心机会与风险提示**。
+    ${backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
     
     分析数据：
     ${JSON.stringify(analysis)}
@@ -430,8 +413,7 @@ export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: A
     研讨记录：
     ${discussion.map(m => `[${m.role}]: ${m.content}`).join('\n\n')}
     
-    请使用 Markdown 格式，语气专业、客观且深度。
-    使用丰富的 Emoji 增加可读性。
+    请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。**不需要包含完整研讨记录**。
     回答语言：简体中文。
 `.trim();
 
@@ -460,9 +442,9 @@ export const getDailyReportPrompt = (marketOverview: MarketOverview, commodities
        - **LATEST DATA**: Use Google Search to ensure all news and data are from the most recent trading session or the current day.
     5. Provide a prediction for today's market opening and trend.
     6. Recommend 3 stocks or sectors to watch today with brief reasons.
-    7. Format the output in Markdown, suitable for a Feishu message.
-    8. Use rich Emojis and clear section dividers (---) to make it look like a professional newsletter.
-    9. Language: Simplified Chinese.
+    7. 请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。
+    8. 使用丰富的 Emoji 增加可读性。
+    9. 回答语言：简体中文。
     
     Structure:
     # 📅 每日早间市场内参 (${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(now)})
@@ -497,8 +479,7 @@ export const getChatReportPrompt = (stockName: string, chatHistory: { role: stri
     会话记录：
     ${JSON.stringify(chatHistory)}
     
-    请使用 Markdown 格式，语气专业且客观。
-    使用丰富的 Emoji 增加可读性。
+    请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。
     回答语言：简体中文。
 `.trim();
 
