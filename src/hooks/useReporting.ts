@@ -30,7 +30,7 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
           content: report,
           type,
           data,
-          feishuWebhookUrl: geminiConfig.feishuWebhookUrl
+          feishuWebhookUrl: useConfigStore.getState().feishuWebhookUrl
         })
       });
       if (!response.ok) {
