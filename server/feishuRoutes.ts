@@ -38,27 +38,42 @@ router.post('/feishu/send-report', async (req, res) => {
       template = 'green';
     }
 
+    let card: any = {
+      config: { wide_screen_mode: true },
+      header: {
+        title: { tag: 'plain_text', content: title },
+        template: template,
+      },
+      elements: [
+        {
+          tag: 'div',
+          text: {
+            tag: 'lark_md',
+            content: finalContent
+          }
+        },
+        { tag: 'hr' },
+        {
+          tag: 'note',
+          elements: [
+            {
+              tag: 'plain_text',
+              content: `📅 ${new Date().toLocaleString('zh-CN')} | 🤖 TradingAgents 机构决策引擎 | 5-Layer Model`
+            }
+          ]
+        }
+      ],
+    };
+
+    // If it's a stock report and we have structured data, we could build a richer card here.
+    // For now, the markdown content from the AI is already very rich.
+
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         msg_type: 'interactive',
-        card: {
-          header: {
-            title: { tag: 'plain_text', content: title },
-            template: template,
-          },
-          elements: [
-            { tag: 'div', text: { tag: 'lark_md', content: finalContent } },
-            { tag: 'hr' },
-            {
-              tag: 'note',
-              elements: [
-                { tag: 'plain_text', content: `由 TradingAgents AI 专家组生成 • ${new Date().toLocaleString()}` },
-              ],
-            },
-          ],
-        },
+        card: card,
       }),
     });
 

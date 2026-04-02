@@ -370,17 +370,32 @@ If the question goes beyond the known analysis, say so clearly instead of invent
 `.trim();
 
 export const getStockReportPrompt = (analysis: StockAnalysis) => `
-    基于以下个股分析数据，生成一份简洁、专业的个股研究简报。
-    报告应包含：
-    1. 股票基本信息（名称、代码、当前价格、涨跌幅）。
-    2. 核心观点总结（1-2句）。
-    3. 技术面与基本面核心要点。
-    4. AI 投资建议与风险提示。
+    基于以下个股分析数据，生成一份完整的个股深度研究报告。
     
+    报告应包含：
+    1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
+    2. 📊 **核心财务指标与基本面透视**：
+       - PE, PB, ROE, EPS 等关键数据及当前估值水位。
+       - **核心指标与预期偏差表** (2026E)。
+       - **行业核心变量与宏观锚点表**。
+    3. 🧠 **AI 核心观点摘要**：
+       - 技术面、基本面、情绪面、风险管理各方的核心分析结论。
+    4. 🔮 **场景概率分布 (Scenarios)**：
+       ${analysis.scenarios ? analysis.scenarios.map(s => `- **${s.case} Case** (${s.probability}%): 目标价 ${s.targetPrice}, 逻辑: ${s.logic}`).join('\n') : '未提供'}
+    5. 🎯 **AI 最终结论**：明确的操作建议。
+    6. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    7. 📈 **交易计划**：建议买入价、目标价、止损价。
+    8. ⚠️ **核心机会与风险提示**。
+    ${analysis.backtestResult ? `9. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
+    
+    ${analysis.discussion && analysis.discussion.length > 0 ? `10. **完整研讨记录**：在报告最后，以引用块的形式完整保留每一位分析师的发言。\n\n研讨记录：\n${analysis.discussion.map(m => `[${m.role}]: ${m.content}`).join('\n\n')}` : ''}
+
     分析数据：
     ${JSON.stringify(analysis)}
     
-    请使用 Markdown 格式，语气专业且客观。
+    请使用 Markdown 格式，语气专业、客观且深度。
+    使用丰富的 Emoji 增加可读性。
+    回答语言：简体中文。
 `.trim();
 
 export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: AgentMessage[], commoditiesData: any[], scenarios?: Scenario[], backtestResult?: any) => `
@@ -468,6 +483,23 @@ export const getDailyReportPrompt = (marketOverview: MarketOverview, commodities
     
     ---
     *本报告由 TradingAgents AI 专家组自动生成，仅供参考。*
+`.trim();
+
+export const getChatReportPrompt = (stockName: string, chatHistory: { role: string; content: string }[]) => `
+    基于以下关于 ${stockName} 的深度追问会话记录，生成一份专业、简洁的研讨总结报告。
+    
+    报告应包含：
+    1. 💬 **会话背景**：简述本次追问讨论的核心股票。
+    2. 🧠 **核心问答摘要**：提炼投资者最关心的几个问题及其对应的 AI 专家解答。
+    3. 🎯 **关键结论与建议**：基于讨论内容总结出的最新操作建议或观点。
+    4. ⚠️ **新增风险/机会提示**：讨论中新发现的风险点或机会点。
+    
+    会话记录：
+    ${JSON.stringify(chatHistory)}
+    
+    请使用 Markdown 格式，语气专业且客观。
+    使用丰富的 Emoji 增加可读性。
+    回答语言：简体中文。
 `.trim();
 
 export const getDiscussionPrompt = (

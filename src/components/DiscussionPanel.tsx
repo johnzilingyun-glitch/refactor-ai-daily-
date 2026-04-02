@@ -362,7 +362,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </div>
  <div className="space-y-2">
  {analysis.sensitivityMatrix.map((row, idx) => (
- <div key={`smr-${idx}`} className="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200/60 last:border-0">
+ <div key={`smr-${row.variable}-${idx}`} className="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200/60 last:border-0">
  <div className="flex items-center gap-2">
  <span className="text-zinc-400 w-16 truncate">{row.variable}</span>
  <span className="text-zinc-400 font-mono italic">{row.change}</span>
@@ -411,7 +411,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </div>
  <div className="space-y-2">
  {analysis.coreVariables.map((v, idx) => (
- <div key={`cv-${idx}`} className="bg-white rounded-xl p-3 border border-zinc-200/60 text-xs">
+ <div key={`cv-${v.name}-${idx}`} className="bg-white rounded-xl p-3 border border-zinc-200/60 text-xs">
  <div className="flex justify-between mb-1.5">
  <span className="font-medium text-zinc-600">{v.name}</span>
  <span className="text-zinc-400 font-mono text-[10px]">[{v.unit}] {v.evidenceLevel}</span>
@@ -445,8 +445,8 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  <div className="text-right"><p className="text-[10px] text-zinc-400">置信度</p><p className="text-base font-semibold text-emerald-500">{analysis.businessModel.confidenceScore}%</p></div>
  </div>
  <div className="flex flex-wrap gap-1.5">
- {Object.entries(analysis.businessModel.drivers).map(([k, v]) => (
- <span key={`drv-${k}`} className="px-2 py-0.5 rounded-xl text-[10px] font-medium bg-zinc-100/50 border border-zinc-200 text-zinc-400">{k}: {v}</span>
+ {Object.entries(analysis.businessModel.drivers).map(([k, v], idx) => (
+ <span key={`drv-${k}-${idx}`} className="px-2 py-0.5 rounded-xl text-[10px] font-medium bg-zinc-100/50 border border-zinc-200 text-zinc-400">{k}: {v}</span>
  ))}
  </div>
  </div>

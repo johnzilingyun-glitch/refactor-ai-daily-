@@ -328,11 +328,18 @@ async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: s
       const sinaMatch = sinaText.match(/="([^"]+)"/);
       if (sinaMatch?.[1]) {
         const parts = sinaMatch[1].split(';');
+        let firstValidMatch = null;
         for (const part of parts) {
           const details = part.split(',');
           if (details.length >= 3) {
             const sinaCode = details[2];
             const sinaMarket = details[1];
+            
+            // Store the first valid match as a fallback if the specific market doesn't match
+            if (!firstValidMatch && (sinaMarket === '11' || sinaMarket === '12' || sinaMarket === '31' || sinaMarket === '41')) {
+              firstValidMatch = sinaCode;
+            }
+
             if ((market === 'A-Share' && (sinaMarket === '11' || sinaMarket === '12')) ||
                 (market === 'HK-Share' && sinaMarket === '31') ||
                 (market === 'US-Share' && sinaMarket === '41')) {
@@ -341,6 +348,11 @@ async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: s
               return sinaCode;
             }
           }
+        }
+        // If no market-specific match found, but we found a valid stock in another market, return it
+        if (firstValidMatch) {
+          console.log(`No market-specific match for '${yfSymbol}' in ${market}, falling back to '${firstValidMatch}'`);
+          return firstValidMatch;
         }
       }
     } catch (e) {
@@ -393,13 +405,22 @@ async function tryQuote(yfSymbol: string, originalSymbol: string, market: string
   for (const query of searchQueries) {
     if (!query) continue;
     try {
+      // Try searching with the query directly
       let searchResults = await yf.search(query);
+      
+      // If no results, try cleaning the query (removing special chars but keeping Chinese)
       if (!searchResults?.quotes?.length) {
         const cleanQuery = query.replace(/[^\w\s\u4e00-\u9fa5]/g, ' ').trim();
         if (cleanQuery && cleanQuery !== query) {
           searchResults = await yf.search(cleanQuery);
         }
       }
+
+      // If still no results and it's Chinese, try adding "stock" to the query
+      if (!searchResults?.quotes?.length && /[\u4e00-\u9fa5]/.test(query)) {
+        searchResults = await yf.search(`${query} stock`);
+      }
+
       if (searchResults?.quotes?.length) {
         const bestMatch = searchResults.quotes.find((q: any) => {
           const s = (q.symbol || '').toUpperCase();
@@ -408,8 +429,11 @@ async function tryQuote(yfSymbol: string, originalSymbol: string, market: string
           if (market === 'US-Share') return !s.endsWith('.SS') && !s.endsWith('.SZ') && !s.endsWith('.BJ') && !s.endsWith('.HK');
           return true;
         });
-        if (bestMatch) {
-          result = await yf.quote(bestMatch.symbol);
+        
+        // If no market-specific match, take the first one
+        const matchToUse = bestMatch || searchResults.quotes[0];
+        if (matchToUse) {
+          result = await yf.quote(matchToUse.symbol);
           if (result) return result;
         }
       }

@@ -150,7 +150,7 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
           {overviewLoading ? Array(5).fill(0).map((_, i) => (
             <div key={`skeleton-index-${i}`} className="h-24 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
           )) : marketOverview?.indices?.map((index, i) => (
-            <div key={`index-${i}-${index.symbol || index.name}`} className="rounded-2xl border border-zinc-200 bg-white p-4">
+            <div key={`index-${index.symbol || index.name}-${i}`} className="rounded-2xl border border-zinc-200 bg-white p-4">
               <p className="mb-1 text-xs font-medium text-zinc-400">{index.name}</p>
               <p className="text-lg font-medium tracking-tight">{(index.price ?? 0).toLocaleString()}</p>
               <div className={cn('mt-1 flex items-center gap-1 font-mono text-xs', (index.change ?? 0) >= 0 ? 'text-indigo-500' : 'text-rose-400')}>
@@ -183,7 +183,7 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
                 </h3>
                 <div className="space-y-3">
                   {marketOverview.sectorAnalysis?.map((sector, i) => (
-                    <div key={`sector-${i}-${sector.name}`} className="rounded-xl bg-zinc-50/30 p-3 border border-zinc-200/30">
+                    <div key={`sector-${sector.name}-${i}`} className="rounded-xl bg-zinc-50/30 p-3 border border-zinc-200/30">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-zinc-600">{sector.name}</span>
                         <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase", 
@@ -203,7 +203,7 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
                 </h3>
                 <div className="space-y-3">
                   {marketOverview.commodityAnalysis?.map((item, i) => (
-                    <div key={`commodity-${i}-${item.name}`} className="rounded-xl bg-zinc-50/30 p-3 border border-zinc-200/30">
+                    <div key={`commodity-${item.name}-${i}`} className="rounded-xl bg-zinc-50/30 p-3 border border-zinc-200/30">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-zinc-600">{item.name}</span>
                         <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase", 

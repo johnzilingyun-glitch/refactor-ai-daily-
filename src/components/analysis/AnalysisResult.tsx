@@ -210,7 +210,7 @@ export function AnalysisResult({
                       </h4>
                       <div className="space-y-2">
                         {controversialPoints.map((point, idx) => (
-                          <div key={`controversial-${idx}-${point.substring(0, 20)}`} className="flex items-start gap-2">
+                          <div key={`controversial-${idx}-${point.substring(0, 30)}`} className="flex items-start gap-2">
                             <div className="w-1 h-1 rounded-full bg-rose-500 mt-1.5 shrink-0" />
                             <p className="text-[11px] text-zinc-500 leading-relaxed italic">{point}</p>
                           </div>
@@ -379,7 +379,7 @@ export function AnalysisResult({
                           <h4 className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">因子敏感度面板 (Sensitivity Analysis)</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {sensitivityFactors.map((f, i) => (
-                              <div key={`sensitivity-${f.factor}-${i}`} className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/50 group hover:border-zinc-200 transition-all">
+                              <div key={`sensitivity-${f.factor}-${f.change}-${i}`} className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/50 group hover:border-zinc-200 transition-all">
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-xs font-medium text-zinc-500">{f.factor}</span>
                                   <span className="text-[10px] font-mono text-zinc-400">{f.change}</span>
@@ -461,7 +461,7 @@ export function AnalysisResult({
                           </h4>
                           <div className="space-y-2">
                             {catalystList.map((c, i) => (
-                              <div key={`catalyst-${c.event.substring(0, 10)}-${i}`} className="flex items-center justify-between text-[11px]">
+                              <div key={`catalyst-${c.event.substring(0, 20)}-${i}`} className="flex items-center justify-between text-[11px]">
                                 <span className="text-zinc-500 font-medium">{c.event}</span>
                                 <div className="flex items-center gap-4">
                                   <span className="text-zinc-400">概率: {c.probability}%</span>
@@ -481,7 +481,7 @@ export function AnalysisResult({
                           </h4>
                           <div className="space-y-3">
                             {verificationMetrics?.map((m, i) => (
-                              <div key={`verification-${m.indicator}-${i}`} className="space-y-1">
+                              <div key={`verification-${m.indicator.substring(0, 20)}-${i}`} className="space-y-1">
                                 <div className="flex items-center justify-between text-[11px]">
                                   <span className="text-zinc-600 font-medium">{m.indicator}</span>
                                   <span className="text-indigo-600 font-mono">{m.threshold}</span>
@@ -536,7 +536,7 @@ export function AnalysisResult({
                               <span className="text-[8px] text-zinc-400 uppercase font-semibold">分层建仓 (Layered Entry)</span>
                               <div className="flex flex-wrap gap-2">
                                 {positionManagement.layeredEntry?.map((step, i) => (
-                                  <span key={`entry-step-${i}-${step.substring(0, 10)}`} className="text-[9px] px-2 py-0.5 rounded bg-zinc-50 text-zinc-500 border border-zinc-200">{step}</span>
+                                  <span key={`entry-step-${i}-${step.substring(0, 20)}`} className="text-[9px] px-2 py-0.5 rounded bg-zinc-50 text-zinc-500 border border-zinc-200">{step}</span>
                                 ))}
                               </div>
                             </div>
@@ -900,7 +900,7 @@ export function AnalysisResult({
               </div>
               <ul className="space-y-2">
                 {analysis.historicalData?.majorEvents?.map((event, i) => (
-                  <li key={`event-${i}-${event.substring(0, 10)}`} className="text-xs text-zinc-400 flex items-start gap-2">
+                  <li key={`hist-event-${event.substring(0, 20)}-${i}`} className="text-xs text-zinc-400 flex items-start gap-2">
                     <span className="mt-1.5 w-1 h-1 rounded-full bg-zinc-300 shrink-0" />
                     {event}
                   </li>
@@ -986,7 +986,7 @@ export function AnalysisResult({
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
                         {analysis.fundamentalTable.map((item, i) => (
-                          <tr key={`fund-table-${i}`} className="hover:bg-zinc-50/30 transition-colors">
+                          <tr key={`fund-table-${item.indicator}-${i}`} className="hover:bg-zinc-50/30 transition-colors">
                             <td className="px-4 py-3 font-medium text-zinc-600">{item.indicator}</td>
                             <td className="px-4 py-3 text-right font-mono text-zinc-950">{item.value}</td>
                             <td className="px-4 py-3 text-right font-mono text-zinc-500">{item.consensus}</td>
@@ -1024,7 +1024,7 @@ export function AnalysisResult({
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
                         {analysis.industryAnchors.map((anchor, i) => (
-                          <tr key={`anchor-table-${i}`} className="hover:bg-zinc-50/30 transition-colors">
+                          <tr key={`anchor-table-${anchor.variable}-${i}`} className="hover:bg-zinc-50/30 transition-colors">
                             <td className="px-4 py-3 font-medium text-zinc-600">{anchor.variable}</td>
                             <td className="px-4 py-3 text-right font-mono text-zinc-950">{anchor.currentValue}</td>
                             <td className="px-4 py-3 text-center">
@@ -1299,7 +1299,7 @@ export function AnalysisResult({
 
           <div className="mb-4 flex flex-wrap gap-2">
             {chatPrompts.map((p, i) => (
-              <button key={`prompt-${i}-${p}`} type="button" onClick={() => void onChat(p)} disabled={isChatting} className="rounded-full border border-zinc-200 bg-zinc-50/80 px-3 py-1.5 text-xs text-zinc-500 transition-colors hover:border-indigo-600/50 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60">
+              <button key={`chat-prompt-${p.substring(0, 20)}-${i}`} type="button" onClick={() => void onChat(p)} disabled={isChatting} className="rounded-full border border-zinc-200 bg-zinc-50/80 px-3 py-1.5 text-xs text-zinc-500 transition-colors hover:border-indigo-600/50 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60">
                 {p}
               </button>
             ))}
@@ -1307,7 +1307,7 @@ export function AnalysisResult({
 
           <div className="mb-6 max-h-96 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
             {chatHistory?.map((msg, idx) => (
-              <div key={`chat-${idx}-${msg.id || `${msg.role}-${msg.content.substring(0, 10)}`}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={`chat-msg-${msg.id || `${msg.role}-${idx}-${msg.content.substring(0, 20)}`}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'rounded-tr-none bg-emerald-600 text-zinc-950' : 'rounded-tl-none bg-zinc-50 text-zinc-500'}`}>
                   {msg.content}
                 </div>

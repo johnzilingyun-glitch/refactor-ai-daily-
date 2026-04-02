@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { createAI, withRetry, parseJsonResponse, generateContentWithUsage, GEMINI_MODEL } from "./geminiService";
-import { getAnalyzeStockPrompt, getChatMessagePrompt, getStockReportPrompt, getDiscussionReportPrompt } from "./prompts";
+import { getAnalyzeStockPrompt, getChatMessagePrompt, getStockReportPrompt, getDiscussionReportPrompt, getChatReportPrompt } from "./prompts";
 import { Market, StockAnalysis, AgentMessage, Scenario, AgentDiscussion, GeminiConfig } from "../types";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
 import { getBeijingDate } from "./dateUtils";
@@ -90,14 +90,7 @@ export async function getStockReport(analysis: StockAnalysis, config?: GeminiCon
 
 export async function getChatReport(stockName: string, chatHistory: { role: string; content: string }[], config?: GeminiConfig): Promise<string> {
   const ai = createAI(config);
-  const prompt = `
-    Based on the following chat history about ${stockName}, generate a concise summary report.
-    
-    Chat History:
-    ${JSON.stringify(chatHistory)}
-    
-    Format the output in Markdown.
-  `.trim();
+  const prompt = getChatReportPrompt(stockName, chatHistory);
 
   const response = await withRetry(async () => {
     const result = await generateContentWithUsage(ai, {
