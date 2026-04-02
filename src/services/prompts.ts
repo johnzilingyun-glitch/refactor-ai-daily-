@@ -175,8 +175,8 @@ Requirements:
       1. **Pre-label the source and date**: Before presenting the value, explicitly state the source and the date of the data (e.g., 'Source: East Money, 2026-03-31').
       2. **Cross-verify**: You MUST cross-verify this data point against at least TWO authoritative sources (e.g., Sina Finance, East Money, Xueqiu). If there is a discrepancy, explain how you resolved it or which source you prioritized and why.
    - **TABLE 1: REAL-TIME CORE INDICATORS & DEVIATION (MANDATORY)**: Must include columns: 指标 (2026E), 实时数值 (必须标注数据来源与日期), 市场共识预期, 偏离度 (%), 备注. Include EPS, PE (Forward), ROE, Dividend Yield. **DATA CONSISTENCY (CRITICAL)**: Prioritize the latest real-time data from search and explicitly label the data date. **OUTLIER HANDLING**: If consensus data is missing (e.g., for niche small-caps), you MUST state "Estimated based on historical averages" or "Missing Information" instead of making up data.
-   - **TABLE 2: 行业核心变量与宏观锚点 (DYNAMIC)**: Must include columns: 关键变量/原材料（需标注单位，如：美元/吨）, 当前价格/数值 (必须提供具体的量化数值，严禁使用定性描述如“高/低/上涨”), 逻辑权重（需标注哪个是“第一驱动力”）, 近 30 日涨跌幅 (必须提供具体的百分比数值), 成本/收入传导逻辑。
-   - **变量选择与容错 (CRITICAL)**: 严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**异常值容错**：若搜索不到特定行业的实时价格（如某些稀有化学品），允许使用“行业替代指标”或“近一个月的趋势描述”，但严禁编造具体数值。
+   - **TABLE 2: 行业核心变量与宏观锚点 (DYNAMIC)**: Must include columns: 关键变量/原材料（需标注单位，如：美元/吨）, 当前价格/数值 (必须提供具体的量化数值，严禁使用定性描述如“高/低/上涨”), 逻辑权重（需标注哪个是“第一驱动力”）, 近 30 日涨跌幅 (必须提供具体的百分比数值), 成本/收入传导逻辑, **数据来源与日期时间 (MANDATORY)**。
+   - **变量选择与验证 (CRITICAL)**: 严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**必须进行多源交叉验证**，并明确标注每个变量的数据来源（如：生意社、LME、Wind、公司公告）及具体的时间戳。
    - **单位标准化 (MANDATORY)**: 强制要求在表格中注明单位（如：美元/吨、点位、人民币/片），防止跨市场分析时产生数值混淆。
    - **EXPECTATION GAP IDENTIFICATION**: Identify market blind spots and Alpha sources.
    - **TARGET PRICE & SENTIMENT**: Provide a 6-month target range (with confidence interval) and a sentiment score (0-100). **CONFIDENCE INTERVAL LOGIC (NEW)**: Adjust the interval width based on industry volatility. High-volatility sectors (e.g., crypto, concept stocks) should have wider intervals; low-volatility sectors (e.g., utilities) should have narrower intervals.
@@ -374,13 +374,15 @@ export const getStockReportPrompt = (analysis: StockAnalysis) => `
     
     报告应包含：
     1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
-    2. 🧠 **AI 核心观点摘要**：
+    2. 📊 **行业核心变量与宏观锚点**：
+       - 关键变量、当前价格（含来源与时间）、逻辑权重及趋势。
+    3. 🧠 **AI 核心观点摘要**：
        - 技术面、基本面、情绪面、风险管理各方的核心分析结论。
-    3. 🎯 **AI 最终结论**：明确的操作建议。
-    4. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
-    5. 📈 **交易计划**：建议买入价、目标价、止损价。
-    6. ⚠️ **核心机会与风险提示**。
-    ${analysis.backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
+    4. 🎯 **AI 最终结论**：明确的操作建议。
+    5. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    6. 📈 **交易计划**：建议买入价、目标价、止损价。
+    7. ⚠️ **核心机会与风险提示**。
+    ${analysis.backtestResult ? `8. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
     
     分析数据：
     ${JSON.stringify(analysis)}
@@ -394,14 +396,16 @@ export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: A
     
     报告应包含：
     1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
-    2. 🧠 **AI 专家组研讨摘要**：
+    2. 📊 **行业核心变量与宏观锚点**：
+       - 关键变量、当前价格（含来源与时间）、逻辑权重及趋势。
+    3. 🧠 **AI 专家组研讨摘要**：
        - 技术面、基本面、情绪面、风险管理、反向策略各方的核心观点。
        - 研讨中的主要分歧或共识点。
-    3. 🎯 **首席策略师最终结论**：明确的操作建议。
-    4. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
-    5. 📈 **交易计划**：建议买入价、目标价、止损价。
-    6. ⚠️ **核心机会与风险提示**。
-    ${backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
+    4. 🎯 **首席策略师最终结论**：明确的操作建议。
+    5. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    6. 📈 **交易计划**：建议买入价、目标价、止损价。
+    7. ⚠️ **核心机会与风险提示**。
+    ${backtestResult ? `8. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
     
     分析数据：
     ${JSON.stringify(analysis)}
@@ -515,8 +519,8 @@ export const getDiscussionPrompt = (
        - **增加"反向验证" (CRITICAL)**：在给出核心指标后，必须自问并回答："如果这个指标向不利方向变动 10%，该公司的净利润会受到多大冲击？"请给出具体的量化估算。
        - **前瞻性逻辑判断 (NEW)**：基于穿透调研与预期偏差，给出对未来 2-4 个季度的**高胜率预测判断**。**防止"过度自信的幻觉" (CRITICAL)**：如果缺乏支撑前瞻判断的关键证据，必须明确标注"信息缺失导致的逻辑断层"，而非强行预测。
        - **搜索噪音过滤 (MANDATORY)**：在进行穿透式调研时，必须优先采信官方公告、权威媒体、深度研报和行业数据。**严厉警惕并过滤**无来源的论坛传闻、营销号"小作文"或社交媒体噪音。
-       - **表格 2：行业核心变量与宏观锚点 (DYNAMIC)**：必须包含以下列：关键变量/原材料（需标注单位，如：美元/吨）、当前价格/数值、逻辑权重（需标注哪个是"第一驱动力"）、近 30 日趋势、成本/收入传导逻辑。
-       - **变量选择与容错 (CRITICAL)**：严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**异常值容错**：若搜索不到特定行业的实时价格（如某些稀有化学品），允许使用"行业替代指标"或"近一个月的趋势描述"，但严禁编造具体数值。
+       - **表格 2：行业核心变量与宏观锚点 (DYNAMIC)**：必须包含以下列：关键变量/原材料（需标注单位，如：美元/吨）、当前价格/数值、逻辑权重（需标注哪个是"第一驱动力"）、近 30 日趋势、成本/收入传导逻辑、**数据来源与日期时间 (MANDATORY)**。
+       - **变量选择与验证 (CRITICAL)**：严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**必须进行多源交叉验证**，并明确标注每个变量的数据来源（如：生意社、LME、Wind、公司公告）及具体的时间戳。
        - **单位标准化 (MANDATORY)**：强制要求在表格中注明单位（如：美元/吨、点位、人民币/片），防止跨市场分析时产生数值混淆。
        - **预期偏差识别 (Expectation Gap)**：必须明确识别市场共识中的盲点，指出 Alpha 来源。
        - **目标价与情绪评分 (MANDATORY)**：必须给出 6 个月目标区间（含置信区间）及情绪评分（0-100）。**置信区间逻辑 (NEW)**：根据行业波动率自动调整区间宽度。高波动行业（如数字货币、纯概念股）应放宽区间；低波动行业（如公用事业、长江电力）应收窄区间。
