@@ -13,7 +13,7 @@ const AVAILABLE_MODELS = [
 ];
 
 export function SettingsModal() {
-  const { config, setConfig, tokenUsage, availableModels, setAvailableModels } = useConfigStore();
+  const { config, setConfig, tokenUsage, availableModels, setAvailableModels, feishuWebhookUrl, setFeishuWebhookUrl } = useConfigStore();
   const { isSettingsOpen, setIsSettingsOpen } = useUIStore();
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [fetchMessage, setFetchMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
@@ -132,6 +132,33 @@ export function SettingsModal() {
                     <Sparkles size={16} className="text-amber-400 shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-700/80 leading-relaxed">
                       <strong>💡 专业提示</strong>：使用个人 API Key 可有效避免"系统高负载"并大幅提升研报生成速度。您可以访问 Google AI Studio 免费获取。
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Feishu Webhook Section */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Globe size={16} className="text-indigo-600" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">飞书通知配置</span>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="输入飞书 Webhook 链接"
+                      id="feishu-webhook-input"
+                      value={feishuWebhookUrl}
+                      onChange={(e) => setFeishuWebhookUrl(e.target.value)}
+                      className="input-premium h-12 pl-4 pr-10 font-mono w-full"
+                    />
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50">
+                    <Info size={16} className="text-indigo-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-indigo-600/70 leading-relaxed">
+                      配置飞书 Webhook 链接，以便在分析完成后接收实时通知。
                     </p>
                   </div>
                 </div>
