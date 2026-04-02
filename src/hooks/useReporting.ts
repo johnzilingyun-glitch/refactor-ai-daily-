@@ -6,6 +6,7 @@ import { useAnalysisStore } from '../stores/useAnalysisStore';
 import { useDiscussionStore } from '../stores/useDiscussionStore';
 import { useScenarioStore } from '../stores/useScenarioStore';
 import { getStockReport, getChatReport, getDiscussionReport, getDailyReport } from '../services/aiService';
+import { sendAnalysisToFeishu } from '../services/feishuService';
 
 export function useReporting(fetchAdminData: () => Promise<void>) {
   const geminiConfig = useConfigStore(s => s.config);
@@ -47,7 +48,7 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
     } finally {
       setIsSendingReport(false);
     }
-  }, [geminiConfig, setIsSendingReport, setReportStatus]);
+  }, [setIsSendingReport, setReportStatus]);
 
   const handleTriggerDailyReport = useCallback(async () => {
     const marketOverview = marketOverviews[overviewMarket];
@@ -66,16 +67,21 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
 
   const handleSendStockReport = useCallback(async () => {
     if (!analysis) return;
-    setIsGeneratingReport(true);
+    setIsSendingReport(true);
     try {
-      const report = await getStockReport(analysis, geminiConfig);
-      setIsGeneratingReport(false);
-      await sendReport(report, 'stock', analysis);
+      const success = await sendAnalysisToFeishu(analysis, useConfigStore.getState().feishuWebhookUrl || '');
+      if (success) {
+        setReportStatus('success');
+        setTimeout(() => setReportStatus('idle'), 3000);
+      } else {
+        throw new Error('Failed to send to Feishu');
+      }
     } catch (error) {
       setReportStatus('error');
-      setIsGeneratingReport(false);
+    } finally {
+      setIsSendingReport(false);
     }
-  }, [analysis, geminiConfig, setIsGeneratingReport, setReportStatus, sendReport]);
+  }, [analysis, setIsSendingReport, setReportStatus]);
 
   const handleSendChatReport = useCallback(async () => {
     if (!analysis || !chatHistory || chatHistory.length === 0) return;
@@ -104,28 +110,32 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
 
   const handleSendDiscussionReport = useCallback(async () => {
     if (!analysis || discussionMessages.length === 0) return;
-    setIsGeneratingReport(true);
+    setIsSendingReport(true);
     try {
-      const report = await getDiscussionReport(analysis, discussionMessages, scenarios, backtestResult, geminiConfig);
-      setIsGeneratingReport(false);
-      const success = await sendReport(report, 'discussion', { stock: analysis.stockInfo?.name || 'Unknown', discussionCount: discussionMessages.length });
+      const success = await sendAnalysisToFeishu(analysis, useConfigStore.getState().feishuWebhookUrl || '');
       if (success) {
+        setReportStatus('success');
+        setTimeout(() => setReportStatus('idle'), 3000);
+        
         void fetch('/api/logs/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             field: 'feishu_discussion_report',
             oldValue: 'standard_format',
-            newValue: 'optimized_markdown',
-            description: `成功发送优化后的个股研讨报告: ${analysis.stockInfo?.name}`
+            newValue: 'decoupled_structured_card',
+            description: `成功发送解耦后的结构化个股研讨报告: ${analysis.stockInfo?.name}`
           })
         });
+      } else {
+        throw new Error('Failed to send to Feishu');
       }
     } catch (error) {
       setReportStatus('error');
-      setIsGeneratingReport(false);
+    } finally {
+      setIsSendingReport(false);
     }
-  }, [analysis, discussionMessages, scenarios, backtestResult, geminiConfig, setIsGeneratingReport, setReportStatus, sendReport]);
+  }, [analysis, discussionMessages, setIsSendingReport, setReportStatus]);
 
   const handleSendHistoryToFeishu = useCallback(async (item: any) => {
     try {

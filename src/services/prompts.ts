@@ -374,15 +374,13 @@ export const getStockReportPrompt = (analysis: StockAnalysis) => `
     
     报告应包含：
     1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
-    2. 📊 **行业核心变量与宏观锚点**：
-       - 关键变量、当前价格（含来源与时间）、逻辑权重及趋势。
-    3. 🧠 **AI 核心观点摘要**：
+    2. 🧠 **AI 核心观点摘要**：
        - 技术面、基本面、情绪面、风险管理各方的核心分析结论。
-    4. 🎯 **AI 最终结论**：明确的操作建议。
-    5. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
-    6. 📈 **交易计划**：建议买入价、目标价、止损价。
-    7. ⚠️ **核心机会与风险提示**。
-    ${analysis.backtestResult ? `8. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
+    3. 🎯 **AI 最终结论**：明确的操作建议。
+    4. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    5. 📈 **交易计划**：建议买入价、目标价、止损价。
+    6. ⚠️ **核心机会与风险提示**。
+    ${analysis.backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
     
     分析数据：
     ${JSON.stringify(analysis)}
@@ -396,16 +394,14 @@ export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: A
     
     报告应包含：
     1. 🚀 **股票基本信息**：名称、代码、当前价格、涨跌幅。
-    2. 📊 **行业核心变量与宏观锚点**：
-       - 关键变量、当前价格（含来源与时间）、逻辑权重及趋势。
-    3. 🧠 **AI 专家组研讨摘要**：
+    2. 🧠 **AI 专家组研讨摘要**：
        - 技术面、基本面、情绪面、风险管理、反向策略各方的核心观点。
        - 研讨中的主要分歧或共识点。
-    4. 🎯 **首席策略师最终结论**：明确的操作建议。
-    5. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
-    6. 📈 **交易计划**：建议买入价、目标价、止损价。
-    7. ⚠️ **核心机会与风险提示**。
-    ${backtestResult ? `8. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
+    3. 🎯 **首席策略师最终结论**：明确的操作建议。
+    4. 🛡️ **安全边际评估**：基于安全边际理论的深度评价。
+    5. 📈 **交易计划**：建议买入价、目标价、止损价。
+    6. ⚠️ **核心机会与风险提示**。
+    ${backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
     
     分析数据：
     ${JSON.stringify(analysis)}
