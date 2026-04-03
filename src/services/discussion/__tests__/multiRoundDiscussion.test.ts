@@ -79,12 +79,12 @@ describe('startMultiRoundDiscussion', () => {
       (progress) => progressUpdates.push({ ...progress, messages: [...progress.messages] }),
     );
 
-    // Deep topology: [DR(1) + TA+FA(2) + SA+RM+CS(3) + Reviewer(1)] × 3 + CS(1)
-    // = 7 * 3 + 1 = 22 expert calls + 1 synthesis call = 23 total AI calls
-    expect(callCount).toBe(23);
+    // Deep topology: [DR(1) + TA+FA(2) + SA+RM+CS(3) + Reviewer(1)] × 2 + CS(1)
+    // = 7 * 2 + 1 = 15 expert calls + 1 synthesis call = 16 total AI calls
+    expect(callCount).toBe(16);
 
     // All multi-round messages should be in the result
-    expect(result.messages).toHaveLength(22);
+    expect(result.messages).toHaveLength(15);
 
     // Each message should have content
     result.messages.forEach((msg) => {
@@ -93,7 +93,7 @@ describe('startMultiRoundDiscussion', () => {
     });
 
     // Progress should have been called for each expert + 1 synthesis
-    expect(progressUpdates.length).toBe(23);
+    expect(progressUpdates.length).toBe(16);
 
     // First expert should be Deep Research Specialist
     expect(progressUpdates[0].currentExpert).toBe('Deep Research Specialist');

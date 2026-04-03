@@ -14,7 +14,7 @@ import { normalizeCoreVariablesByPriority } from "./coreVariablePriority";
 const ITERATION_COUNT: Record<AnalysisLevel, number> = {
   quick: 0,
   standard: 1,
-  deep: 3,
+  deep: 2,
 };
 
 export interface MultiRoundProgress {
@@ -150,7 +150,7 @@ export async function startMultiRoundDiscussion(
     for (let i = 0; i < round.experts.length; i++) {
       if (abortSignal?.aborted) break;
       // Add inter-call delay to space out requests (skip before first call)
-      if (i > 0) await delay(1500);
+      if (i > 0) await delay(400);
       results.push(await callExpert(round.experts[i]));
     }
 
@@ -175,7 +175,10 @@ export async function startMultiRoundDiscussion(
     });
 
     try {
-      const synthesis = await startAgentDiscussion(analysis, config, allMessages);
+      const synthesis = await startAgentDiscussion(analysis, config, allMessages, {
+        commoditiesData,
+        backtest,
+      });
       // Merge: multi-round messages + synthesis structured data
       const merged = {
         ...synthesis,
@@ -239,20 +242,26 @@ function buildIterativeTopology(
 export async function startAgentDiscussion(
   analysis: StockAnalysis,
   config?: GeminiConfig,
-  history?: AgentMessage[]
+  history?: AgentMessage[],
+  prefetched?: {
+    commoditiesData?: any[];
+    backtest?: ReturnType<typeof performBacktest> | null;
+  }
 ): Promise<AgentDiscussion> {
   const ai = createAI(config);
   const historyContext = history ? `\n\n**PREVIOUS DISCUSSION HISTORY**:\n${JSON.stringify(history)}` : "";
-  const commoditiesData = await getCommoditiesData();
-  const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
-  const backtest = performBacktest(analysis, previousAnalysis);
+  const commoditiesData = prefetched?.commoditiesData ?? await getCommoditiesData();
+  const resolvedBacktest = prefetched?.backtest ?? await (async () => {
+    const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
+    return performBacktest(analysis, previousAnalysis);
+  })();
 
-  const memoryContext = backtest ? `
+  const memoryContext = resolvedBacktest ? `
     **MEMORY & FEEDBACK LOOP (LEARNING FROM PAST)**:
-    - 我们在 ${backtest.previousDate} 对该股票进行过深度分析。
-    - 当时价格为 ${backtest.previousPrice}，当前价格为 ${backtest.currentPrice}（变动: ${backtest.returnSincePrev}）。
-    - 当时给出的建议是 ${backtest.previousRecommendation}，目标价为 ${backtest.previousTarget}，止损价为 ${backtest.previousStopLoss}。
-    - **当前状态**: ${backtest.status}（预测得分/准确率: ${backtest.accuracy}/100）。
+    - 我们在 ${resolvedBacktest.previousDate} 对该股票进行过深度分析。
+    - 当时价格为 ${resolvedBacktest.previousPrice}，当前价格为 ${resolvedBacktest.currentPrice}（变动: ${resolvedBacktest.returnSincePrev}）。
+    - 当时给出的建议是 ${resolvedBacktest.previousRecommendation}，目标价为 ${resolvedBacktest.previousTarget}，止损价为 ${resolvedBacktest.previousStopLoss}。
+    - **当前状态**: ${resolvedBacktest.status}（预测得分/准确率: ${resolvedBacktest.accuracy}/100）。
     - **强制指令**: 深度研究专家和首席策略师必须在讨论中明确引用上述历史业绩情况。如果是"预测被打脸"或"逻辑漂移"，必须解释原因并修正逻辑；如果是"目标达成"，则讨论是否该止盈或提高目标价。
   ` : "";
 
@@ -274,12 +283,12 @@ export async function startAgentDiscussion(
   const parsed = validateResponse(AgentDiscussionSchema, raw, 'AgentDiscussion') as AgentDiscussion;
 
   // Inject backtest results back into the response for UI display
-  if (backtest) {
+  if (resolvedBacktest) {
     parsed.backtestResult = {
-      previousDate: backtest.previousDate,
-      previousRecommendation: backtest.previousRecommendation,
-      actualReturn: backtest.returnSincePrev,
-      learningPoint: backtest.learningPoint
+      previousDate: resolvedBacktest.previousDate,
+      previousRecommendation: resolvedBacktest.previousRecommendation,
+      actualReturn: resolvedBacktest.returnSincePrev,
+      learningPoint: resolvedBacktest.learningPoint
     };
   }
 
