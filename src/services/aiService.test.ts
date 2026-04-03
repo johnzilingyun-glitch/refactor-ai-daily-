@@ -157,5 +157,13 @@ describe('aiService Validation Logic', () => {
       const parsed = parseJsonResponse<any>(raw);
       expect(parsed.stockInfo.symbol).toBe('AAPL');
     });
+
+    it('should sanitize bad control characters inside JSON strings', () => {
+      const raw = '{"summary":"第一行\n第二行","stockInfo":{"symbol":"AAPL"}}';
+      const parsed = parseJsonResponse<any>(raw);
+      expect(parsed.stockInfo.symbol).toBe('AAPL');
+      expect(parsed.summary).toContain('第一行');
+      expect(parsed.summary).toContain('第二行');
+    });
   });
 });

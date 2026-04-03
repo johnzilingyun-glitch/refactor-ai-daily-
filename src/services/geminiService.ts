@@ -151,9 +151,74 @@ export function extractJsonBlock(raw: string): string {
   throw new Error("Gemini returned a non-JSON response (Mismatched braces).");
 }
 
+function sanitizeJsonControlCharacters(jsonText: string): string {
+  let result = '';
+  let inString = false;
+  let escape = false;
+
+  for (let i = 0; i < jsonText.length; i++) {
+    const char = jsonText[i];
+    const code = char.charCodeAt(0);
+
+    if (escape) {
+      result += char;
+      escape = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      result += char;
+      escape = true;
+      continue;
+    }
+
+    if (char === '"') {
+      result += char;
+      inString = !inString;
+      continue;
+    }
+
+    if (inString && code < 0x20) {
+      switch (char) {
+        case '\n':
+          result += '\\n';
+          break;
+        case '\r':
+          result += '\\r';
+          break;
+        case '\t':
+          result += '\\t';
+          break;
+        case '\b':
+          result += '\\b';
+          break;
+        case '\f':
+          result += '\\f';
+          break;
+        default:
+          result += `\\u${code.toString(16).padStart(4, '0')}`;
+          break;
+      }
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result.replace(/^\uFEFF/, '');
+}
+
 export function parseJsonResponse<T>(raw: string): T {
   try {
-    const parsed = JSON.parse(extractJsonBlock(raw));
+    const extracted = extractJsonBlock(raw);
+    let parsed: any;
+
+    try {
+      parsed = JSON.parse(extracted);
+    } catch {
+      parsed = JSON.parse(sanitizeJsonControlCharacters(extracted));
+    }
+
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       if (parsed.analysis) return parsed.analysis as T;
       if (parsed.data) return parsed.data as T;
