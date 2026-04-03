@@ -147,8 +147,11 @@ export function normalizeCoreVariablesByPriority(
     if (!next.source) {
       next = { ...next, source: 'Other' };
     }
-    if (!next.dataDate && analysis.stockInfo?.lastUpdated) {
-      next = { ...next, dataDate: analysis.stockInfo.lastUpdated.slice(0, 10) };
+    if (!next.dataDate) {
+      const fallbackDate =
+        analysis.stockInfo?.lastUpdated?.slice(0, 10) ||
+        new Date().toISOString().slice(0, 10);
+      next = { ...next, dataDate: fallbackDate };
     }
 
     // add minimal audit note without breaking existing text

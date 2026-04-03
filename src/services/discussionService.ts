@@ -44,6 +44,16 @@ function isLowQualityExpertContent(role: AgentRole, content: string): boolean {
   return false;
 }
 
+/** For DR only: check that coreVariables have source+dataDate fields set */
+function drCoreVarsMissingSourceDate(role: AgentRole, parsed: any): boolean {
+  if (role !== 'Deep Research Specialist') return false;
+  const vars: any[] = parsed?.coreVariables;
+  if (!Array.isArray(vars) || vars.length === 0) return false;
+  const missing = vars.filter((v: any) => !v.source || !v.dataDate).length;
+  // Trigger retry if more than half the variables are missing source or date
+  return missing > vars.length / 2;
+}
+
 export async function startMultiRoundDiscussion(
   analysis: StockAnalysis,
   level: AnalysisLevel,
@@ -110,11 +120,16 @@ export async function startMultiRoundDiscussion(
       let content = String(parsed?.content || '');
 
       // One-shot corrective retry when content quality is insufficient
-      if (!abortSignal?.aborted && isLowQualityExpertContent(role, content)) {
+      const needsRetry =
+        isLowQualityExpertContent(role, content) ||
+        drCoreVarsMissingSourceDate(role, parsed);
+
+      if (!abortSignal?.aborted && needsRetry) {
         const correction = `\n\n【上次输出不合格，必须重答】\n` +
           `- 你的输出缺少足够量化数据或来源标注。\n` +
           `- 本次必须包含至少3个具体数字（价格/比例/概率/涨跌幅等）\n` +
           `- 必须显式标注来源优先级（API > Google Search > Other）和数据日期\n` +
+          `- coreVariables 每个元素必须包含 source（数据来源）和 dataDate（YYYY-MM-DD 格式）\n` +
           `- 仅返回 JSON，且 content 必须完整详实。`;
 
         parsed = await invokeExpert(prompt + correction);
