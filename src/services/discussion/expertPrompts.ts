@@ -39,6 +39,11 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 你必须输出一个 Markdown 表格，包含以下列：
 | 关键变量(单位) | 当前值 | 逻辑权重 | 近30日趋势 | 传导逻辑 | Source |
 要求：
+- **数据源优先级协议 (CRITICAL)**: 核心变量的当前值必须按以下顺序选取：
+  1) 权威金融 API 数据（本提示中 [API数据] 字段，或官方交易所/权威终端 API）
+  2) Google Search 命中的权威媒体/机构数据
+  3) 其它公开信息源（仅当前两者缺失时）
+- 若同一变量同时存在 API 与 Google Search 数据，\`当前值\`必须以 API 为准；Google Search 仅用于交叉验证与解释差异
 - 变量必须通过 Google Search 获取最新实时数据（今天的），严禁使用过时数据
 - 每个变量必须进行多源交叉验证：至少对比 API 提供的数据 + Google Search 到的数据
 - Source 列必须简略标注数据来源和日期，如 "Wind 04/03", "东方财富 04/03", "LME 04/03", "API实时"
@@ -211,13 +216,22 @@ export function getExpertPrompt(
     sections.push(`\n**[API数据] 大宗商品实时数据**: ${JSON.stringify(commoditiesData)}`);
   }
 
+  // Authoritative baseline for all experts
+  sections.push(`\n**权威API基准口径 (MANDATORY)**:`);
+  sections.push(`- 以下 [API数据] 是本轮讨论唯一优先口径，优先级高于 Google Search 与其他来源。`);
+  sections.push(`- 你的关键量化结论（价格、估值、增速、资金流、风险概率）必须先对齐 API 基准。`);
+  sections.push(`- 若搜索结果与 API 冲突（>1%），你必须保留 API 作为主口径，并额外说明冲突来源、时间与原因。`);
+  sections.push(`- 严禁直接用低优先级来源覆盖 API 数值。`);
+
   // Cross-validation instructions
   sections.push(`\n**交叉验证要求 (MANDATORY)**:`);
   sections.push(`1. 上方标注 [API数据] 的内容来自金融API接口的实时数据，这是你的"Ground Truth"基准。`);
+  sections.push(`1.1 数据源优先级：权威金融API > Google Search 权威来源 > 其他来源。核心变量的 value 必须采用最高优先级可用数据。`);
   sections.push(`2. 你必须使用 Google Search 搜索该股票最新的市场信息、研报、公告，与 API 数据进行交叉对比。`);
-  sections.push(`3. 若 Google Search 结果与 API 数据存在差异（>1%），必须在发言中明确指出差异并分析原因。`);
+  sections.push(`3. 若 Google Search 结果与 API 数据存在差异（>1%），必须在发言中明确指出差异并分析原因；但默认口径仍以 API 为准（除非 API 明显过期/缺失）。`);
   sections.push(`4. 严禁凭空编造数据。所有引用的数据必须标注来源（API / Google Search / 推算）和时间。`);
   sections.push(`5. 若某项关键数据无法通过搜索验证，必须标注"未经验证"。`);
+  sections.push(`6. 你的发言中至少列出 3 个关键数值，并明确对应数据源优先级（API/Search/Other）。`);
 
   // Previous rounds — structured for interactive discussion
   if (previousRounds.length > 0) {

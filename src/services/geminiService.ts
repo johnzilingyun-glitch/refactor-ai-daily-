@@ -174,6 +174,48 @@ export function parseJsonResponse<T>(raw: string): T {
   }
 }
 
+export async function generateAndParseJsonWithRetry<T>(
+  ai: any,
+  params: any,
+  options?: {
+    transportRetries?: number;
+    baseDelayMs?: number;
+    parseRetries?: number;
+    parseDelayMs?: number;
+  }
+): Promise<T> {
+  const transportRetries = options?.transportRetries ?? 3;
+  const baseDelayMs = options?.baseDelayMs ?? 2000;
+  const parseRetries = options?.parseRetries ?? 2;
+  const parseDelayMs = options?.parseDelayMs ?? 1200;
+
+  let lastParseError: unknown;
+
+  for (let attempt = 1; attempt <= parseRetries; attempt++) {
+    const responseText = await withRetry(async () => {
+      const result = await generateContentWithUsage(ai, params);
+      return result.text;
+    }, transportRetries, baseDelayMs);
+
+    try {
+      return parseJsonResponse<T>(responseText);
+    } catch (error) {
+      lastParseError = error;
+      if (attempt >= parseRetries) break;
+
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`Gemini JSON parse failed, retrying generation (${attempt}/${parseRetries}): ${msg}`);
+      await delay(parseDelayMs * attempt);
+    }
+  }
+
+  throw new Error(
+    lastParseError instanceof Error
+      ? lastParseError.message
+      : 'Failed to parse Gemini JSON response after retries.'
+  );
+}
+
 export async function generateContentWithUsage(ai: any, params: any) {
   const result = await ai.models.generateContent(params);
   if (result.usageMetadata) {

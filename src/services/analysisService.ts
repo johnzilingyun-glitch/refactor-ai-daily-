@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { createAI, withRetry, parseJsonResponse, generateContentWithUsage, GEMINI_MODEL } from "./geminiService";
+import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, generateAndParseJsonWithRetry } from "./geminiService";
 import { getAnalyzeStockPrompt, getChatMessagePrompt, getStockReportPrompt, getDiscussionReportPrompt, getChatReportPrompt } from "./prompts";
 import { Market, StockAnalysis, AgentMessage, Scenario, AgentDiscussion, GeminiConfig } from "../types";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
@@ -33,19 +33,23 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
   const commoditiesData = await getCommoditiesData();
   const prompt = getAnalyzeStockPrompt(symbol, market, realtimeData, commoditiesData, history, beijingDate, beijingShortDate, now);
 
-  const response = await withRetry(async () => {
-    const result = await generateContentWithUsage(ai, {
+  const raw = await generateAndParseJsonWithRetry<StockAnalysis>(
+    ai,
+    {
       model: config?.model || GEMINI_MODEL,
       contents: prompt,
-      config: { 
+      config: {
         responseMimeType: "application/json",
         tools: [{ googleSearch: {} }]
       }
-    });
-    return result.text;
-  });
-
-  const raw = parseJsonResponse<StockAnalysis>(response);
+    },
+    {
+      transportRetries: 4,
+      baseDelayMs: 2500,
+      parseRetries: 2,
+      parseDelayMs: 1200,
+    }
+  );
   const analysis = validateResponse(StockAnalysisSchema, raw, 'StockAnalysis') as StockAnalysis;
   
   // Calculate and associate data quality metadata

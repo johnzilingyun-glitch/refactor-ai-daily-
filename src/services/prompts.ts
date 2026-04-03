@@ -497,6 +497,7 @@ export const getDiscussionPrompt = (
 
     **当前日期**: ${today}
     **数据时效性红线 (CRITICAL)**: 所有宏观变量（汇率、利率、大宗商品价格等）必须通过 Google Search 获取今天 (${today}) 的最新报价。严禁使用训练数据中的记忆值。若某变量今天无交易，标注最近交易日期。
+    **口径优先级红线 (CRITICAL)**: 本次讨论所有量化结论必须遵循 **权威金融 API > Google Search 权威来源 > 其他来源**。若冲突，JSON 输出口径必须保留 API 作为主口径，搜索数据仅用于差异解释。
 
     **REAL-TIME COMMODITY DATA (GROUND TRUTH - ${today})**:
     ${formatCommoditiesToMarkdown(commoditiesData)}
@@ -521,12 +522,14 @@ export const getDiscussionPrompt = (
        - **搜索噪音过滤 (MANDATORY)**：在进行穿透式调研时，必须优先采信官方公告、权威媒体、深度研报和行业数据。**严厉警惕并过滤**无来源的论坛传闻、营销号"小作文"或社交媒体噪音。
        - **表格 2：行业核心变量与宏观锚点 (DYNAMIC)**：必须包含以下列：关键变量/原材料（需标注单位，如：美元/吨）、当前价格/数值、逻辑权重（需标注哪个是"第一驱动力"）、近 30 日趋势、成本/收入传导逻辑、**数据来源与日期时间 (MANDATORY)**。
        - **变量选择与验证 (CRITICAL)**：严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**必须进行多源交叉验证**，并明确标注每个变量的数据来源（如：生意社、LME、Wind、公司公告）及具体的时间戳。
+      - **数据源优先级协议 (CRITICAL)**：核心变量取值必须遵循 **权威金融 API > Google Search 权威来源 > 其他来源**。若 API 与搜索数据冲突，默认以 API 为准，搜索结果用于解释差异。
        - **单位标准化 (MANDATORY)**：强制要求在表格中注明单位（如：美元/吨、点位、人民币/片），防止跨市场分析时产生数值混淆。
        - **预期偏差识别 (Expectation Gap)**：必须明确识别市场共识中的盲点，指出 Alpha 来源。
        - **目标价与情绪评分 (MANDATORY)**：必须给出 6 个月目标区间（含置信区间）及情绪评分（0-100）。**置信区间逻辑 (NEW)**：根据行业波动率自动调整区间宽度。高波动行业（如数字货币、纯概念股）应放宽区间；低波动行业（如公用事业、长江电力）应收窄区间。
        - **内容要求**：必须包含上述 2 个 Markdown 表格，所有关键数据必须有明确的时间戳和来源标注（Source: ...）。
-       - **[结构化输出] 核心变量 (MANDATORY)**：除了 Markdown 内容外，你还必须提炼出 3-5 个核心经济变量，填入返回 JSON 的 \`coreVariables\` 数组。每个变量需包含：name（变量名）、value（当前值，必须是今天搜索到的最新数值）、unit（单位）、marketExpect（市场预期）、delta（偏离说明）、reason（偏离原因）、evidenceLevel（证据级别：财报/研报共识/第三方监控/推算/信息缺失）、**source（数据来源，如：Wind/东方财富/中国外汇交易中心/LME/生意社）**、**dataDate（数据日期，格式 YYYY-MM-DD，必须是最新可获取的日期）**。
+      - **[结构化输出] 核心变量 (MANDATORY)**：除了 Markdown 内容外，你还必须提炼出 3-5 个核心经济变量，填入返回 JSON 的 \`coreVariables\` 数组。每个变量需包含：name（变量名）、value（当前值，必须是按优先级协议选取的最新值）、unit（单位）、marketExpect（市场预期）、delta（偏离说明）、reason（偏离原因）、evidenceLevel（证据级别：财报/研报共识/第三方监控/推算/信息缺失）、**source（数据来源，如：API/Wind/东方财富/中国外汇交易中心/LME/生意社）**、**dataDate（数据日期，格式 YYYY-MM-DD，必须是最新可获取的日期）**。
        - **数据时效性红线 (CRITICAL)**：coreVariables 中的 value 必须来自 Google Search 获取的最新报价。例如 USD/CNY 汇率必须搜索今天的中间价，严禁使用训练数据中的记忆值。若搜索到的最新数据日期 ≠ 今天，必须在 dataDate 中如实标注。
+      - **口径统一 (MANDATORY)**：若同一变量存在多个来源，\`value\` 字段必须使用最高优先级来源的数值；\`reason\` 中简述其它来源差异及原因。
     
     2. **技术分析师 (Technical Analyst)**：负责技术面深度分析。必须提供：
        - 趋势定性（主升浪/调整浪/下跌通道，引用具体价位和涨幅数据）
@@ -578,10 +581,13 @@ export const getDiscussionPrompt = (
 
     **研讨质量要求（严格执行，否则视为不合格）**：
     1. **数据准确性与实时性**：必须使用内置的 Google Search 工具获取最新的市场数据、新闻和公告。
+    1.1 **来源优先级**：所有关键数值遵循 **权威金融 API > Google Search 权威来源 > 其他来源**。
+    1.2 **口径一致性**：分析师正文与最终 JSON 字段（coreVariables/scenarios/tradingPlan/expectedValueOutcome）必须使用同一优先级口径，禁止正文与结构化字段口径不一致。
     2. **权威来源标注**：所有引用的关键数据（如财报数据、宏观指标、机构持仓等）必须明确标注来源（如：东方财富、雪球、路透社、公司公告等）。
-    3. **金融 API 交叉验证 (MANDATORY)**：将搜索获取的数据与传入的 \`analysis.stockInfo\`（视为金融机构 API 提供的基准数据）进行对比。
+    3. **金融 API 交叉验证 (MANDATORY)**：将搜索获取的数据与传入的 \`analysis.stockInfo\`（视为金融机构 API 提供的基准数据）进行对比；若冲突，默认以 API 为口径输出，并记录差异原因。
        - **必须核对的字段**：当前价格 (price)、涨跌幅 (changePercent)、市盈率 (pe)、市净率 (pb)、总市值。
        - 如果存在显著差异（>1%），必须在 \`dataVerification\` 字段中详细说明，并由 **高级评审专家** 在发言中进行纠偏。
+    - 若 API 字段存在且有效，禁止在最终 JSON 中使用低优先级来源覆盖该字段。
     4. **数据密度**：每位分析师的 content 字段必须包含丰富的具体数据（价格、百分比、倍数、金额等），禁止空泛的定性描述。
     5. **Markdown格式**：content 字段必须使用 Markdown 格式（### 标题、表格、加粗、列表等），使内容结构清晰。
     6. **深度研究专家和高级评审专家** 的 content 字段必须各包含至少1个 Markdown 表格。

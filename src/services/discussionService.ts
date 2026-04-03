@@ -8,6 +8,7 @@ import { getDiscussionPrompt } from "./prompts";
 import { buildTopology } from "./discussion/orchestrator";
 import { getExpertPrompt, getExpertResponseSchema } from "./discussion/expertPrompts";
 import { aggregateResults } from "./discussion/resultAggregator";
+import { normalizeCoreVariablesByPriority } from "./coreVariablePriority";
 
 // Iteration count per analysis level (how many times the middle cycle repeats)
 const ITERATION_COUNT: Record<AnalysisLevel, number> = {
@@ -21,6 +22,26 @@ export interface MultiRoundProgress {
   totalRounds: number;
   currentExpert: string;
   messages: AgentMessage[];
+}
+
+function hasQuantData(text: string): boolean {
+  return /\d/.test(text);
+}
+
+function hasSourceHints(text: string): boolean {
+  return /(API|Source|来源|Wind|东方财富|同花顺|交易所|Reuters|Bloomberg|Google Search|路透|彭博)/i.test(text);
+}
+
+function isLowQualityExpertContent(role: AgentRole, content: string): boolean {
+  const t = (content || '').trim();
+  if (t.length < 8) return true;
+
+  // For SA/CS/DR, enforce stronger data density + source attribution
+  if (role === 'Sentiment Analyst' || role === 'Contrarian Strategist' || role === 'Deep Research Specialist') {
+    if (!hasQuantData(t) && !hasSourceHints(t)) return true;
+  }
+
+  return false;
 }
 
 export async function startMultiRoundDiscussion(
@@ -70,23 +91,40 @@ export async function startMultiRoundDiscussion(
 
       const prompt = getExpertPrompt(role, analysis, allMessages, commoditiesData, backtest);
 
-      const responseText = await withRetry(async () => {
-        const result = await generateContentWithUsage(ai, {
-          model: config?.model || GEMINI_MODEL,
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            tools: [{ googleSearch: {} }],
-          },
-        });
-        return result.text;
-      }, 5, 3000);
+      const invokeExpert = async (inputPrompt: string) => {
+        const responseText = await withRetry(async () => {
+          const result = await generateContentWithUsage(ai, {
+            model: config?.model || GEMINI_MODEL,
+            contents: inputPrompt,
+            config: {
+              responseMimeType: "application/json",
+              tools: [{ googleSearch: {} }],
+            },
+          });
+          return result.text;
+        }, 5, 3000);
 
-      const parsed = parseJsonResponse<any>(responseText);
+        return parseJsonResponse<any>(responseText);
+      };
+      let parsed = await invokeExpert(prompt);
+      let content = String(parsed?.content || '');
+
+      // One-shot corrective retry when content quality is insufficient
+      if (!abortSignal?.aborted && isLowQualityExpertContent(role, content)) {
+        const correction = `\n\n【上次输出不合格，必须重答】\n` +
+          `- 你的输出缺少足够量化数据或来源标注。\n` +
+          `- 本次必须包含至少3个具体数字（价格/比例/概率/涨跌幅等）\n` +
+          `- 必须显式标注来源优先级（API > Google Search > Other）和数据日期\n` +
+          `- 仅返回 JSON，且 content 必须完整详实。`;
+
+        parsed = await invokeExpert(prompt + correction);
+        content = String(parsed?.content || '');
+      }
+
       const message: AgentMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         role,
-        content: String(parsed?.content || ''),
+        content,
         timestamp: new Date().toISOString(),
         type: 'discussion',
         round: roundNum,
@@ -139,7 +177,7 @@ export async function startMultiRoundDiscussion(
     try {
       const synthesis = await startAgentDiscussion(analysis, config, allMessages);
       // Merge: multi-round messages + synthesis structured data
-      return {
+      const merged = {
         ...synthesis,
         messages: multiRoundResult.messages, // keep all multi-round messages
         finalConclusion: synthesis.finalConclusion || multiRoundResult.finalConclusion,
@@ -150,13 +188,22 @@ export async function startMultiRoundDiscussion(
         controversialPoints: multiRoundResult.controversialPoints || synthesis.controversialPoints,
         backtestResult: multiRoundResult.backtestResult || synthesis.backtestResult,
       };
+
+      merged.coreVariables = normalizeCoreVariablesByPriority(merged.coreVariables, analysis);
+      return merged;
     } catch (err) {
       console.error('Synthesis step failed, using multi-round results:', err);
-      return multiRoundResult;
+      return {
+        ...multiRoundResult,
+        coreVariables: normalizeCoreVariablesByPriority(multiRoundResult.coreVariables, analysis),
+      };
     }
   }
 
-  return multiRoundResult;
+  return {
+    ...multiRoundResult,
+    coreVariables: normalizeCoreVariablesByPriority(multiRoundResult.coreVariables, analysis),
+  };
 }
 
 /**
@@ -243,6 +290,8 @@ export async function startAgentDiscussion(
       id: msg.id || `msg-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 9)}`
     }));
   }
+
+  parsed.coreVariables = normalizeCoreVariablesByPriority(parsed.coreVariables, analysis);
 
   return parsed;
 }
