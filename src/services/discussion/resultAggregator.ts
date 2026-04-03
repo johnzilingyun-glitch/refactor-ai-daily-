@@ -1,14 +1,21 @@
-import type { AgentRole, AgentDiscussion, ExpertOutput } from '../../types';
+import type { AgentRole, AgentMessage, AgentDiscussion, ExpertOutput } from '../../types';
 import type { BacktestResult } from '../backtestService';
 
 export function aggregateResults(
   roundResults: Map<AgentRole, ExpertOutput>,
   backtest: BacktestResult | null,
+  allMessages?: AgentMessage[],
 ): AgentDiscussion {
-  const messages = Array.from(roundResults.values()).map((output, idx) => ({
-    ...output.message,
-    id: output.message.id || `msg-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
-  }));
+  // Use allMessages if provided (multi-round), otherwise extract from Map (single-round)
+  const messages = allMessages
+    ? allMessages.map((msg, idx) => ({
+        ...msg,
+        id: msg.id || `msg-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
+      }))
+    : Array.from(roundResults.values()).map((output, idx) => ({
+        ...output.message,
+        id: output.message.id || `msg-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 11)}`,
+      }));
 
   // Extract structured data from specific experts
   const deepResearch = roundResults.get('Deep Research Specialist');

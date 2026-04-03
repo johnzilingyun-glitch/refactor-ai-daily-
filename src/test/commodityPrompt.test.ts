@@ -71,7 +71,8 @@ describe('AI Discussion Commodity Data Integration', () => {
     const lastCall = (geminiService.generateContentWithUsage as any).mock.calls[0];
     const prompt = lastCall[1].contents;
     
-    expect(prompt).toContain('REAL-TIME COMMODITY DATA (GROUND TRUTH - 2026-03-30)');
+    expect(prompt).toContain('REAL-TIME COMMODITY DATA (GROUND TRUTH -');
+    expect(prompt).toMatch(/REAL-TIME COMMODITY DATA \(GROUND TRUTH - \d{4}-\d{2}-\d{2}\)/);
     expect(prompt).toContain('| 商品种类 | 实时价格 | 24h 涨跌幅 | 单位 | 最后更新 |');
     expect(prompt).toContain('| --- | --- | --- | --- | --- |');
     expect(prompt).toContain('伦敦金 (XAU) (GC=F)');

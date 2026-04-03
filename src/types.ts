@@ -240,6 +240,7 @@ export interface AgentMessage {
   timestamp: string;
   type?: "discussion" | "research" | "review" | "user_question" | "fact_check";
   references?: { title: string; url: string }[];
+  round?: number;
 }
 
 export interface Scenario {
@@ -370,6 +371,8 @@ export interface CoreVariable {
   delta: string;           // 偏离说明，如 "+5% vs 预期"
   reason: string;          // 偏离原因
   evidenceLevel: "财报" | "研报共识" | "第三方监控" | "推算" | "信息缺失";
+  source?: string;         // 数据来源，如 "Wind", "东方财富", "LME"
+  dataDate?: string;       // 数据日期，如 "2026-04-03"
 }
 
 export type BusinessType = "manufacturing" | "saas" | "banking" | "retail" | "healthcare" | "tech" | "other";

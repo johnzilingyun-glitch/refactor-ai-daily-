@@ -1,7 +1,7 @@
 import { StockAnalysis, Market, MarketOverview, AgentMessage, Scenario, AgentDiscussion, StockInfo } from "../types";
 import { analyzeStock as _analyzeStock, sendChatMessage as _sendChatMessage, getStockReport as _getStockReport, getDiscussionReport as _getDiscussionReport, getChatReport as _getChatReport } from "./analysisService";
 import { getMarketOverview as _getMarketOverview, getDailyReport as _getDailyReport } from "./marketService";
-import { startAgentDiscussion as _startAgentDiscussion } from "./discussionService";
+import { startAgentDiscussion as _startAgentDiscussion, startMultiRoundDiscussion as _startMultiRoundDiscussion } from "./discussionService";
 import { saveAnalysisToHistory as _saveAnalysisToHistory, getHistoryContext as _getHistoryContext } from "./adminService";
 
 // Re-export core functions from new services
@@ -13,6 +13,7 @@ export const getChatReport = _getChatReport;
 export const getMarketOverview = _getMarketOverview;
 export const getDailyReport = _getDailyReport;
 export const startAgentDiscussion = _startAgentDiscussion;
+export const startMultiRoundDiscussion = _startMultiRoundDiscussion;
 export const saveAnalysisToHistory = _saveAnalysisToHistory;
 export const getHistoryContext = _getHistoryContext;
 

@@ -185,8 +185,16 @@ export function AnalysisResult({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Final Conclusion Card */}
-                  {analysis.finalConclusion && (
+                  {/* In-progress indicator when discussion is running */}
+                  {isDiscussing && discussionMessages.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200/40 flex items-center gap-3">
+                      <Loader2 size={16} className="animate-spin text-indigo-500" />
+                      <p className="text-xs font-medium text-indigo-600">专家组联席会议讨论进行中，结论将在全部轮次完成后呈现...</p>
+                    </div>
+                  )}
+
+                  {/* Final Conclusion Card - hidden during active discussion */}
+                  {analysis.finalConclusion && !isDiscussing && (
                     <div className="p-5 rounded-2xl bg-indigo-600/5 border border-indigo-100 relative overflow-hidden group">
                       <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Award size={48} className="text-emerald-500" />
@@ -222,8 +230,8 @@ export function AnalysisResult({
                     </div>
                   )}
 
-                  {/* Trading Plan Card */}
-                  {analysis.tradingPlan && (
+                  {/* Trading Plan Card - hidden during active discussion */}
+                  {analysis.tradingPlan && !isDiscussing && (
                     <div className="p-5 rounded-2xl bg-indigo-50/30 border border-blue-500/20">
                       <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-4 flex items-center gap-2">
                         <Target size={14} />
@@ -288,7 +296,7 @@ export function AnalysisResult({
                     </div>
                   )}
 
-                  {scenarios.length > 0 && (
+                  {(scenarios.length > 0 || !!expectationGap || (sensitivityFactors && sensitivityFactors.length > 0) || calculations.length > 0 || !!stressTestLogic || (catalystList && catalystList.length > 0) || (verificationMetrics && verificationMetrics.length > 0) || !!capitalFlow || !!positionManagement || !!timeDimension) && (
                     <div className="space-y-6">
                       {/* Expectation Gap */}
                       {expectationGap && (

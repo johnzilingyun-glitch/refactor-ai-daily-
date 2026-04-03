@@ -75,7 +75,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  onPointerDownDrag
 }) => {
  const { analysis } = useAnalysisStore();
- const { discussionMessages: messages, analystWeights } = useDiscussionStore();
+ const { discussionMessages: messages, analystWeights, currentRound, totalRounds } = useDiscussionStore();
 
  const isDiscussing = useUIStore(selectIsDiscussing);
  const isReviewing = useUIStore(selectIsReviewing);
@@ -99,7 +99,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  if (scrollRef.current) {
  scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
  }
- }, [messages]);
+ }, [messages, isDiscussing]);
 
  const handleSend = () => {
  if (inputValue.trim() && onSendMessage) {
@@ -244,7 +244,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  {isDiscussing && (
  <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-zinc-200 text-xs font-medium text-zinc-400 uppercase tracking-widest">
  <Loader2 size={14} className="animate-spin text-indigo-600" />
- 全网推演中
+ {totalRounds > 1 ? `第 ${currentRound}/${totalRounds} 轮推演中` : '全网推演中'}
  </div>
  )}
 
@@ -317,8 +317,89 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </motion.div>
  )}
 
- {/* Decision Engine Dashboard */}
- {analysis?.expectedValueOutcome && (
+ <AnimatePresence initial={false}>
+ {messages.map((msg, i) => {
+ const msgKey = msg.id ? `msg-id-${msg.id}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}`;
+ const showRoundDivider = msg.round != null && (i === 0 || messages[i - 1]?.round !== msg.round);
+ return (
+ <React.Fragment key={msgKey}>
+ {showRoundDivider && (
+ <div className="flex items-center gap-3 my-4 max-w-4xl mx-auto">
+ <div className="flex-1 h-px bg-indigo-200/40" />
+ <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200/50 whitespace-nowrap">
+ 第 {msg.round} 轮
+ </span>
+ <div className="flex-1 h-px bg-indigo-200/40" />
+ </div>
+ )}
+ <motion.div
+ key={msgKey}
+ initial={{ opacity: 0, x: -20 }}
+ animate={{ opacity: 1, x: 0 }}
+ transition={{ type: "spring", stiffness: 100, damping: 15 }}
+ className="flex gap-6 group max-w-4xl mx-auto"
+ >
+ <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 shadow-sm ${roleColors[msg.role] || "text-zinc-400 bg-white border-zinc-200/60"}`}>
+ {roleIcons[msg.role] || <MessageSquare size={24} />}
+ </div>
+ <div className="flex-1 space-y-3">
+ <div className="flex items-center justify-between">
+ <div className="flex items-center gap-3">
+ <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-xl border shadow-sm ${roleColors[msg.role] || "text-zinc-500 bg-white border-zinc-200/60"}`}>
+ {roleNames[msg.role] || msg.role}
+ </span>
+ {getWeightInfo(msg.role)?.isExpert && (
+ <span className="text-xs font-medium text-indigo-600 bg-indigo-600/8 px-3 py-1 rounded-xl border border-indigo-600/15 flex items-center gap-1.5 animate-pulse">
+ <Award size={14} />
+ 行业专家 ({getWeightInfo(msg.role)?.expertiseArea})
+ </span>
+ )}
+ </div>
+ <span className="text-xs text-zinc-400 font-mono font-medium">
+ {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+ </span>
+ </div>
+ <div className="relative">
+ <div className={`text-[15px] leading-7 p-6 rounded-2xl rounded-tl-none border transition-all duration-200 ${msg.type === "research" ? "bg-cyan-50/50 border-cyan-200/60 text-zinc-700 hover:border-cyan-300" : msg.type === "review" ? "bg-indigo-50/30 border-indigo-200/60 text-zinc-700 hover:border-indigo-300" : msg.type === "fact_check" ? "bg-rose-50/50 border-rose-200/60 text-zinc-700 hover:border-rose-300" : msg.type === "user_question" ? "bg-white border-zinc-200 text-zinc-600" : "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300" }`}>
+ <div className="prose prose-base max-w-none">
+ <ReactMarkdown remarkPlugins={[remarkGfm]}>
+ {msg.content}
+ </ReactMarkdown>
+ </div>
+
+ {msg.references && msg.references.length > 0 && (
+ <div className="mt-5 pt-5 border-t border-zinc-200/60">
+ <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+ <ExternalLink size={14} />
+ 引用来源
+ </p>
+ <div className="flex flex-wrap gap-2">
+ {msg.references.map((ref, idx) => (
+ <a
+ key={`ref-${idx}-${ref.url}`}
+ href={ref.url}
+ target="_blank"
+ rel="noopener noreferrer"
+ className="text-xs font-medium text-cyan-600 hover:text-zinc-950 bg-cyan-950/40 border border-cyan-200/50 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
+ >
+ {ref.title.length > 30 ? ref.title.substring(0, 30) + '...' : ref.title}
+ <ExternalLink size={12} />
+ </a>
+ ))}
+ </div>
+ </div>
+ )}
+ </div>
+ </div>
+ </div>
+ </motion.div>
+ </React.Fragment>
+ );
+ })}
+ </AnimatePresence>
+
+ {/* Decision Engine Dashboard - shown after messages */}
+ {!isDiscussing && analysis?.expectedValueOutcome && (
  <motion.div
  initial={{ opacity: 0, y: 10 }}
  animate={{ opacity: 1, y: 0 }}
@@ -388,7 +469,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </motion.div>
  )}
 
- {analysis && (analysis.coreVariables || analysis.businessModel || analysis.quantifiedRisks) && (
+ {!isDiscussing && analysis && (analysis.coreVariables || analysis.businessModel || analysis.quantifiedRisks) && (
  <motion.div
  initial={{ opacity: 0, y: 10 }}
  animate={{ opacity: 1, y: 0 }}
@@ -414,7 +495,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  <div key={`cv-${v.name}-${idx}`} className="bg-white rounded-xl p-3 border border-zinc-200/60 text-xs">
  <div className="flex justify-between mb-1.5">
  <span className="font-medium text-zinc-600">{v.name}</span>
- <span className="text-zinc-400 font-mono text-[10px]">[{v.unit}] {v.evidenceLevel}</span>
+ <span className="text-zinc-400 font-mono text-[10px]">[{v.unit}] {v.evidenceLevel}{v.source ? ` · ${v.source}` : ''}{v.dataDate ? ` ${v.dataDate}` : ''}</span>
  </div>
  <div className="grid grid-cols-3 gap-2 text-center">
  <div><p className="text-[10px] text-zinc-400">当前</p><p className="font-mono text-zinc-500">{String(v.value)}</p></div>
@@ -505,7 +586,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </motion.div>
  )}
 
- {dataVerification && dataVerification.length > 0 && (
+ {!isDiscussing && dataVerification && dataVerification.length > 0 && (
  <motion.div
  initial={{ opacity: 0, y: -10 }}
  animate={{ opacity: 1, y: 0 }}
@@ -571,75 +652,6 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </div>
  </motion.div>
  )}
-
- <AnimatePresence initial={false}>
- {messages.map((msg, i) => {
- const msgKey = msg.id ? `msg-id-${msg.id}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}`;
- return (
- <motion.div
- key={msgKey}
- initial={{ opacity: 0, x: -20 }}
- animate={{ opacity: 1, x: 0 }}
- transition={{ type: "spring", stiffness: 100, damping: 15 }}
- className="flex gap-6 group max-w-4xl mx-auto"
- >
- <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 shadow-sm ${roleColors[msg.role] || "text-zinc-400 bg-white border-zinc-200/60"}`}>
- {roleIcons[msg.role] || <MessageSquare size={24} />}
- </div>
- <div className="flex-1 space-y-3">
- <div className="flex items-center justify-between">
- <div className="flex items-center gap-3">
- <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-xl border shadow-sm ${roleColors[msg.role] || "text-zinc-500 bg-white border-zinc-200/60"}`}>
- {roleNames[msg.role] || msg.role}
- </span>
- {getWeightInfo(msg.role)?.isExpert && (
- <span className="text-xs font-medium text-indigo-600 bg-indigo-600/8 px-3 py-1 rounded-xl border border-indigo-600/15 flex items-center gap-1.5 animate-pulse">
- <Award size={14} />
- 行业专家 ({getWeightInfo(msg.role)?.expertiseArea})
- </span>
- )}
- </div>
- <span className="text-xs text-zinc-400 font-mono font-medium">
- {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
- </span>
- </div>
- <div className="relative">
- <div className={`text-[15px] leading-7 p-6 rounded-2xl rounded-tl-none border transition-all duration-200 ${msg.type === "research" ? "bg-cyan-50/50 border-cyan-200/60 text-zinc-700 hover:border-cyan-300" : msg.type === "review" ? "bg-indigo-50/30 border-indigo-200/60 text-zinc-700 hover:border-indigo-300" : msg.type === "fact_check" ? "bg-rose-50/50 border-rose-200/60 text-zinc-700 hover:border-rose-300" : msg.type === "user_question" ? "bg-white border-zinc-200 text-zinc-600" : "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300" }`}>
- <div className="prose prose-base max-w-none">
- <ReactMarkdown remarkPlugins={[remarkGfm]}>
- {msg.content}
- </ReactMarkdown>
- </div>
-
- {msg.references && msg.references.length > 0 && (
- <div className="mt-5 pt-5 border-t border-zinc-200/60">
- <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-3 flex items-center gap-2">
- <ExternalLink size={14} />
- 引用来源
- </p>
- <div className="flex flex-wrap gap-2">
- {msg.references.map((ref, idx) => (
- <a
- key={`ref-${idx}-${ref.url}`}
- href={ref.url}
- target="_blank"
- rel="noopener noreferrer"
- className="text-xs font-medium text-cyan-600 hover:text-zinc-950 bg-cyan-950/40 border border-cyan-200/50 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
- >
- {ref.title.length > 30 ? ref.title.substring(0, 30) + '...' : ref.title}
- <ExternalLink size={12} />
- </a>
- ))}
- </div>
- </div>
- )}
- </div>
- </div>
- </div>
- </motion.div>
- );
- })}
- </AnimatePresence>
 
  {messages.length === 0 && !isDiscussing && (
  <div className="flex-1 flex flex-col items-center justify-center text-zinc-200 py-32 space-y-6">

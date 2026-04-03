@@ -58,6 +58,9 @@ export async function withRetry<T>(
         if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota')) {
           throw new Error('API 配额已耗尽，请等待几分钟后重试，或在 https://ai.dev/rate-limit 查看额度状态。');
         }
+        if (errStr.includes('503') || errStr.toLowerCase().includes('unavailable')) {
+          throw new Error('AI 模型当前负载过高，请稍后重试。建议使用「标准」模式减少 API 调用次数。');
+        }
         throw error;
       }
       await delay(1000);

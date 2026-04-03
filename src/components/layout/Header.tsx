@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp } from 'lucide-react';
-import { Market } from '../../types';
+import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp, Zap, BarChart3, Microscope } from 'lucide-react';
+import { Market, AnalysisLevel } from '../../types';
 import { useUIStore, selectLoading } from '../../stores/useUIStore';
 import { useMarketStore } from '../../stores/useMarketStore';
 import { useAnalysisStore } from '../../stores/useAnalysisStore';
@@ -15,7 +15,7 @@ interface HeaderProps {
 
 export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHistory, onFetchAdminData }: HeaderProps) {
   const loading = useUIStore(selectLoading);
-  const { isTriggeringReport, showAdminPanel, setShowAdminPanel, setIsSettingsOpen } = useUIStore();
+  const { isTriggeringReport, showAdminPanel, setShowAdminPanel, setIsSettingsOpen, analysisLevel, setAnalysisLevel } = useUIStore();
   const { dailyReport } = useMarketStore();
   const { symbol, setSymbol, market, setMarket } = useAnalysisStore();
 
@@ -140,6 +140,29 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
             }}
             className="h-14 w-full font-medium text-base rounded-xl border border-zinc-200 bg-white pl-14 pr-6 text-zinc-950 transition-all placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600/40 shadow-sm shadow-zinc-900/5 group-hover:border-zinc-300"
           />
+        </div>
+
+        {/* Analysis Level Selector */}
+        <div className="flex rounded-xl border border-zinc-200 bg-white overflow-hidden h-14 flex-shrink-0">
+          {([
+            { level: 'quick' as AnalysisLevel, icon: Zap, label: '快扫' },
+            { level: 'standard' as AnalysisLevel, icon: BarChart3, label: '标准' },
+            { level: 'deep' as AnalysisLevel, icon: Microscope, label: '深研' },
+          ] as const).map(({ level, icon: Icon, label }) => (
+            <button
+              key={level}
+              type="button"
+              onClick={() => setAnalysisLevel(level)}
+              className={`flex items-center gap-1.5 px-4 text-sm font-medium transition-all ${
+                analysisLevel === level
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700'
+              }`}
+            >
+              <Icon size={15} strokeWidth={1.5} />
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
 
         <button

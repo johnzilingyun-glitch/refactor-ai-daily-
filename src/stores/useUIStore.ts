@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { AnalysisLevel } from '../types';
 
 type AnalysisActivity = 'idle' | 'analyzing' | 'chatting' | 'discussing' | 'reviewing';
 
@@ -27,6 +28,7 @@ interface UIState {
 
   // Config
   autoRefreshInterval: number;
+  analysisLevel: AnalysisLevel;
 
   // Activity setters (update enum)
   setLoading: (loading: boolean) => void;
@@ -53,6 +55,7 @@ interface UIState {
   setShowAdminPanel: (show: boolean) => void;
   setSelectedDetail: (detail: { type: 'log' | 'history', data: any } | null) => void;
   setAutoRefreshInterval: (interval: number) => void;
+  setAnalysisLevel: (level: AnalysisLevel) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -110,10 +113,12 @@ export const useUIStore = create<UIState>()(
       setShowAdminPanel: (showAdminPanel) => set({ showAdminPanel }),
       setSelectedDetail: (selectedDetail) => set({ selectedDetail }),
       setAutoRefreshInterval: (autoRefreshInterval) => set({ autoRefreshInterval }),
+      analysisLevel: 'standard' as AnalysisLevel,
+      setAnalysisLevel: (analysisLevel: AnalysisLevel) => set({ analysisLevel }),
     }),
     {
       name: 'ui-storage',
-      partialize: (state) => ({ autoRefreshInterval: state.autoRefreshInterval }),
+      partialize: (state) => ({ autoRefreshInterval: state.autoRefreshInterval, analysisLevel: state.analysisLevel }),
     }
   )
 );

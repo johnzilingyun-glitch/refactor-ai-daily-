@@ -6,12 +6,18 @@ interface DiscussionState {
   controversialPoints: string[];
   tradingPlanHistory: TradingPlanVersion[];
   analystWeights: AnalystWeight[];
+  currentRound: number;
+  totalRounds: number;
+  abortController: AbortController | null;
 
   setDiscussionMessages: (messages: AgentMessage[] | ((prev: AgentMessage[]) => AgentMessage[])) => void;
   setControversialPoints: (points: string[]) => void;
   setTradingPlanHistory: (history: TradingPlanVersion[] | ((prev: TradingPlanVersion[]) => TradingPlanVersion[])) => void;
   setAnalystWeights: (weights: AnalystWeight[]) => void;
   setDiscussionResults: (discussion: AgentDiscussion) => void;
+  setRoundProgress: (current: number, total: number) => void;
+  setAbortController: (controller: AbortController | null) => void;
+  abortDiscussion: () => void;
   resetDiscussion: () => void;
 }
 
@@ -20,9 +26,12 @@ const initialState = {
   controversialPoints: [] as string[],
   tradingPlanHistory: [] as TradingPlanVersion[],
   analystWeights: [] as AnalystWeight[],
+  currentRound: 0,
+  totalRounds: 0,
+  abortController: null as AbortController | null,
 };
 
-export const useDiscussionStore = create<DiscussionState>((set) => ({
+export const useDiscussionStore = create<DiscussionState>((set, get) => ({
   ...initialState,
 
   setDiscussionMessages: (updater) => set((state) => ({
@@ -39,5 +48,18 @@ export const useDiscussionStore = create<DiscussionState>((set) => ({
     tradingPlanHistory: discussion.tradingPlanHistory || [],
     analystWeights: discussion.analystWeights || [],
   }),
-  resetDiscussion: () => set(initialState),
+  setRoundProgress: (currentRound, totalRounds) => set({ currentRound, totalRounds }),
+  setAbortController: (abortController) => set({ abortController }),
+  abortDiscussion: () => {
+    const { abortController } = get();
+    if (abortController) {
+      abortController.abort();
+      set({ abortController: null });
+    }
+  },
+  resetDiscussion: () => {
+    const { abortController } = get();
+    if (abortController) abortController.abort();
+    set(initialState);
+  },
 }));
