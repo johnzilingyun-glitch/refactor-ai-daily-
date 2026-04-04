@@ -34,7 +34,7 @@ interface AnalysisResultProps {
   onSendStockReport: () => void;
   onSendDiscussionReport: () => void;
   onSendChatReport: () => void;
-  onDiscussionQuestion: (question: string, targetRole?: any) => void;
+  onDiscussionQuestion: (question: string) => void;
   onGenerateNewConclusion: () => void;
   onChat: (message?: string) => void;
 }

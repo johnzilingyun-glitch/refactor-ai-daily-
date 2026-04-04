@@ -276,6 +276,63 @@ function buildIterativeTopology(
   }));
 }
 
+/**
+ * AI-powered router to select the most appropriate expert for a user's question.
+ */
+export async function routeUserQuestion(
+  question: string,
+  analysis: StockAnalysis,
+  history: AgentMessage[],
+  config?: GeminiConfig
+): Promise<AgentRole> {
+  const ai = createAI(config);
+  
+  const rolesInfo = `
+  1. Technical Analyst: 技术面、K线、指标、量价关系、趋势预测。
+  2. Fundamental Analyst: 基本面、财报、估值、行业竞争、盈利模式。
+  3. Sentiment Analyst: 市场情绪、舆情分析、恐慌贪婪度。
+  4. Risk Manager: 宏观风险、合规、黑天鹅、止损逻辑。
+  5. Contrarian Strategist: 逆向思维、共识偏差、反向博弈。
+  6. Deep Research Specialist: 产业链深度细节、核心变量追踪（如锂价、出货量）。
+  7. Professional Reviewer: 逻辑审阅、逻辑缺陷查找、严谨性评估。
+  8. Chief Strategist: 宏观策略、资产配置建议。
+  `;
+
+  const routingPrompt = `
+  作为研讨会主持人，请根据用户的提问，从以下专家组中选择一位最适合回答该问题的专家。
+  当前分析的股票：${analysis.stockInfo.name} (${analysis.stockInfo.symbol})
+  
+  【专家列表】
+  ${rolesInfo}
+  
+  【用户提问】
+  ${question}
+  
+  请基于问题的内容深度和专业度进行匹配。如果问题比较空泛，请默认分配给 "Professional Reviewer"。
+  仅返回 JSON 格式，包含 role 字段，值为上述英文角色名称之一。
+  `;
+
+  const raw = await generateAndParseJsonWithRetry<any>(ai, {
+    model: config?.model || GEMINI_MODEL,
+    contents: routingPrompt,
+    config: {
+      responseMimeType: "application/json"
+    }
+  });
+
+  const validRoles: AgentRole[] = [
+    "Technical Analyst", "Fundamental Analyst", "Sentiment Analyst", 
+    "Risk Manager", "Contrarian Strategist", "Deep Research Specialist", 
+    "Professional Reviewer", "Chief Strategist"
+  ];
+
+  if (raw.role && validRoles.includes(raw.role as AgentRole)) {
+    return raw.role as AgentRole;
+  }
+
+  return "Professional Reviewer";
+}
+
 export async function answerDiscussionQuestion(
   analysis: StockAnalysis,
   question: string,

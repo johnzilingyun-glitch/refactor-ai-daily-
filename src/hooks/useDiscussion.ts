@@ -4,7 +4,7 @@ import { useUIStore, selectIsReviewing, selectIsDiscussing } from '../stores/use
 import { useAnalysisStore } from '../stores/useAnalysisStore';
 import { useDiscussionStore } from '../stores/useDiscussionStore';
 import { useScenarioStore } from '../stores/useScenarioStore';
-import { answerDiscussionQuestion, generateNewConclusion, saveAnalysisToHistory } from '../services/aiService';
+import { answerDiscussionQuestion, generateNewConclusion, saveAnalysisToHistory, routeUserQuestion } from '../services/aiService';
 import { StockAnalysis, AgentMessage, AgentRole } from '../types';
 
 export function useDiscussion(fetchAdminData: () => Promise<void>) {
@@ -23,7 +23,7 @@ export function useDiscussion(fetchAdminData: () => Promise<void>) {
     setTimeDimension,
   } = useScenarioStore();
 
-  const handleDiscussionQuestion = useCallback(async (question: string, targetRole: AgentRole = 'Professional Reviewer') => {
+  const handleDiscussionQuestion = useCallback(async (question: string) => {
     if (!analysis || isReviewing || isDiscussing) return;
 
     setIsReviewing(true);
@@ -38,8 +38,13 @@ export function useDiscussion(fetchAdminData: () => Promise<void>) {
     const updatedMessages = [...discussionMessages, userMsg];
     setDiscussionMessages(updatedMessages);
 
+    let selectedRole: AgentRole = 'Professional Reviewer';
     try {
-      const answerMsg = await answerDiscussionQuestion(analysis, question, targetRole, updatedMessages, geminiConfig);
+      // Step 1: Route the question to an expert
+      selectedRole = await routeUserQuestion(question, analysis, updatedMessages, geminiConfig);
+      
+      // Step 2: Get the answer from the selected expert
+      const answerMsg = await answerDiscussionQuestion(analysis, question, selectedRole, updatedMessages, geminiConfig);
       
       const newMessages = [...updatedMessages, answerMsg];
       setDiscussionMessages(newMessages);
@@ -56,8 +61,8 @@ export function useDiscussion(fetchAdminData: () => Promise<void>) {
       console.error('Expert failed:', err);
       setDiscussionMessages([...updatedMessages, {
         id: `error-${Date.now()}`,
-        role: targetRole,
-        content: `⚠️ ${targetRole} 暂时无法回答：${err instanceof Error ? err.message : '未知错误'}`,
+        role: selectedRole,
+        content: `⚠️ ${selectedRole} 暂时无法回答：${err instanceof Error ? err.message : '未知错误'}`,
         timestamp: new Date().toISOString(),
         type: "review"
       }]);
