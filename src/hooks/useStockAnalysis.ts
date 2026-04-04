@@ -112,7 +112,10 @@ export function useStockAnalysis() {
             discussion: discussion.messages,
             tradingPlan: discussion.tradingPlan || result.tradingPlan,
             verificationMetrics: discussion.verificationMetrics || result.verificationMetrics,
-            capitalFlow: discussion.capitalFlow || result.capitalFlow
+            capitalFlow: discussion.capitalFlow || result.capitalFlow,
+            expectedValueOutcome: discussion.expectedValueOutcome || result.expectedValueOutcome,
+            sensitivityMatrix: discussion.sensitivityMatrix || result.sensitivityMatrix,
+            dataVerification: discussion.dataVerification || result.dataVerification
           };
           setAnalysis(finalAnalysis);
 

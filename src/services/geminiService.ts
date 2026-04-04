@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { useConfigStore } from "../stores/useConfigStore";
+import { requestScheduler } from "./requestScheduler";
 
 export const GEMINI_MODEL = "gemini-3-flash-preview";
 
@@ -265,10 +266,12 @@ export async function generateAndParseJsonWithRetry<T>(
   let lastParseError: unknown;
 
   for (let attempt = 1; attempt <= parseRetries; attempt++) {
-    const responseText = await withRetry(async () => {
-      const result = await generateContentWithUsage(ai, params);
-      return result.text;
-    }, transportRetries, baseDelayMs);
+    const responseText = await requestScheduler.schedule(async () => {
+      return await withRetry(async () => {
+        const result = await generateContentWithUsage(ai, params);
+        return result.text;
+      }, transportRetries, baseDelayMs);
+    });
 
     try {
       return parseJsonResponse<T>(responseText);

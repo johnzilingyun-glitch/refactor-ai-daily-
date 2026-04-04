@@ -30,6 +30,8 @@ export function aggregateResults(
     quantifiedRisks: riskManager?.structuredData?.quantifiedRisks,
     tradingPlan: chiefStrategist?.structuredData?.tradingPlan,
     scenarios: chiefStrategist?.structuredData?.scenarios,
+    expectedValueOutcome: chiefStrategist?.structuredData?.expectedValueOutcome,
+    sensitivityMatrix: chiefStrategist?.structuredData?.sensitivityMatrix,
     controversialPoints: contrarian?.structuredData
       ? (contrarian.message.content ? [contrarian.message.content.slice(0, 200)] : [])
       : undefined,

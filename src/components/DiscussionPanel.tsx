@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -77,7 +78,14 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
   onPointerDownDrag
 }) => {
   const { analysis } = useAnalysisStore();
-  const { discussionMessages: messages, analystWeights, currentRound, totalRounds } = useDiscussionStore();
+  const { 
+    discussionMessages: messages, 
+    analystWeights, 
+    currentRound, 
+    totalRounds,
+    expectedValueOutcome: discussionExpectedValue,
+    sensitivityMatrix: discussionSensitivity
+  } = useDiscussionStore();
 
   const isDiscussing = useUIStore(selectIsDiscussing);
   const isReviewing = useUIStore(selectIsReviewing);
@@ -318,71 +326,81 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
         )}
 
         {/* Expected Value Center */}
-        {!isDiscussing && analysis?.expectedValueOutcome && (
+        {(discussionExpectedValue || analysis?.expectedValueOutcome) && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="max-w-4xl mx-auto space-y-6"
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-indigo-600/10 flex items-center justify-center border border-indigo-600/15">
-                  <Calculator size={18} className="text-indigo-600" />
-                </div>
-                <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-600">期望价值中枢 (Expected Value)</h4>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-zinc-400 uppercase font-semibold">统一期望价格</p>
-                <p className="text-2xl font-semibold text-zinc-950 tracking-tighter">${analysis.expectedValueOutcome.expectedPrice}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
-                <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
-                  <Activity size={16} className="text-indigo-600" />
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">概率加权演算逻辑</span>
-                </div>
-                <div className="bg-zinc-100/80 rounded-xl p-4 border border-zinc-200/60 font-mono text-xs text-indigo-500/80 leading-relaxed italic">
-                  "{analysis.expectedValueOutcome.calculationLogic}"
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2">
-                  <span>置信区间: <span className="text-zinc-500 font-medium">{analysis.expectedValueOutcome.confidenceInterval}</span></span>
-                  <span className="flex items-center gap-1"><Shield size={10} /> 机构级一致性验证已通过</span>
-                </div>
-              </div>
-
-              {analysis.sensitivityMatrix && (
-                <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
-                  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
-                    <Table size={16} className="text-emerald-500" />
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">多变量收益敏感度矩阵</span>
-                  </div>
-                  <div className="space-y-2">
-                    {analysis.sensitivityMatrix.map((row, idx) => (
-                      <div key={`smr-${row.variable}-${idx}`} className="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200/60 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-zinc-400 w-16 truncate">{row.variable}</span>
-                          <span className="text-zinc-400 font-mono italic">{row.change}</span>
-                          <ArrowRight size={10} className="text-zinc-300" />
-                        </div>
-                        <div className="text-right">
-                          <span className={cn(
-                            "font-semibold tracking-tighter mr-2",
-                            row.profitImpact.includes('+') ? "text-emerald-500" : "text-rose-500"
-                          )}>
-                            {row.profitImpact}
-                          </span>
-                          <span className="text-[9px] text-zinc-300 flex items-center gap-0.5 justify-end">
-                            <Clock size={8} /> {row.timeLag}
-                          </span>
-                        </div>
+            {(() => {
+              const evData = discussionExpectedValue || analysis?.expectedValueOutcome;
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-xl bg-indigo-600/10 flex items-center justify-center border border-indigo-600/15">
+                        <Calculator size={18} className="text-indigo-600" />
                       </div>
-                    ))}
+                      <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-600">期望价值中枢 (Expected Value)</h4>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-zinc-400 uppercase font-semibold">统一期望价格</p>
+                      <p className="text-2xl font-semibold text-zinc-950 tracking-tighter">${evData.expectedPrice}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+ 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
+                      <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+                        <Activity size={16} className="text-indigo-600" />
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">概率加权演算逻辑</span>
+                      </div>
+                      <div className="bg-zinc-100/80 rounded-xl p-4 border border-zinc-200/60 font-mono text-xs text-indigo-500/80 leading-relaxed italic">
+                        "{evData.calculationLogic}"
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2">
+                        <span>置信区间: <span className="text-zinc-500 font-medium">{evData.confidenceInterval}</span></span>
+                        <span className="flex items-center gap-1"><Shield size={10} /> 机构级一致性验证已通过</span>
+                      </div>
+                    </div>
+ 
+                    {(() => {
+                      const matrix = discussionSensitivity || analysis?.sensitivityMatrix;
+                      return matrix && (
+                        <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
+                          <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+                            <Table size={16} className="text-emerald-500" />
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">多变量收益敏感度矩阵</span>
+                          </div>
+                          <div className="space-y-2">
+                            {matrix.map((row: any, idx: number) => (
+                              <div key={`smr-${row.variable}-${idx}`} className="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200/60 last:border-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-zinc-400 w-20 truncate">{row.variable}</span>
+                                  <span className="text-zinc-400 font-mono italic">{row.change}</span>
+                                  <ArrowRight size={10} className="text-zinc-300" />
+                                </div>
+                                <div className="text-right">
+                                  <span className={cn(
+                                    "font-semibold tracking-tighter mr-2",
+                                    row.profitImpact.includes('+') ? "text-emerald-500" : "text-rose-500"
+                                  )}>
+                                    {row.profitImpact}
+                                  </span>
+                                  <span className="text-[9px] text-zinc-300 flex items-center gap-0.5 justify-end">
+                                    <Clock size={8} /> {row.timeLag}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              );
+            })()}
           </motion.div>
         )}
 
@@ -439,8 +457,11 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                         msg.type === "user_question" ? "bg-white border-zinc-200 text-zinc-600" : 
                         "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300 hover:shadow-md"
                       )}>
-                        <div className="prose prose-sm md:prose-base max-w-none prose-zinc prose-headings:text-zinc-900 prose-headings:font-bold prose-p:text-zinc-600 prose-strong:text-zinc-900 prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1 prose-code:rounded prose-table:border prose-table:border-zinc-200 prose-th:bg-zinc-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        <div className="prose prose-sm md:prose-base max-w-none prose-zinc prose-p:leading-relaxed prose-p:mb-4 prose-p:text-zinc-700 prose-headings:mt-6 prose-headings:mb-3 prose-strong:text-zinc-950 prose-table:my-6 prose-table:border-collapse prose-th:bg-zinc-50 prose-th:text-zinc-900 prose-th:font-extrabold prose-th:border prose-th:border-zinc-200 prose-td:border prose-td:border-zinc-100 prose-td:p-3 prose-img:rounded-2xl">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]} 
+                            rehypePlugins={[rehypeRaw]}
+                          >
                             {msg.content}
                           </ReactMarkdown>
                         </div>

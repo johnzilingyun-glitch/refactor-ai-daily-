@@ -333,6 +333,26 @@ export async function routeUserQuestion(
   return "Professional Reviewer";
 }
 
+
+// Simple in-memory cache for data and results
+const discussionCache = {
+  commodities: null as any,
+  commoditiesTimestamp: 0,
+  CACHE_DURATION: 15 * 60 * 1000 // 15 mins
+};
+
+async function getCachedCommodities() {
+  const now = Date.now();
+  if (discussionCache.commodities && (now - discussionCache.commoditiesTimestamp < discussionCache.CACHE_DURATION)) {
+    return discussionCache.commodities;
+  }
+  
+  const data = await getCommoditiesData();
+  discussionCache.commodities = data;
+  discussionCache.commoditiesTimestamp = now;
+  return data;
+}
+
 export async function answerDiscussionQuestion(
   analysis: StockAnalysis,
   question: string,
@@ -341,10 +361,9 @@ export async function answerDiscussionQuestion(
   config?: GeminiConfig
 ): Promise<AgentMessage> {
   const ai = createAI(config);
-  const commoditiesData = await getCommoditiesData();
+  const commoditiesData = await getCachedCommodities();
   const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
   const backtest = performBacktest(analysis, previousAnalysis);
-
   const prompt = getExpertPrompt(expertRole, analysis, history, commoditiesData, backtest);
   
   const additionalContext = `
@@ -379,7 +398,7 @@ export async function generateNewConclusion(
   config?: GeminiConfig
 ): Promise<{ message: AgentMessage, finalConclusion: string }> {
   const ai = createAI(config);
-  const commoditiesData = await getCommoditiesData();
+  const commoditiesData = await getCachedCommodities();
   const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
   const backtest = performBacktest(analysis, previousAnalysis);
 

@@ -74,9 +74,6 @@ export function TokenUsage() {
                 {serviceStatus === 'quota_exhausted' ? 'Quota Exhausted' : 
                  serviceStatus === 'error' ? 'Service Limited' : 'Active / Stable'}
               </p>
-              <p className="text-[9px] text-zinc-400 font-medium tracking-tight">
-                {serviceStatus === 'quota_exhausted' ? 'Wait a few minutes' : 'Gemini Free-Tier Monitoring'}
-              </p>
             </div>
           </div>
         </div>

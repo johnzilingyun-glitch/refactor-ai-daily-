@@ -8,6 +8,8 @@ interface DiscussionState {
   analystWeights: AnalystWeight[];
   currentRound: number;
   totalRounds: number;
+  expectedValueOutcome: any | null;
+  sensitivityMatrix: any[] | null;
   abortController: AbortController | null;
 
   setDiscussionMessages: (messages: AgentMessage[] | ((prev: AgentMessage[]) => AgentMessage[])) => void;
@@ -28,6 +30,8 @@ const initialState = {
   analystWeights: [] as AnalystWeight[],
   currentRound: 0,
   totalRounds: 0,
+  expectedValueOutcome: null,
+  sensitivityMatrix: null,
   abortController: null as AbortController | null,
 };
 
@@ -47,6 +51,8 @@ export const useDiscussionStore = create<DiscussionState>((set, get) => ({
     controversialPoints: discussion.controversialPoints || [],
     tradingPlanHistory: discussion.tradingPlanHistory || [],
     analystWeights: discussion.analystWeights || [],
+    expectedValueOutcome: discussion.expectedValueOutcome || null,
+    sensitivityMatrix: discussion.sensitivityMatrix || null,
   }),
   setRoundProgress: (currentRound, totalRounds) => set({ currentRound, totalRounds }),
   setAbortController: (abortController) => set({ abortController }),

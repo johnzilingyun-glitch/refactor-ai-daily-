@@ -493,6 +493,8 @@ export interface ExpertOutput {
     quantifiedRisks?: QuantifiedRisk[];
     scenarios?: Scenario[];
     tradingPlan?: TradingPlan;
+    expectedValueOutcome?: ExpectedValueOutcome;
+    sensitivityMatrix?: SensitivityMatrixRow[];
   };
 }
 
