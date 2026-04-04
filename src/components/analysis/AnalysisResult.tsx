@@ -34,7 +34,8 @@ interface AnalysisResultProps {
   onSendStockReport: () => void;
   onSendDiscussionReport: () => void;
   onSendChatReport: () => void;
-  onDiscussionQuestion: (question: string) => void;
+  onDiscussionQuestion: (question: string, targetRole?: any) => void;
+  onGenerateNewConclusion: () => void;
   onChat: (message?: string) => void;
 }
 
@@ -45,6 +46,7 @@ export function AnalysisResult({
   onSendDiscussionReport,
   onSendChatReport,
   onDiscussionQuestion,
+  onGenerateNewConclusion,
   onChat,
 }: AnalysisResultProps) {
   const [isDiscussionFullscreen, setIsDiscussionFullscreen] = useState(false);
@@ -218,7 +220,7 @@ export function AnalysisResult({
                       </h4>
                       <div className="space-y-2">
                         {controversialPoints.map((point, idx) => (
-                          <div key={`controversial-${idx}-${point.substring(0, 30)}`} className="flex items-start gap-2">
+                          <div key={`controversial-${idx}-${point.substring(0, 30)}-${Math.random().toString(36).slice(2, 7)}`} className="flex items-start gap-2">
                             <div className="w-1 h-1 rounded-full bg-rose-500 mt-1.5 shrink-0" />
                             <p className="text-[11px] text-zinc-500 leading-relaxed italic">{point}</p>
                           </div>
@@ -595,7 +597,7 @@ export function AnalysisResult({
 
                   {/* Moderator messages */}
                   {discussionMessages.filter(m => m.role === "Moderator").map((m, i) => (
-                    <div key={`mod-${i}-${m.id || m.role}`} className="relative">
+                    <div key={`mod-${i}-${m.id || m.role}-${Math.random().toString(36).slice(2, 7)}`} className="relative">
                       <div className="absolute -left-2 top-0 bottom-0 w-1 bg-indigo-600/50 rounded-full" />
                       <div className="prose prose-invert prose-sm max-w-none pl-4">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -729,6 +731,7 @@ export function AnalysisResult({
             >
               <DiscussionPanel 
                 onSendMessage={onDiscussionQuestion}
+                onGenerateNewConclusion={onGenerateNewConclusion}
                 onClose={() => setShowDiscussion(false)}
                 isFullscreen={isDiscussionFullscreen}
                 onToggleFullscreen={() => setIsDiscussionFullscreen(!isDiscussionFullscreen)}
@@ -1315,7 +1318,7 @@ export function AnalysisResult({
 
           <div className="mb-6 max-h-96 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
             {chatHistory?.map((msg, idx) => (
-              <div key={`chat-msg-${msg.id || `${msg.role}-${idx}-${msg.content.substring(0, 20)}`}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={`chat-msg-${msg.id || `${msg.role}-${idx}-${msg.content.substring(0, 20)}-${Math.random().toString(36).slice(2, 7)}`}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'rounded-tr-none bg-emerald-600 text-zinc-950' : 'rounded-tl-none bg-zinc-50 text-zinc-500'}`}>
                   {msg.content}
                 </div>

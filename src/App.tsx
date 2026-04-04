@@ -29,7 +29,7 @@ export default function App() {
 
   // Custom hooks for business logic
   const { handleSearch, resetToHome, fetchAdminData } = useStockAnalysis();
-  const { handleDiscussionQuestion } = useDiscussion(fetchAdminData);
+  const { handleDiscussionQuestion, handleGenerateNewConclusion } = useDiscussion(fetchAdminData);
   const { handleChat } = useChat(fetchAdminData);
   const { fetchMarketOverview } = useMarketData(fetchAdminData);
   const {
@@ -112,6 +112,7 @@ export default function App() {
               onSendDiscussionReport={handleSendDiscussionReport}
               onSendChatReport={handleSendChatReport}
               onDiscussionQuestion={handleDiscussionQuestion}
+              onGenerateNewConclusion={handleGenerateNewConclusion}
               onChat={handleChat}
             />
           ) : (

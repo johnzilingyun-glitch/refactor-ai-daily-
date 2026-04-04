@@ -91,6 +91,7 @@ router.get('/stock/commodities', async (req, res) => {
     { symbol: 'HG=F', name: 'LME铜 (HG)', unit: '$/lb' },
     { symbol: 'CL=F', name: '原油 (WTI)', unit: '$/bbl' },
     { symbol: 'SI=F', name: '白银', unit: '$/oz' },
+    { symbol: 'USDCNY=X', name: '美元/人民币', unit: 'CNY' },
   ];
 
   try {
@@ -105,6 +106,7 @@ router.get('/stock/commodities', async (req, res) => {
             price: quote.regularMarketPrice,
             changePercent: quote.regularMarketChangePercent !== undefined ? parseFloat(quote.regularMarketChangePercent.toFixed(2)) : 0,
             unit: item.unit,
+            source: 'Yahoo Finance API',
             lastUpdated: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) + ' CST'
           });
         }

@@ -66,14 +66,14 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 2. 识别关键支撑位和阻力位
 3. 评估成交量配合情况
 4. 给出技术面评分和短期趋势判断
-**交流要求**: 你必须回应深度研究专家提出的核心变量，从技术面角度验证或质疑其结论。如果前轮有其他专家发言，也必须就他们的观点给出技术面的印证或反驳。`,
+**专业研判集成要求**: 你必须审视深度研究专家提出的核心变量，从技术面视角对其结论进行客观验证或证伪。如果前序已有其他专家发言，你必须将他们的观点纳入你的技术面分析框架，给出印证或反驳。`,
 
   'Fundamental Analyst': `你是基本面分析师。任务：
 1. 评估核心财务指标（PE/PB/ROE/增长率）
 2. 与同行业公司估值对比
-3. 分析盈利质量和可持续性
+3. 分析盈利质量 and 可持续性
 4. 给出合理估值区间
-**交流要求**: 你必须结合深度研究专家的核心变量和技术分析师的趋势判断，从估值角度评价当前价格是否合理。若技术面与基本面矛盾，必须明确指出并给出解释。`,
+**专业研判集成要求**: 你必须集成深度研究专家的核心变量和技术分析师的趋势判断，从估值维度评价当前价格的合理性。若技术面与基本面逻辑存在背离，你必须客观指出并给出基于专业视角的深度解释。`,
 
   'Sentiment Analyst': `你是情绪分析师。任务：
 1. 评估当前市场对该股票的整体情绪
@@ -98,20 +98,20 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 - Source 列必须标注具体来源和日期
 - 明确区分"机构有序撤离"和"散户恐慌抛售"
 
-**交流要求**: 你必须将情绪面数据与前面技术分析师和基本面分析师的判断进行交叉验证。特别关注"资金流向是否支持技术趋势"和"市场情绪是否与基本面匹配"。若资金面与技术面矛盾，必须明确指出并分析背离原因。`,
+**专业研判集成要求**: 你必须将情绪面量化数据与前序技术分析师和基本面分析师的判断进行深度交叉验证。重点研判"资金流向是否支撑技术趋势"以及"市场情绪是否透支基本面预期"。若资金面与技术面出现背离，必须给出理性的专业解释。`,
 
   'Risk Manager': `你是风险经理。任务：
 1. 列出 3-5 个量化风险（概率 × 影响 = 期望损失）
 2. 为每个风险提供对冲策略
 3. 设计止损方案（价格止损 + 逻辑止损）
 4. 评估最大回撤风险
-**交流要求**: 你必须针对前面所有专家的看涨/看跌观点，逐一评估其风险暴露。若多位专家意见一致，需警惕一致性偏差风险。止损位必须参考技术分析师的支撑位。`,
+**专业研判集成要求**: 你必须针对前序所有专家的看涨/看跌逻辑，逐一进行压力测试和风险暴露评估。若多位专家观点趋同，你必须警惕并指出"一致性偏差"风险。你的止损位设定必须参考技术分析师提供的关键支撑位。`,
 
   'Contrarian Strategist': `你是逆向策略师。任务：
-1. 挑战前面专家的主流观点——必须引用具体专家的具体论点进行反驳
-2. 指出前面讨论中被集体忽略的反面论据
-3. 分析"如果市场共识错了"的情景
-4. 提供替代性投资逻辑
+1. 挑战前序专家的主流观点——必须引用具体专家的具体论点进行专业反驳
+2. 指出讨论中被集体忽略的负面变量或逻辑死角
+3. 分析"如果市场共识发生坍塌"的极端情景
+4. 提供具备客观依据的替代性投资逻辑
 
 **数据获取要求 (MANDATORY)**:
 你必须使用 Google Search 搜索以下对立面数据（严禁凭空编造）：
@@ -124,7 +124,7 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 你必须输出一个 Markdown 表格：
 | 主流观点 | 持有者 | 反向论据 | 数据支撑 | 概率评估 | Source |
 要求：
-- 至少列出 3 个前面专家的主流观点并逐一反驳
+- 至少列出 3 个前序专家的主流观点并逐一反驳
 - "持有者"列必须指名道姓（如"技术分析师认为..."、"深度研究专家提出..."）
 - "数据支撑"列必须有通过 Google Search 获取的具体数据
 - Source 列必须标注来源和日期
@@ -135,21 +135,21 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
 - 卖方一致评级分布（买入/持有/卖出的比例）
 - 过去30天涨幅 vs 行业平均涨幅（是否过度偏离）
 
-**交流要求**: 你不能泛泛而谈。必须引用前面至少 2 位专家的具体观点并逐一反驳，指出他们逻辑中的薄弱环节。每个反驳必须有 Google Search 获取的数据支撑。`,
+**专业研判集成要求**: 你不能进行泛泛而谈的互动。你必须引用前序至少 2 位专家的具体观点，利用你的专业视角指出其逻辑中的薄弱环节。每个反驳必须具备坚实的数据支撑，确保反向逻辑的客观性与理性。`,
 
-  'Professional Reviewer': `你是专业评审，负责审查整轮讨论质量。任务：
-1. 逐一检查每位专家发言的逻辑一致性——是否存在自相矛盾
-2. 识别各专家之间的数据冲突和分歧焦点
-3. 验证关键假设是否有数据支撑
-4. 给出综合可信度评分（0-100）
-**交流要求**: 你必须引用具体专家和其观点，指出哪些共识是可信的、哪些分歧需要在下一轮重点讨论。你的评审将直接指导后续迭代轮次的讨论焦点。`,
+  'Professional Reviewer': `你是专业评审，负责审查整轮研讨的逻辑严密性。任务：
+1. 逐一审查每位专家发言的逻辑一致性——严查是否存在自相矛盾或数据误用
+2. 识别各专家之间的数据冲突和分歧焦点，并给出中立的专业判读
+3. 验证所有关键假设是否具备坚实的证据支撑
+4. 给出该轮研讨的综合可信度评分（0-100）
+**专业研判集成要求**: 你必须引用具体专家及其核心观点，明确指出哪些共识是具备高置信度的，哪些分歧是后续决策的关键。你的评审报告将作为首席策略师最终定调的核心参考。`,
 
-  'Chief Strategist': `你是首席策略师，做最终总结决策。任务：
-1. 综合所有专家的讨论交流（特别是分歧和冲突），形成最终判断
-2. 制定具体交易计划（入场/目标/止损）——必须基于技术分析师的支撑阻力位和风险经理的止损建议
-3. 设计仓位管理方案——必须参考风险经理的风险量化
-4. 给出明确的投资建议和置信度
-**交流要求**: 你的结论必须体现对所有专家讨论的综合权衡，不能忽视反向策略师的质疑。必须说明采纳了哪些观点、否决了哪些观点及其理由。交易计划必须与你的结论逻辑一致。`,
+  'Chief Strategist': `你是首席策略师，负责最终的综合研判与决策。任务：
+1. 深度集成所有专家的研讨成果（特别是分歧点与冲突逻辑），形成客观、理性的最终判断
+2. 制定具备实操性的交易计划（入场/目标/止损）——必须基于技术分析师的支撑阻力位和风险经理的止损方案
+3. 设计科学的仓位管理方案——必须参考风险经理的量化风险评估
+4. 给出明确的投资建议及对应的置信度
+**专业研判集成要求**: 你的最终报告必须体现对整体讨论逻辑的深度提炼与权衡。你必须说明采纳了哪些专业观点、否决了哪些逻辑及其背后的客观理由。严禁忽视逆向策略师的预警，你的决策必须在充分考虑所有风险变量后给出。`,
 
   'Moderator': '协调讨论流程',
 };
@@ -233,14 +233,18 @@ export function getExpertPrompt(
   sections.push(`5. 若某项关键数据无法通过搜索验证，必须标注"未经验证"。`);
   sections.push(`6. 你的发言中至少列出 3 个关键数值，并明确对应数据源优先级（API/Search/Other）。`);
 
-  // Previous rounds — structured for interactive discussion
+  // Previous rounds — structured for professional integration
   if (previousRounds.length > 0) {
-    sections.push('\n**前轮专家发言（你必须回应和交流，不能各说各话）**:');
+    sections.push('\n**前轮专家分析结论（作为你的分析输入与证据链）**:');
     for (const msg of previousRounds) {
       const roundLabel = msg.round ? `[第${msg.round}轮]` : '';
-      sections.push(`- **${msg.role}** ${roundLabel}: ${msg.content.slice(0, 600)}${msg.content.length > 600 ? '...' : ''}`);
+      sections.push(`- **${msg.role}** ${roundLabel}: ${msg.content.slice(0, 800)}${msg.content.length > 800 ? '...' : ''}`);
     }
-    sections.push(`\n**互动要求**: 你的发言必须引用和回应上述专家的具体观点。赞同的要说明理由，反对的要用数据反驳。禁止忽视前面专家的讨论内容。`);
+    sections.push(`\n**专业研判集成要求 (MANDATORY)**: 你不是在进行简单的模拟互动，而是作为一名资深专家，必须对前序专家的所有分析进行客观、理性、专业的审视。你必须：
+1. 将前序专家的结论作为你的分析背景和证据链的一部分。
+2. 利用你的专业领域知识，对前序观点进行验证、补充或证伪。
+3. 严禁各说各话，你的报告必须体现出对整体讨论逻辑的深度集成与专业升华。
+4. 引用具体专家的论点时，必须给出你基于专业视角的客观评价。`);
   }
 
   // Backtest context
@@ -254,16 +258,16 @@ export function getExpertPrompt(
   }
 
   // Response format
-  sections.push(`\n请以 JSON 格式返回你的分析结果，包含 "content" 字段（发言内容）。`);
+  sections.push(`\n【重要】请以 JSON 格式返回你的分析结果。你必须在 "content" 字段中提供详细的文字分析（不少于 200 字），不能仅返回结构化数据。`);
 
   return sections.join('\n');
 }
 
 export function getExpertResponseSchema(role: AgentRole): Record<string, any> {
   const base = {
-    type: 'object' as const,
+    type: 'OBJECT' as const,
     properties: {
-      content: { type: 'string', description: '专家发言内容' },
+      content: { type: 'STRING', description: '专家发言内容' },
     },
     required: ['content'],
   };
@@ -274,8 +278,12 @@ export function getExpertResponseSchema(role: AgentRole): Record<string, any> {
         ...base,
         properties: {
           ...base.properties,
-          coreVariables: { type: 'array', description: '核心驱动变量' },
-          businessModel: { type: 'object', description: '商业模式分析' },
+          coreVariables: { 
+            type: 'ARRAY', 
+            description: '核心驱动变量',
+            items: { type: 'OBJECT' }
+          },
+          businessModel: { type: 'OBJECT', description: '商业模式分析' },
         },
       };
     case 'Risk Manager':
@@ -283,7 +291,11 @@ export function getExpertResponseSchema(role: AgentRole): Record<string, any> {
         ...base,
         properties: {
           ...base.properties,
-          quantifiedRisks: { type: 'array', description: '量化风险列表' },
+          quantifiedRisks: { 
+            type: 'ARRAY', 
+            description: '量化风险列表',
+            items: { type: 'OBJECT' }
+          },
         },
       };
     case 'Chief Strategist':
@@ -291,9 +303,13 @@ export function getExpertResponseSchema(role: AgentRole): Record<string, any> {
         ...base,
         properties: {
           ...base.properties,
-          tradingPlan: { type: 'object', description: '交易计划' },
-          scenarios: { type: 'array', description: '情景分析' },
-          finalConclusion: { type: 'string', description: '最终结论' },
+          tradingPlan: { type: 'OBJECT', description: '交易计划' },
+          scenarios: { 
+            type: 'ARRAY', 
+            description: '情景分析',
+            items: { type: 'OBJECT' }
+          },
+          finalConclusion: { type: 'STRING', description: '最终结论' },
         },
       };
     case 'Contrarian Strategist':
@@ -301,7 +317,11 @@ export function getExpertResponseSchema(role: AgentRole): Record<string, any> {
         ...base,
         properties: {
           ...base.properties,
-          controversialPoints: { type: 'array', description: '争议要点' },
+          controversialPoints: { 
+            type: 'ARRAY', 
+            description: '争议要点',
+            items: { type: 'STRING' }
+          },
         },
       };
     default:

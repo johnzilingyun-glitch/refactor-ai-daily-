@@ -77,8 +77,8 @@ export function extractJsonBlock(raw: string): string {
   if (tripleBacktickMatch?.[1]) {
     cleaned = tripleBacktickMatch[1].trim();
   } else {
-    // Also try single backticks
-    const singleBacktickMatch = cleaned.match(/`\s*([\s\S]*?)\s*`/);
+    // Also try single backticks if the entire string is wrapped in them
+    const singleBacktickMatch = cleaned.match(/^`\s*([\s\S]*?)\s*`$/);
     if (singleBacktickMatch?.[1]) {
       cleaned = singleBacktickMatch[1].trim();
     }

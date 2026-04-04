@@ -3,7 +3,7 @@ import { AgentRole, DataVerification } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
  User, Shield, BarChart3, PieChart, MessageSquare, Loader2, Download, Search, Zap, Send, 
- HelpCircle, UserCheck, ExternalLink, AlertTriangle, Award, X, Maximize2, Minimize2, 
+ UserCheck, ExternalLink, AlertTriangle, Award, X, Maximize2, Minimize2, 
  CheckCircle2, ShieldCheck, Cpu, Layers, Target, History, RotateCcw, Database, 
  Calculator, Table, Activity, Clock, ArrowRight, Info, Share2
 } from 'lucide-react';
@@ -60,7 +60,8 @@ const roleNames: Record<AgentRole, string> = {
 };
 
 interface DiscussionPanelProps {
- onSendMessage?: (message: string) => void;
+ onSendMessage?: (message: string, targetRole?: AgentRole) => void;
+ onGenerateNewConclusion?: () => void;
  onClose?: () => void;
  isFullscreen?: boolean;
  onToggleFullscreen?: () => void;
@@ -69,6 +70,7 @@ interface DiscussionPanelProps {
 
 export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  onSendMessage,
+ onGenerateNewConclusion,
  onClose,
  isFullscreen,
  onToggleFullscreen,
@@ -88,6 +90,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
 
  const scrollRef = useRef<HTMLDivElement>(null);
  const [inputValue, setInputValue] = React.useState('');
+ const [targetRole, setTargetRole] = React.useState<AgentRole>('Professional Reviewer');
  const stockSymbol = analysis?.stockInfo?.symbol;
  const dataVerification = analysis?.dataVerification;
 
@@ -103,7 +106,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
 
  const handleSend = () => {
  if (inputValue.trim() && onSendMessage) {
- onSendMessage(inputValue.trim());
+ onSendMessage(inputValue.trim(), targetRole);
  setInputValue('');
  }
  };
@@ -317,14 +320,270 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </motion.div>
  )}
 
+  {/* Expected Value Center - Moved to Top */}
+  {!isDiscussing && analysis?.expectedValueOutcome && (
+  <motion.div
+  initial={{ opacity: 0, y: 10 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="max-w-4xl mx-auto space-y-6"
+  >
+  <div className="flex items-center justify-between mb-2">
+  <div className="flex items-center gap-3">
+  <div className="h-8 w-8 rounded-xl bg-indigo-600/10 flex items-center justify-center border border-indigo-600/15">
+  <Calculator size={18} className="text-indigo-600" />
+  </div>
+  <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-600">期望价值中枢 (Expected Value)</h4>
+  </div>
+  <div className="text-right">
+  <p className="text-[10px] text-zinc-400 uppercase font-semibold">统一期望价格</p>
+  <p className="text-2xl font-semibold text-zinc-950 tracking-tighter">${analysis.expectedValueOutcome.expectedPrice}</p>
+  </div>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  {/* EV Calculation logic */}
+  <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
+  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+  <Activity size={16} className="text-indigo-600" />
+  <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">概率加权演算逻辑</span>
+  </div>
+  <div className="bg-zinc-100/80 rounded-xl p-4 border border-zinc-200/60 font-mono text-xs text-indigo-500/80 leading-relaxed italic">
+  "{analysis.expectedValueOutcome.calculationLogic}"
+  </div>
+  <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2">
+  <span>置信区间: <span className="text-zinc-500 font-medium">{analysis.expectedValueOutcome.confidenceInterval}</span></span>
+  <span className="flex items-center gap-1"><Shield size={10} /> 机构级一致性验证已通过</span>
+  </div>
+  </div>
+
+  {/* Sensitivity Matrix */}
+  {analysis.sensitivityMatrix && (
+  <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
+  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+  <Table size={16} className="text-emerald-500" />
+  <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">多变量收益敏感度矩阵</span>
+  </div>
+  <div className="space-y-2">
+  {analysis.sensitivityMatrix.map((row, idx) => (
+  <div key={`smr-${row.variable}-${idx}`} className="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200/60 last:border-0">
+  <div className="flex items-center gap-2">
+  <span className="text-zinc-400 w-16 truncate">{row.variable}</span>
+  <span className="text-zinc-400 font-mono italic">{row.change}</span>
+  <ArrowRight size={10} className="text-zinc-300" />
+  </div>
+  <div className="text-right">
+  <span className={cn(
+  "font-semibold tracking-tighter mr-2",
+  row.profitImpact.includes('+') ? "text-emerald-500" : "text-rose-500"
+  )}>
+  {row.profitImpact}
+  </span>
+  <span className="text-[9px] text-zinc-300 flex items-center gap-0.5 justify-end">
+  <Clock size={8} /> {row.timeLag}
+  </span>
+  </div>
+  </div>
+  ))}
+  </div>
+  </div>
+  )}
+  </div>
+  </motion.div>
+  )}
+
+  {/* Decision Engine Dashboard - Moved to Top */}
+  {!isDiscussing && analysis && (analysis.coreVariables || analysis.businessModel || analysis.quantifiedRisks) && (
+  <motion.div
+  initial={{ opacity: 0, y: 10 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="max-w-4xl mx-auto space-y-6 mb-8"
+  >
+  <div className="flex items-center gap-3 mb-2">
+  <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/15">
+  <Target size={18} className="text-emerald-500" />
+  </div>
+  <h4 className="text-sm font-bold uppercase tracking-wider text-emerald-500">决策引擎量化看板</h4>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  {/* Core Variables */}
+  {analysis.coreVariables && analysis.coreVariables.length > 0 && (
+  <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-cyan-200/50 transition-all">
+  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+  <Cpu size={16} className="text-cyan-600" />
+  <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-600">核心经济变量 (SSoT)</span>
+  </div>
+  <div className="space-y-2">
+  {analysis.coreVariables.map((v, idx) => (
+  <div key={`cv-${v.name}-${idx}`} className="bg-white rounded-xl p-3 border border-zinc-200/60 text-xs">
+  <div className="flex justify-between mb-1.5">
+  <span className="font-medium text-zinc-600">{v.name}</span>
+  <span className="text-zinc-400 font-mono text-[10px]">[{v.unit}] {v.evidenceLevel}{v.source ? ` · ${v.source}` : ''}{v.dataDate ? ` ${v.dataDate}` : ''}</span>
+  </div>
+  <div className="grid grid-cols-3 gap-2 text-center">
+  <div><p className="text-[10px] text-zinc-400">当前</p><p className="font-mono text-zinc-500">{String(v.value)}</p></div>
+  <div className="border-x border-zinc-200/60"><p className="text-[10px] text-zinc-400">市场预期</p><p className="font-mono text-zinc-500">{String(v.marketExpect)}</p></div>
+  <div><p className="text-[10px] text-emerald-500">偏离</p><p className="font-mono text-emerald-500 font-medium">{v.delta}</p></div>
+  </div>
+  {v.reason && <p className="mt-1.5 pt-1.5 border-t border-zinc-200/60 text-[10px] text-indigo-500/80 italic">{v.reason}</p>}
+  </div>
+  ))}
+  </div>
+  </div>
+  )}
+
+  {/* Business Model */}
+  {analysis.businessModel && (
+  <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-emerald-500/15 transition-all">
+  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+  <Layers size={16} className="text-emerald-500" />
+  <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-500">单位经济模型</span>
+  <span className="ml-auto text-[10px] font-mono text-zinc-300 uppercase">{analysis.businessModel.businessType}</span>
+  </div>
+  <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-4">
+  <p className="text-[10px] text-emerald-500 font-bold uppercase mb-1">利润推演公式</p>
+  <p className="text-sm font-mono text-zinc-700 font-medium break-all">{analysis.businessModel.formula}</p>
+  </div>
+  <div className="grid grid-cols-2 gap-3">
+  <div><p className="text-[10px] text-zinc-400">预测利润</p><p className="text-base font-semibold text-zinc-950">{analysis.businessModel.projectedProfit}</p></div>
+  <div className="text-right"><p className="text-[10px] text-zinc-400">置信度</p><p className="text-base font-semibold text-emerald-500">{analysis.businessModel.confidenceScore}%</p></div>
+  </div>
+  <div className="flex flex-wrap gap-1.5">
+  {Object.entries(analysis.businessModel.drivers).map(([k, v], idx) => (
+  <span key={`drv-${k}-${idx}`} className="px-2 py-0.5 rounded-xl text-[10px] font-medium bg-zinc-100/50 border border-zinc-200 text-zinc-400">{k}: {v}</span>
+  ))}
+  </div>
+  </div>
+  )}
+
+  {/* Quantified Risks */}
+  {analysis.quantifiedRisks && analysis.quantifiedRisks.length > 0 && (
+  <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-rose-500/12 transition-all">
+  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+  <Shield size={16} className="text-rose-500" />
+  <span className="text-[11px] font-bold uppercase tracking-widest text-rose-500">风险概率矩阵 (EV)</span>
+  {analysis.riskAdjustedValuation && (
+  <span className="ml-auto text-[10px] font-mono font-medium text-indigo-600">风险调整估值: {analysis.riskAdjustedValuation}</span>
+  )}
+  </div>
+  <div className="space-y-2">
+  {analysis.quantifiedRisks.map((r, idx) => (
+  <div key={`qr-${idx}`} className="grid grid-cols-12 gap-2 items-center bg-zinc-100/60 p-2.5 rounded-xl border border-zinc-200/60 text-xs">
+  <div className="col-span-4"><p className="font-medium text-zinc-600 truncate">{r.name}</p><p className="text-[10px] text-zinc-400 truncate">{r.mitigation}</p></div>
+  <div className="col-span-2 text-center"><p className="text-[9px] text-zinc-400">概率</p><p className="font-mono font-medium text-indigo-600">{r.probability}%</p></div>
+  <div className="col-span-3 text-center"><p className="text-[9px] text-zinc-400">利润冲击</p><p className="font-mono font-medium text-rose-500">{r.impactPercent}%</p></div>
+  <div className="col-span-3 text-right"><p className="text-[9px] text-zinc-400">EV损失</p><p className="font-mono font-semibold text-rose-500 bg-rose-500/6 px-1.5 py-0.5 rounded-xl">{r.expectedLoss}%</p></div>
+  </div>
+  ))}
+  </div>
+  </div>
+  )}
+
+  {/* Position Plan (from tradingPlan) */}
+  {analysis.tradingPlan?.positionPlan && analysis.tradingPlan.positionPlan.length > 0 && (
+  <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-indigo-600/12 transition-all">
+  <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
+  <Award size={16} className="text-indigo-600" />
+  <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-600">分层建仓 & 逻辑止损</span>
+  </div>
+  <div className="flex gap-2">
+  {analysis.tradingPlan.positionPlan.map((p, idx) => (
+  <div key={`pp-${idx}`} className="flex-1 bg-indigo-600/6 border border-indigo-600/12 rounded-xl p-3 text-center">
+  <p className="text-sm font-semibold text-indigo-600">{p.price}</p>
+  <p className="text-[10px] text-zinc-400">{p.positionPercent}%</p>
+  </div>
+  ))}
+  </div>
+  {analysis.tradingPlan.logicBasedStopLoss && (
+  <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-500/4 p-2.5 rounded-xl border border-rose-500/8">
+  <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+  <span>{analysis.tradingPlan.logicBasedStopLoss}</span>
+  </div>
+  )}
+  {analysis.tradingPlan.riskRewardRatio && (
+  <p className="text-[10px] text-zinc-400">风险收益比: <span className="font-medium text-emerald-500">{analysis.tradingPlan.riskRewardRatio}</span></p>
+  )}
+  </div>
+  )}
+  </div>
+  </motion.div>
+  )}
+
+  {/* Data Integrity Report - Moved to Top */}
+  {!isDiscussing && dataVerification && dataVerification.length > 0 && (
+  <motion.div
+  initial={{ opacity: 0, y: -10 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="max-w-4xl mx-auto bg-white border border-emerald-500/15 rounded-2xl p-6 space-y-4"
+  >
+  <div className="flex items-center justify-between border-b border-zinc-200/60 pb-4">
+  <div className="flex items-center gap-3">
+  <ShieldCheck className="text-emerald-500" size={20} />
+  <h4 className="text-sm font-bold uppercase tracking-widest text-emerald-500">数据完整性与交叉验证报告</h4>
+  </div>
+  <div className="flex items-center gap-3">
+  {analysis?.dataQuality && (
+  <div className={cn(
+  "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+  getQualityLabel(analysis.dataQuality.score).color,
+  "bg-zinc-50 border-zinc-200/60"
+  )}>
+  <Database size={10} />
+  综合质量: {analysis.dataQuality.score}%
+  </div>
+  )}
+  <span className="text-[10px] font-mono font-medium text-zinc-400 uppercase">实时监测已开启</span>
+  </div>
+  </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {dataVerification.map((item, idx) => (
+  <div key={`verification-${idx}-${item.source}`} className="bg-white border border-zinc-200/60 rounded-xl p-4 space-y-2">
+  <div className="flex items-center justify-between">
+  <span className="text-xs font-medium text-zinc-500">{item.source}</span>
+  {item.isVerified ? (
+  <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+  <CheckCircle2 size={10} />
+  已验证
+  </span>
+  ) : (
+  <span className="flex items-center gap-1 text-[10px] font-medium text-rose-500 bg-rose-400/10 px-2 py-0.5 rounded-full border border-rose-400/20">
+  <AlertTriangle size={10} />
+  存在差异
+  </span>
+  )}
+  </div>
+  {item.discrepancy && (
+  <p className="text-xs text-rose-300/80 leading-relaxed italic">
+  差异: {item.discrepancy}
+  </p>
+  )}
+  <div className="flex items-center justify-between pt-2">
+  <div className="flex items-center gap-2">
+  <div className="w-16 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+  <div
+  className={`h-full rounded-full ${item.confidence > 90 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+  style={{ width: `${item.confidence}%` }}
+  />
+  </div>
+  <span className="text-[10px] font-mono font-medium text-zinc-400">{item.confidence}% 置信度</span>
+  </div>
+  <span className="text-[10px] font-mono text-zinc-300 italic">
+  {new Date(item.lastChecked).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  </span>
+  </div>
+  </div>
+  ))}
+  </div>
+  </motion.div>
+  )}
  <AnimatePresence initial={false}>
  {messages.map((msg, i) => {
- const msgKey = msg.id ? `msg-id-${msg.id}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}`;
+ const msgKey = msg.id ? `msg-id-${msg.id}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}-${Math.random().toString(36).slice(2, 7)}`;
  const showRoundDivider = msg.round != null && (i === 0 || messages[i - 1]?.round !== msg.round);
  return (
- <React.Fragment key={msgKey}>
+ <React.Fragment key={`frag-${msgKey}`}>
  {showRoundDivider && (
- <div className="flex items-center gap-3 my-4 max-w-4xl mx-auto">
+ <div key={`divider-${msgKey}`} className="flex items-center gap-3 my-4 max-w-4xl mx-auto">
  <div className="flex-1 h-px bg-indigo-200/40" />
  <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200/50 whitespace-nowrap">
  第 {msg.round} 轮
@@ -333,7 +592,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </div>
  )}
  <motion.div
- key={msgKey}
+ key={`msg-div-${msgKey}`}
  initial={{ opacity: 0, x: -20 }}
  animate={{ opacity: 1, x: 0 }}
  transition={{ type: "spring", stiffness: 100, damping: 15 }}
@@ -376,7 +635,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  <div className="flex flex-wrap gap-2">
  {msg.references.map((ref, idx) => (
  <a
- key={`ref-${idx}-${ref.url}`}
+ key={`ref-${idx}-${ref.url}-${Math.random().toString(36).slice(2, 7)}`}
  href={ref.url}
  target="_blank"
  rel="noopener noreferrer"
@@ -398,260 +657,12 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  })}
  </AnimatePresence>
 
- {/* Decision Engine Dashboard - shown after messages */}
- {!isDiscussing && analysis?.expectedValueOutcome && (
- <motion.div
- initial={{ opacity: 0, y: 10 }}
- animate={{ opacity: 1, y: 0 }}
- className="max-w-4xl mx-auto space-y-6"
- >
- <div className="flex items-center justify-between mb-2">
- <div className="flex items-center gap-3">
- <div className="h-8 w-8 rounded-xl bg-indigo-600/10 flex items-center justify-center border border-indigo-600/15">
- <Calculator size={18} className="text-indigo-600" />
- </div>
- <h4 className="text-sm font-bold uppercase tracking-wider text-indigo-600">期望价值中枢 (Expected Value)</h4>
- </div>
- <div className="text-right">
- <p className="text-[10px] text-zinc-400 uppercase font-semibold">统一期望价格</p>
- <p className="text-2xl font-semibold text-zinc-950 tracking-tighter">${analysis.expectedValueOutcome.expectedPrice}</p>
- </div>
- </div>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
- {/* EV Calculation logic */}
- <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
- <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
- <Activity size={16} className="text-indigo-600" />
- <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">概率加权演算逻辑</span>
- </div>
- <div className="bg-zinc-100/80 rounded-xl p-4 border border-zinc-200/60 font-mono text-xs text-indigo-500/80 leading-relaxed italic">
- "{analysis.expectedValueOutcome.calculationLogic}"
- </div>
- <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-2">
- <span>置信区间: <span className="text-zinc-500 font-medium">{analysis.expectedValueOutcome.confidenceInterval}</span></span>
- <span className="flex items-center gap-1"><Shield size={10} /> 机构级一致性验证已通过</span>
- </div>
- </div>
 
- {/* Sensitivity Matrix */}
- {analysis.sensitivityMatrix && (
- <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-4">
- <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
- <Table size={16} className="text-emerald-500" />
- <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">多变量收益敏感度矩阵</span>
- </div>
- <div className="space-y-2">
- {analysis.sensitivityMatrix.map((row, idx) => (
- <div key={`smr-${row.variable}-${idx}`} className="flex items-center justify-between text-[11px] py-1 border-b border-zinc-200/60 last:border-0">
- <div className="flex items-center gap-2">
- <span className="text-zinc-400 w-16 truncate">{row.variable}</span>
- <span className="text-zinc-400 font-mono italic">{row.change}</span>
- <ArrowRight size={10} className="text-zinc-300" />
- </div>
- <div className="text-right">
- <span className={cn(
- "font-semibold tracking-tighter mr-2",
- row.profitImpact.includes('+') ? "text-emerald-500" : "text-rose-500"
- )}>
- {row.profitImpact}
- </span>
- <span className="text-[9px] text-zinc-300 flex items-center gap-0.5 justify-end">
- <Clock size={8} /> {row.timeLag}
- </span>
- </div>
- </div>
- ))}
- </div>
- </div>
- )}
- </div>
- </motion.div>
- )}
 
- {!isDiscussing && analysis && (analysis.coreVariables || analysis.businessModel || analysis.quantifiedRisks) && (
- <motion.div
- initial={{ opacity: 0, y: 10 }}
- animate={{ opacity: 1, y: 0 }}
- className="max-w-4xl mx-auto space-y-6 mb-8"
- >
- <div className="flex items-center gap-3 mb-2">
- <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/15">
- <Target size={18} className="text-emerald-500" />
- </div>
- <h4 className="text-sm font-bold uppercase tracking-wider text-emerald-500">决策引擎量化看板</h4>
- </div>
 
- <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
- {/* Core Variables */}
- {analysis.coreVariables && analysis.coreVariables.length > 0 && (
- <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-cyan-200/50 transition-all">
- <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
- <Cpu size={16} className="text-cyan-600" />
- <span className="text-[11px] font-bold uppercase tracking-widest text-cyan-600">核心经济变量 (SSoT)</span>
- </div>
- <div className="space-y-2">
- {analysis.coreVariables.map((v, idx) => (
- <div key={`cv-${v.name}-${idx}`} className="bg-white rounded-xl p-3 border border-zinc-200/60 text-xs">
- <div className="flex justify-between mb-1.5">
- <span className="font-medium text-zinc-600">{v.name}</span>
- <span className="text-zinc-400 font-mono text-[10px]">[{v.unit}] {v.evidenceLevel}{v.source ? ` · ${v.source}` : ''}{v.dataDate ? ` ${v.dataDate}` : ''}</span>
- </div>
- <div className="grid grid-cols-3 gap-2 text-center">
- <div><p className="text-[10px] text-zinc-400">当前</p><p className="font-mono text-zinc-500">{String(v.value)}</p></div>
- <div className="border-x border-zinc-200/60"><p className="text-[10px] text-zinc-400">市场预期</p><p className="font-mono text-zinc-500">{String(v.marketExpect)}</p></div>
- <div><p className="text-[10px] text-emerald-500">偏离</p><p className="font-mono text-emerald-500 font-medium">{v.delta}</p></div>
- </div>
- {v.reason && <p className="mt-1.5 pt-1.5 border-t border-zinc-200/60 text-[10px] text-indigo-500/80 italic">{v.reason}</p>}
- </div>
- ))}
- </div>
- </div>
- )}
 
- {/* Business Model */}
- {analysis.businessModel && (
- <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-emerald-500/15 transition-all">
- <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
- <Layers size={16} className="text-emerald-500" />
- <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-500">单位经济模型</span>
- <span className="ml-auto text-[10px] font-mono text-zinc-300 uppercase">{analysis.businessModel.businessType}</span>
- </div>
- <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-4">
- <p className="text-[10px] text-emerald-500 font-bold uppercase mb-1">利润推演公式</p>
- <p className="text-sm font-mono text-zinc-700 font-medium break-all">{analysis.businessModel.formula}</p>
- </div>
- <div className="grid grid-cols-2 gap-3">
- <div><p className="text-[10px] text-zinc-400">预测利润</p><p className="text-base font-semibold text-zinc-950">{analysis.businessModel.projectedProfit}</p></div>
- <div className="text-right"><p className="text-[10px] text-zinc-400">置信度</p><p className="text-base font-semibold text-emerald-500">{analysis.businessModel.confidenceScore}%</p></div>
- </div>
- <div className="flex flex-wrap gap-1.5">
- {Object.entries(analysis.businessModel.drivers).map(([k, v], idx) => (
- <span key={`drv-${k}-${idx}`} className="px-2 py-0.5 rounded-xl text-[10px] font-medium bg-zinc-100/50 border border-zinc-200 text-zinc-400">{k}: {v}</span>
- ))}
- </div>
- </div>
- )}
 
- {/* Quantified Risks */}
- {analysis.quantifiedRisks && analysis.quantifiedRisks.length > 0 && (
- <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-rose-500/12 transition-all">
- <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
- <Shield size={16} className="text-rose-500" />
- <span className="text-[11px] font-bold uppercase tracking-widest text-rose-500">风险概率矩阵 (EV)</span>
- {analysis.riskAdjustedValuation && (
- <span className="ml-auto text-[10px] font-mono font-medium text-indigo-600">风险调整估值: {analysis.riskAdjustedValuation}</span>
- )}
- </div>
- <div className="space-y-2">
- {analysis.quantifiedRisks.map((r, idx) => (
- <div key={`qr-${idx}`} className="grid grid-cols-12 gap-2 items-center bg-zinc-100/60 p-2.5 rounded-xl border border-zinc-200/60 text-xs">
- <div className="col-span-4"><p className="font-medium text-zinc-600 truncate">{r.name}</p><p className="text-[10px] text-zinc-400 truncate">{r.mitigation}</p></div>
- <div className="col-span-2 text-center"><p className="text-[9px] text-zinc-400">概率</p><p className="font-mono font-medium text-indigo-600">{r.probability}%</p></div>
- <div className="col-span-3 text-center"><p className="text-[9px] text-zinc-400">利润冲击</p><p className="font-mono font-medium text-rose-500">{r.impactPercent}%</p></div>
- <div className="col-span-3 text-right"><p className="text-[9px] text-zinc-400">EV损失</p><p className="font-mono font-semibold text-rose-500 bg-rose-500/6 px-1.5 py-0.5 rounded-xl">{r.expectedLoss}%</p></div>
- </div>
- ))}
- </div>
- </div>
- )}
-
- {/* Position Plan (from tradingPlan) */}
- {analysis.tradingPlan?.positionPlan && analysis.tradingPlan.positionPlan.length > 0 && (
- <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 space-y-3 hover:border-indigo-600/12 transition-all">
- <div className="flex items-center gap-2 border-b border-zinc-200/60 pb-3">
- <Award size={16} className="text-indigo-600" />
- <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-600">分层建仓 & 逻辑止损</span>
- </div>
- <div className="flex gap-2">
- {analysis.tradingPlan.positionPlan.map((p, idx) => (
- <div key={`pp-${idx}`} className="flex-1 bg-indigo-600/6 border border-indigo-600/12 rounded-xl p-3 text-center">
- <p className="text-sm font-semibold text-indigo-600">{p.price}</p>
- <p className="text-[10px] text-zinc-400">{p.positionPercent}%</p>
- </div>
- ))}
- </div>
- {analysis.tradingPlan.logicBasedStopLoss && (
- <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-500/4 p-2.5 rounded-xl border border-rose-500/8">
- <AlertTriangle size={12} className="shrink-0 mt-0.5" />
- <span>{analysis.tradingPlan.logicBasedStopLoss}</span>
- </div>
- )}
- {analysis.tradingPlan.riskRewardRatio && (
- <p className="text-[10px] text-zinc-400">风险收益比: <span className="font-medium text-emerald-500">{analysis.tradingPlan.riskRewardRatio}</span></p>
- )}
- </div>
- )}
- </div>
- </motion.div>
- )}
-
- {!isDiscussing && dataVerification && dataVerification.length > 0 && (
- <motion.div
- initial={{ opacity: 0, y: -10 }}
- animate={{ opacity: 1, y: 0 }}
- className="max-w-4xl mx-auto bg-white border border-emerald-500/15 rounded-2xl p-6 space-y-4"
- >
- <div className="flex items-center justify-between border-b border-zinc-200/60 pb-4">
- <div className="flex items-center gap-3">
- <ShieldCheck className="text-emerald-500" size={20} />
- <h4 className="text-sm font-bold uppercase tracking-widest text-emerald-500">数据完整性与交叉验证报告</h4>
- </div>
- <div className="flex items-center gap-3">
- {analysis?.dataQuality && (
- <div className={cn(
- "flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
- getQualityLabel(analysis.dataQuality.score).color,
- "bg-zinc-50 border-zinc-200/60"
- )}>
- <Database size={10} />
- 综合质量: {analysis.dataQuality.score}%
- </div>
- )}
- <span className="text-[10px] font-mono font-medium text-zinc-400 uppercase">实时监测已开启</span>
- </div>
- </div>
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {dataVerification.map((item, idx) => (
- <div key={`verification-${idx}-${item.source}`} className="bg-white border border-zinc-200/60 rounded-xl p-4 space-y-2">
- <div className="flex items-center justify-between">
- <span className="text-xs font-medium text-zinc-500">{item.source}</span>
- {item.isVerified ? (
- <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
- <CheckCircle2 size={10} />
- 已验证
- </span>
- ) : (
- <span className="flex items-center gap-1 text-[10px] font-medium text-rose-500 bg-rose-400/10 px-2 py-0.5 rounded-full border border-rose-400/20">
- <AlertTriangle size={10} />
- 存在差异
- </span>
- )}
- </div>
- {item.discrepancy && (
- <p className="text-xs text-rose-300/80 leading-relaxed italic">
- 差异: {item.discrepancy}
- </p>
- )}
- <div className="flex items-center justify-between pt-2">
- <div className="flex items-center gap-2">
- <div className="w-16 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
- <div
- className={`h-full rounded-full ${item.confidence > 90 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
- style={{ width: `${item.confidence}%` }}
- />
- </div>
- <span className="text-[10px] font-mono font-medium text-zinc-400">{item.confidence}% 置信度</span>
- </div>
- <span className="text-[10px] font-mono text-zinc-300 italic">
- {new Date(item.lastChecked).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
- </span>
- </div>
- </div>
- ))}
- </div>
- </motion.div>
- )}
 
  {messages.length === 0 && !isDiscussing && (
  <div className="flex-1 flex flex-col items-center justify-center text-zinc-200 py-32 space-y-6">
@@ -666,13 +677,38 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
 
  {messages.length > 0 && !isDiscussing && onSendMessage && (
  <div className="p-8 border-t border-zinc-100 bg-white relative z-10 shadow-[0_-12px_40px_-20px_rgba(0,0,0,0.05)]">
- <div className="relative flex items-center gap-4 max-w-4xl mx-auto">
+ <div className="relative flex flex-col gap-4 max-w-4xl mx-auto">
+ <div className="flex items-center justify-between">
+ <div className="flex items-center gap-2">
+ <span className="text-sm font-medium text-zinc-500">指定回答专家:</span>
+ <select
+ value={targetRole}
+ onChange={(e) => setTargetRole(e.target.value as AgentRole)}
+ className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-zinc-50 text-zinc-700 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+ disabled={isReviewing}
+ >
+ {Object.keys(roleNames).map((role) => (
+ <option key={role} value={role}>{roleNames[role as AgentRole]}</option>
+ ))}
+ </select>
+ </div>
+ {onGenerateNewConclusion && (
+ <button
+ onClick={onGenerateNewConclusion}
+ disabled={isReviewing}
+ className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200/50 text-sm font-medium transition-all disabled:opacity-50"
+ >
+ <Award size={16} />
+ 生成最新结论
+ </button>
+ )}
+ </div>
  <div className="flex-1 relative">
  <textarea
  value={inputValue}
  onChange={(e) => setInputValue(e.target.value)}
  onKeyDown={handleKeyDown}
- placeholder="向专家组提问或要求深度研判..."
+ placeholder={`向 ${roleNames[targetRole]} 提问...`}
  className="w-full input-premium px-6 py-4 pr-16 text-base h-[60px] resize-none rounded-2xl"
  rows={1}
  disabled={isReviewing}
@@ -694,7 +730,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </div>
  <p className="mt-3 text-[10px] text-zinc-400 px-2 flex items-center gap-1.5 font-bold uppercase tracking-wider max-w-4xl mx-auto">
  <Zap size={14} className="text-indigo-600" />
- 提问后将由 <span className="text-indigo-600">高级评审专家</span> 对当前话题进行深度复核与答疑
+ 提问后将由 <span className="text-indigo-600">{roleNames[targetRole]}</span> 对当前话题进行深度复核与答疑
  </p>
  </div>
  )}

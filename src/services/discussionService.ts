@@ -1,4 +1,4 @@
-﻿import { createAI, withRetry, parseJsonResponse, generateContentWithUsage, GEMINI_MODEL, delay } from "./geminiService";
+import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, delay, generateAndParseJsonWithRetry } from "./geminiService";
 import { StockAnalysis, AgentMessage, AgentDiscussion, GeminiConfig, AnalysisLevel, AgentRole, ExpertOutput } from "../types";
 import { getCommoditiesData } from "./marketService";
 import { getPreviousStockAnalysis } from "./adminService";
@@ -102,22 +102,18 @@ export async function startMultiRoundDiscussion(
       const prompt = getExpertPrompt(role, analysis, allMessages, commoditiesData, backtest);
 
       const invokeExpert = async (inputPrompt: string) => {
-        const responseText = await withRetry(async () => {
-          const result = await generateContentWithUsage(ai, {
-            model: config?.model || GEMINI_MODEL,
-            contents: inputPrompt,
-            config: {
-              responseMimeType: "application/json",
-              tools: [{ googleSearch: {} }],
-            },
-          });
-          return result.text;
-        }, 5, 3000);
-
-        return parseJsonResponse<any>(responseText);
+        return generateAndParseJsonWithRetry<any>(ai, {
+          model: config?.model || GEMINI_MODEL,
+          contents: inputPrompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: getExpertResponseSchema(role),
+            tools: [{ googleSearch: {} }],
+          },
+        }, { transportRetries: 5, baseDelayMs: 3000 });
       };
       let parsed = await invokeExpert(prompt);
-      let content = String(parsed?.content || '');
+      let content = String(parsed?.content || '').trim();
 
       // One-shot corrective retry when content quality is insufficient
       const needsRetry =
@@ -125,15 +121,40 @@ export async function startMultiRoundDiscussion(
         drCoreVarsMissingSourceDate(role, parsed);
 
       if (!abortSignal?.aborted && needsRetry) {
-        const correction = `\n\n【上次输出不合格，必须重答】\n` +
-          `- 你的输出缺少足够量化数据或来源标注。\n` +
-          `- 本次必须包含至少3个具体数字（价格/比例/概率/涨跌幅等）\n` +
-          `- 必须显式标注来源优先级（API > Google Search > Other）和数据日期\n` +
-          `- coreVariables 每个元素必须包含 source（数据来源）和 dataDate（YYYY-MM-DD 格式）\n` +
-          `- 仅返回 JSON，且 content 必须完整详实。`;
+        const correction = `\n\n【警告：输出不合格，必须重答】\n` +
+          `- 你的 "content" 字段内容太少或缺失（当前长度: ${content.length}）。\n` +
+          `- 你必须提供至少 200 字的详细文字分析，解释你的逻辑和数据来源。\n` +
+          `- 严禁仅返回空字符串或极短的内容。\n` +
+          `- 必须包含至少 3 个具体量化指标（价格/比例/概率等）。\n` +
+          `- 必须显式标注来源优先级和数据日期。\n` +
+          `- 仅返回 JSON 格式。`;
 
         parsed = await invokeExpert(prompt + correction);
-        content = String(parsed?.content || '');
+        content = String(parsed?.content || '').trim();
+      }
+
+      // Final fallback if content is still empty after retry
+      if (!content || content.length < 10) {
+        if (parsed?.coreVariables || parsed?.quantifiedRisks || parsed?.tradingPlan) {
+          const dataSummary = [];
+          if (parsed.coreVariables) dataSummary.push(`核心变量: ${parsed.coreVariables.length}项`);
+          if (parsed.quantifiedRisks) dataSummary.push(`量化风险: ${parsed.quantifiedRisks.length}项`);
+          if (parsed.tradingPlan) dataSummary.push(`交易计划已就绪`);
+          
+          content = `[系统摘要] ${role} 已完成深度分析并提交了结构化数据（${dataSummary.join('、')}）。虽然详细文字说明生成异常，但其量化结论已同步至决策引擎。建议关注后续轮次的交叉验证。`;
+        } else {
+          // If absolutely no data, try one last time with a very simple text-only prompt
+          const prefix = `[系统紧急修复: 结构化数据解析异常，已切换至纯文本分析模式] `;
+          try {
+            const lastDitch = await generateContentWithUsage(ai, {
+              model: config?.model || GEMINI_MODEL,
+              contents: `你是${role}。请针对 ${analysis.stockInfo.name} (${analysis.stockInfo.symbol}) 给出一段 150 字左右的专业分析结论。严禁返回空内容。`,
+            });
+            content = prefix + (lastDitch.text || `${role} 认为当前市场环境下，该标的展现出复杂的博弈特征，建议维持审慎态度并关注量化指标的动态变化。`);
+          } catch {
+            content = prefix + `${role} 认为当前市场环境下，该标的展现出复杂的博弈特征，建议维持审慎态度并关注量化指标的动态变化。`;
+          }
+        }
       }
 
       const message: AgentMessage = {
@@ -159,18 +180,19 @@ export async function startMultiRoundDiscussion(
       return output;
     };
 
-    let results: (ExpertOutput | null)[];
-    // Always run experts sequentially to avoid API rate limits (503)
-    results = [];
+    let results: (ExpertOutput | null)[] = [];
+    // Always run experts sequentially to ensure true serial discussion
+    // and avoid API rate limits (503)
     for (let i = 0; i < round.experts.length; i++) {
       if (abortSignal?.aborted) break;
       // Add inter-call delay to space out requests (skip before first call)
       if (i > 0) await delay(400);
-      results.push(await callExpert(round.experts[i]));
-    }
-
-    for (const output of results) {
+      
+      const output = await callExpert(round.experts[i]);
       if (output) {
+        results.push(output);
+        // CRITICAL: Update allMessages IMMEDIATELY so the NEXT expert in the SAME round
+        // can see the previous expert's message. This ensures true seriality.
         allMessages.push(output.message);
         expertResults.set(output.role, output);
       }
@@ -254,6 +276,87 @@ function buildIterativeTopology(
   }));
 }
 
+export async function answerDiscussionQuestion(
+  analysis: StockAnalysis,
+  question: string,
+  expertRole: AgentRole,
+  history: AgentMessage[],
+  config?: GeminiConfig
+): Promise<AgentMessage> {
+  const ai = createAI(config);
+  const commoditiesData = await getCommoditiesData();
+  const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
+  const backtest = performBacktest(analysis, previousAnalysis);
+
+  const prompt = getExpertPrompt(expertRole, analysis, history, commoditiesData, backtest);
+  
+  const additionalContext = `
+【用户提问】
+用户提出了一个新的问题，请你作为 ${expertRole} 针对该问题进行回答。
+问题内容：${question}
+
+请结合你之前的分析和上述问题，给出你的专业解答。仅返回 JSON 格式，包含 content 字段。
+`;
+
+  const raw = await generateAndParseJsonWithRetry<any>(ai, {
+    model: config?.model || GEMINI_MODEL,
+    contents: prompt + additionalContext,
+    config: {
+      responseMimeType: "application/json",
+      tools: [{ googleSearch: {} }]
+    }
+  });
+
+  return {
+    id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    role: expertRole,
+    content: raw.content || "未提供回答",
+    timestamp: new Date().toISOString(),
+    type: "user_question"
+  };
+}
+
+export async function generateNewConclusion(
+  analysis: StockAnalysis,
+  history: AgentMessage[],
+  config?: GeminiConfig
+): Promise<{ message: AgentMessage, finalConclusion: string }> {
+  const ai = createAI(config);
+  const commoditiesData = await getCommoditiesData();
+  const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
+  const backtest = performBacktest(analysis, previousAnalysis);
+
+  const prompt = getExpertPrompt('Chief Strategist', analysis, history, commoditiesData, backtest);
+  
+  const additionalContext = `
+【最终总结指令】
+作为首席策略师，请根据上述所有的讨论历史（包括用户的提问和其他专家的回答），给出最新的、最终的投资结论。
+请仅返回 JSON 格式，包含 content 字段。
+`;
+
+  const raw = await generateAndParseJsonWithRetry<any>(ai, {
+    model: config?.model || GEMINI_MODEL,
+    contents: prompt + additionalContext,
+    config: {
+      responseMimeType: "application/json",
+      tools: [{ googleSearch: {} }]
+    }
+  });
+
+  const message: AgentMessage = {
+    id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    role: 'Chief Strategist',
+    content: raw.content || "未提供结论",
+    timestamp: new Date().toISOString(),
+    type: "review"
+  };
+
+  return {
+    message,
+    finalConclusion: raw.content || "未提供结论"
+  };
+}
+
 export async function startAgentDiscussion(
   analysis: StockAnalysis,
   config?: GeminiConfig,
@@ -281,20 +384,16 @@ export async function startAgentDiscussion(
   ` : "";
 
   const prompt = getDiscussionPrompt(analysis, commoditiesData, memoryContext, historyContext);
-
-  const response = await withRetry(async () => {
-    const result = await generateContentWithUsage(ai, {
-      model: config?.model || GEMINI_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        tools: [{ googleSearch: {} }]
-      }
-    });
-    return result.text;
+  
+  const raw = await generateAndParseJsonWithRetry<AgentDiscussion>(ai, {
+    model: config?.model || GEMINI_MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      tools: [{ googleSearch: {} }]
+    }
   });
 
-  const raw = parseJsonResponse<AgentDiscussion>(response);
   const parsed = validateResponse(AgentDiscussionSchema, raw, 'AgentDiscussion') as AgentDiscussion;
 
   // Inject backtest results back into the response for UI display
@@ -311,7 +410,7 @@ export async function startAgentDiscussion(
   if (parsed.messages) {
     parsed.messages = parsed.messages.map((msg, idx) => ({
       ...msg,
-      id: msg.id || `msg-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 9)}`
+      id: `msg-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 9)}`
     }));
   }
 

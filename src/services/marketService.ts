@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { createAI, withRetry, parseJsonResponse, generateContentWithUsage, GEMINI_MODEL } from "./geminiService";
+import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, generateAndParseJsonWithRetry } from "./geminiService";
 import { getMarketOverviewPrompt, getDailyReportPrompt } from "./prompts";
 import { MarketOverview, GeminiConfig, Market } from "../types";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
@@ -27,19 +27,15 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
   const commoditiesData = await getCommoditiesData();
   const prompt = getMarketOverviewPrompt(indicesData, commoditiesData, history, beijingDate, now, market);
 
-  const response = await withRetry(async () => {
-    const result = await generateContentWithUsage(ai, {
-      model: config?.model || GEMINI_MODEL,
-      contents: prompt,
-      config: { 
-        responseMimeType: "application/json",
-        tools: [{ googleSearch: {} }]
-      }
-    });
-    return result.text;
+  const raw = await generateAndParseJsonWithRetry<MarketOverview>(ai, {
+    model: config?.model || GEMINI_MODEL,
+    contents: prompt,
+    config: { 
+      responseMimeType: "application/json",
+      tools: [{ googleSearch: {} }]
+    }
   });
 
-  const raw = parseJsonResponse<MarketOverview>(response);
   const overview = validateResponse(MarketOverviewSchema, raw, 'MarketOverview') as MarketOverview;
   overview.id = `market-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   

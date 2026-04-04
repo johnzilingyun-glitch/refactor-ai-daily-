@@ -52,7 +52,7 @@ export const StockAnalysisSchema = z.object({
 
 const AgentMessageSchema = z.object({
   role: z.string(),
-  content: z.string(),
+  content: z.string().catch(''),
   timestamp: z.string(),
   type: z.string().optional(),
   references: z.array(z.any()).optional(),

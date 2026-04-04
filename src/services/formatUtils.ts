@@ -9,7 +9,8 @@ export function formatCommoditiesToMarkdown(data: any[]): string {
   
   data.forEach(item => {
     const change = item.changePercent > 0 ? `+${item.changePercent}%` : `${item.changePercent}%`;
-    table += `| ${item.name} (${item.symbol}) | $${item.price} | ${change} | ${item.unit} | ${item.lastUpdated} |\n`;
+    const priceStr = item.unit === 'CNY' ? `${item.price} CNY` : `$${item.price}`;
+    table += `| ${item.name} (${item.symbol}) | ${priceStr} | ${change} | ${item.unit} | ${item.lastUpdated} |\n`;
   });
   
   return table;

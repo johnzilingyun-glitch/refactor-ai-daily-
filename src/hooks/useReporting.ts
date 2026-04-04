@@ -22,6 +22,11 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
   const { scenarios, backtestResult } = useScenarioStore();
 
   const sendReport = useCallback(async (report: string, type: string, data?: any) => {
+    const webhookUrl = useConfigStore.getState().feishuWebhookUrl;
+    if (!webhookUrl) {
+      useUIStore.getState().setIsSettingsOpen(true);
+      throw new Error('请先在设置中配置飞书 Webhook 链接');
+    }
     setIsSendingReport(true);
     try {
       const response = await fetch('/api/feishu/send-report', {
@@ -31,7 +36,7 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
           content: report,
           type,
           data,
-          feishuWebhookUrl: useConfigStore.getState().feishuWebhookUrl
+          feishuWebhookUrl: webhookUrl
         })
       });
       if (!response.ok) {
@@ -67,9 +72,15 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
 
   const handleSendStockReport = useCallback(async () => {
     if (!analysis) return;
+    const webhookUrl = useConfigStore.getState().feishuWebhookUrl;
+    if (!webhookUrl) {
+      useUIStore.getState().setIsSettingsOpen(true);
+      setReportStatus('error');
+      return;
+    }
     setIsSendingReport(true);
     try {
-      const success = await sendAnalysisToFeishu(analysis, useConfigStore.getState().feishuWebhookUrl || '');
+      const success = await sendAnalysisToFeishu(analysis, webhookUrl);
       if (success) {
         setReportStatus('success');
         setTimeout(() => setReportStatus('idle'), 3000);
@@ -85,6 +96,12 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
 
   const handleSendChatReport = useCallback(async () => {
     if (!analysis || !chatHistory || chatHistory.length === 0) return;
+    const webhookUrl = useConfigStore.getState().feishuWebhookUrl;
+    if (!webhookUrl) {
+      useUIStore.getState().setIsSettingsOpen(true);
+      setReportStatus('error');
+      return;
+    }
     setIsGeneratingReport(true);
     try {
       const report = await getChatReport(analysis.stockInfo?.name || 'Unknown', chatHistory);
@@ -110,9 +127,15 @@ export function useReporting(fetchAdminData: () => Promise<void>) {
 
   const handleSendDiscussionReport = useCallback(async () => {
     if (!analysis || discussionMessages.length === 0) return;
+    const webhookUrl = useConfigStore.getState().feishuWebhookUrl;
+    if (!webhookUrl) {
+      useUIStore.getState().setIsSettingsOpen(true);
+      setReportStatus('error');
+      return;
+    }
     setIsSendingReport(true);
     try {
-      const success = await sendAnalysisToFeishu(analysis, useConfigStore.getState().feishuWebhookUrl || '');
+      const success = await sendAnalysisToFeishu(analysis, webhookUrl);
       if (success) {
         setReportStatus('success');
         setTimeout(() => setReportStatus('idle'), 3000);

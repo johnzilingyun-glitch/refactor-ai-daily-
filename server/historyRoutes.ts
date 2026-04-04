@@ -67,8 +67,15 @@ router.get('/logs/optimization', (req, res) => {
 });
 
 router.post('/history/save', (req, res) => {
+  console.log('--- SAVE REQUEST START ---');
   const { type, data } = req.body;
-  console.log(`Received save request for type: ${type}, data size: ${JSON.stringify(data).length} bytes`);
+  console.log(`Type: ${type}`);
+  if (data) {
+    console.log(`Data size: ${JSON.stringify(data).length} bytes`);
+  } else {
+    console.log('Data is missing');
+  }
+  
   if (!type || !data) {
     console.error('Missing type or data in save request');
     return res.status(400).json({ error: 'Type and data are required' });
@@ -81,6 +88,7 @@ router.post('/history/save', (req, res) => {
     console.error('Failed to save analysis to history:', err);
     res.status(500).json({ error: 'Failed to save analysis to history', details: err instanceof Error ? err.message : String(err) });
   }
+  console.log('--- SAVE REQUEST END ---');
 });
 
 router.post('/logs/add', (req, res) => {

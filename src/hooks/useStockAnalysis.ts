@@ -27,11 +27,12 @@ export function useStockAnalysis() {
       if (!logsRes.ok) {
         console.error(`Failed to fetch optimization logs: ${logsRes.status} ${logsRes.statusText}`);
       } else {
+        const text = await logsRes.text();
         try {
-          const logs = await logsRes.json();
+          const logs = JSON.parse(text);
           setOptimizationLogs(logs);
         } catch (e) {
-          console.error('Failed to parse optimization logs JSON:', e);
+          console.error('Failed to parse optimization logs JSON. Response text:', text.substring(0, 500), e);
         }
       }
     } catch (err) {

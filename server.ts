@@ -4,10 +4,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-import historyRoutes, { addLogEntry } from './server/historyRoutes.js';
-import feishuRoutes from './server/feishuRoutes.js';
-import stockRoutes from './server/stockRoutes.js';
-import { monitor } from './server/dataSourceHealth.js';
+import historyRoutes, { addLogEntry } from './server/historyRoutes';
+import feishuRoutes from './server/feishuRoutes';
+import stockRoutes from './server/stockRoutes';
+import { monitor } from './server/dataSourceHealth';
 
 dotenv.config();
 
@@ -38,6 +38,11 @@ async function startServer() {
   app.use('/api', historyRoutes);
   app.use('/api', feishuRoutes);
   app.use('/api', stockRoutes);
+
+  // Handle 404 for API routes explicitly to avoid falling through to SPA
+  app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: `API route ${req.originalUrl} not found` });
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

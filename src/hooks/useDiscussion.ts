@@ -4,8 +4,8 @@ import { useUIStore, selectIsReviewing, selectIsDiscussing } from '../stores/use
 import { useAnalysisStore } from '../stores/useAnalysisStore';
 import { useDiscussionStore } from '../stores/useDiscussionStore';
 import { useScenarioStore } from '../stores/useScenarioStore';
-import { startAgentDiscussion, saveAnalysisToHistory } from '../services/aiService';
-import { StockAnalysis, AgentMessage } from '../types';
+import { answerDiscussionQuestion, generateNewConclusion, saveAnalysisToHistory } from '../services/aiService';
+import { StockAnalysis, AgentMessage, AgentRole } from '../types';
 
 export function useDiscussion(fetchAdminData: () => Promise<void>) {
   const geminiConfig = useConfigStore(s => s.config);
@@ -23,7 +23,7 @@ export function useDiscussion(fetchAdminData: () => Promise<void>) {
     setTimeDimension,
   } = useScenarioStore();
 
-  const handleDiscussionQuestion = useCallback(async (question: string) => {
+  const handleDiscussionQuestion = useCallback(async (question: string, targetRole: AgentRole = 'Professional Reviewer') => {
     if (!analysis || isReviewing || isDiscussing) return;
 
     setIsReviewing(true);
@@ -39,42 +39,66 @@ export function useDiscussion(fetchAdminData: () => Promise<void>) {
     setDiscussionMessages(updatedMessages);
 
     try {
-      const discussion = await startAgentDiscussion(analysis, geminiConfig, updatedMessages);
-
-      setDiscussionMessages(discussion.messages);
-      if (discussion.scenarios) setScenarios(discussion.scenarios);
-      if (discussion.sensitivityFactors) setSensitivityFactors(discussion.sensitivityFactors);
-      if (discussion.controversialPoints) setControversialPoints(discussion.controversialPoints);
-      if (discussion.verificationMetrics) setVerificationMetrics(discussion.verificationMetrics);
-      if (discussion.capitalFlow) setCapitalFlow(discussion.capitalFlow);
-      if (discussion.positionManagement) setPositionManagement(discussion.positionManagement);
-      if (discussion.timeDimension) setTimeDimension(discussion.timeDimension);
-      if (discussion.tradingPlanHistory) setTradingPlanHistory(discussion.tradingPlanHistory);
+      const answerMsg = await answerDiscussionQuestion(analysis, question, targetRole, updatedMessages, geminiConfig);
+      
+      const newMessages = [...updatedMessages, answerMsg];
+      setDiscussionMessages(newMessages);
 
       const finalAnalysis: StockAnalysis = {
         ...analysis,
-        ...discussion,
-        discussion: discussion.messages,
-        finalConclusion: discussion.finalConclusion || analysis.finalConclusion,
-        tradingPlan: discussion.tradingPlan || analysis.tradingPlan
+        discussion: newMessages,
       };
       setAnalysis(finalAnalysis);
 
       await saveAnalysisToHistory('stock', finalAnalysis);
       void fetchAdminData();
     } catch (err) {
-      console.error('Reviewer failed:', err);
+      console.error('Expert failed:', err);
       setDiscussionMessages([...updatedMessages, {
         id: `error-${Date.now()}`,
-        role: "Professional Reviewer",
-        content: `⚠️ 评审专家暂时无法回答：${err instanceof Error ? err.message : '未知错误'}`,
+        role: targetRole,
+        content: `⚠️ ${targetRole} 暂时无法回答：${err instanceof Error ? err.message : '未知错误'}`,
         timestamp: new Date().toISOString(),
         type: "review"
       }]);
     } finally {
       setIsReviewing(false);
     }
-  }, [analysis, isReviewing, isDiscussing, geminiConfig, discussionMessages, setDiscussionMessages, setIsReviewing, setScenarios, setSensitivityFactors, setControversialPoints, setVerificationMetrics, setCapitalFlow, setPositionManagement, setTimeDimension, setTradingPlanHistory, setAnalysis, fetchAdminData]);
+  }, [analysis, isReviewing, isDiscussing, geminiConfig, discussionMessages, setDiscussionMessages, setIsReviewing, setAnalysis, fetchAdminData]);
 
-  return { handleDiscussionQuestion };
+  const handleGenerateNewConclusion = useCallback(async () => {
+    if (!analysis || isReviewing || isDiscussing) return;
+
+    setIsReviewing(true);
+
+    try {
+      const { message, finalConclusion } = await generateNewConclusion(analysis, discussionMessages, geminiConfig);
+      
+      const newMessages = [...discussionMessages, message];
+      setDiscussionMessages(newMessages);
+
+      const finalAnalysis: StockAnalysis = {
+        ...analysis,
+        discussion: newMessages,
+        finalConclusion: finalConclusion
+      };
+      setAnalysis(finalAnalysis);
+
+      await saveAnalysisToHistory('stock', finalAnalysis);
+      void fetchAdminData();
+    } catch (err) {
+      console.error('Chief Strategist failed:', err);
+      setDiscussionMessages([...discussionMessages, {
+        id: `error-${Date.now()}`,
+        role: 'Chief Strategist',
+        content: `⚠️ 首席策略师暂时无法总结：${err instanceof Error ? err.message : '未知错误'}`,
+        timestamp: new Date().toISOString(),
+        type: "review"
+      }]);
+    } finally {
+      setIsReviewing(false);
+    }
+  }, [analysis, isReviewing, isDiscussing, geminiConfig, discussionMessages, setDiscussionMessages, setIsReviewing, setAnalysis, fetchAdminData]);
+
+  return { handleDiscussionQuestion, handleGenerateNewConclusion };
 }

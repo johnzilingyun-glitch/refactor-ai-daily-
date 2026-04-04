@@ -46,7 +46,7 @@ Requirements:
    - Ensure the data is from TODAY'S trading session if the market is open. Note the source and time (with timezone, e.g. UTC+8) in the summary. Briefly mention the calculation used for indices (e.g., "Price 3000 - Prev Close 3010 = -10 (-0.33%)").
    - **DATA INTEGRITY CHECK**: If the "change" or "changePercent" is exactly 0, verify if the stock was suspended or if it's a non-trading day. Check the "Turnover" (成交额) to confirm trading activity.
 4. **SECTOR ANALYSIS (NEW)**: Analyze current hot sectors (板块) in the ${market} market and provide a conclusion for each.
-5. **COMMODITY ANALYSIS (NEW)**: Analyze major commodity trends (e.g., Gold, Oil, Copper). **RELEVANCE (CRITICAL)**: Only analyze commodities that are currently driving the market or have a significant impact on the specific sectors being discussed.
+5. **COMMODITY ANALYSIS (NEW)**: Analyze major commodity trends (e.g., Gold, Oil, Copper). **RELEVANCE (CRITICAL)**: Only analyze commodities that are currently driving the market or have a significant impact on the specific sectors being discussed. For the A-Share market, the **USD/CNY exchange rate** is always a critical macro variable; you MUST use the value from the "REAL-TIME COMMODITY DATA" section if available.
 6. **RECOMMENDATIONS**: Provide recommended stocks or sectors in the ${market} market based on the above analysis.
 7. Include exactly 5 major financial news items from the latest market day for the ${market} market.
 8. Each news item must have title, source, time, url, and summary.
@@ -496,8 +496,8 @@ export const getDiscussionPrompt = (
     这不是一份普通分析报告，而是一场真实的、多轮的、有激烈辩论和数据交锋的专业级研讨会议。
 
     **当前日期**: ${today}
-    **数据时效性红线 (CRITICAL)**: 所有宏观变量（汇率、利率、大宗商品价格等）必须通过 Google Search 获取今天 (${today}) 的最新报价。严禁使用训练数据中的记忆值。若某变量今天无交易，标注最近交易日期。
-    **口径优先级红线 (CRITICAL)**: 本次讨论所有量化结论必须遵循 **权威金融 API > Google Search 权威来源 > 其他来源**。若冲突，JSON 输出口径必须保留 API 作为主口径，搜索数据仅用于差异解释。
+    **数据时效性红线 (CRITICAL)**: 所有宏观变量（汇率、利率、大宗商品价格等）必须优先使用下方的 **REAL-TIME COMMODITY DATA**。若该数据中不包含所需变量，则必须通过 Google Search 获取今天 (${today}) 的最新报价。严禁使用训练数据中的记忆值。若某变量今天无交易，标注最近交易日期。
+    **口径优先级红线 (CRITICAL)**: 本次讨论所有量化结论必须遵循 **内置 REAL-TIME 数据 > 权威金融 API > Google Search 权威来源 > 其他来源**。若冲突，JSON 输出口径必须保留内置数据作为主口径，搜索数据仅用于差异解释。
 
     **REAL-TIME COMMODITY DATA (GROUND TRUTH - ${today})**:
     ${formatCommoditiesToMarkdown(commoditiesData)}
@@ -528,7 +528,7 @@ export const getDiscussionPrompt = (
        - **目标价与情绪评分 (MANDATORY)**：必须给出 6 个月目标区间（含置信区间）及情绪评分（0-100）。**置信区间逻辑 (NEW)**：根据行业波动率自动调整区间宽度。高波动行业（如数字货币、纯概念股）应放宽区间；低波动行业（如公用事业、长江电力）应收窄区间。
        - **内容要求**：必须包含上述 2 个 Markdown 表格，所有关键数据必须有明确的时间戳和来源标注（Source: ...）。
       - **[结构化输出] 核心变量 (MANDATORY)**：除了 Markdown 内容外，你还必须提炼出 3-5 个核心经济变量，填入返回 JSON 的 \`coreVariables\` 数组。每个变量需包含：name（变量名）、value（当前值，必须是按优先级协议选取的最新值）、unit（单位）、marketExpect（市场预期）、delta（偏离说明）、reason（偏离原因）、evidenceLevel（证据级别：财报/研报共识/第三方监控/推算/信息缺失）、**source（数据来源，如：API/Wind/东方财富/中国外汇交易中心/LME/生意社）**、**dataDate（数据日期，格式 YYYY-MM-DD，必须是最新可获取的日期）**。
-       - **数据时效性红线 (CRITICAL)**：coreVariables 中的 value 必须来自 Google Search 获取的最新报价。例如 USD/CNY 汇率必须搜索今天的中间价，严禁使用训练数据中的记忆值。若搜索到的最新数据日期 ≠ 今天，必须在 dataDate 中如实标注。
+       - **数据时效性红线 (CRITICAL)**：coreVariables 中的 value 必须优先来自内置的 **REAL-TIME COMMODITY DATA**。若缺失，则必须来自 Google Search 获取的最新报价。例如 USD/CNY 汇率必须优先使用内置数据，若无则搜索今天的中间价，严禁使用训练数据中的记忆值。若搜索到的最新数据日期 ≠ 今天，必须在 dataDate 中如实标注。
       - **口径统一 (MANDATORY)**：若同一变量存在多个来源，\`value\` 字段必须使用最高优先级来源的数值；\`reason\` 中简述其它来源差异及原因。
     
     2. **技术分析师 (Technical Analyst)**：负责技术面深度分析。必须提供：
