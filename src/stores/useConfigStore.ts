@@ -18,6 +18,10 @@ interface ConfigState {
   setFeishuWebhookUrl: (webhook: string) => void;
   debugMode: boolean;
   setDebugMode: (enabled: boolean) => void;
+  serviceStatus: 'available' | 'quota_exhausted' | 'error';
+  setServiceStatus: (status: 'available' | 'quota_exhausted' | 'error') => void;
+  lastErrorStatus: string | null;
+  setLastErrorStatus: (status: string | null) => void;
 }
 
 export const useConfigStore = create<ConfigState>((set) => {
@@ -62,5 +66,9 @@ export const useConfigStore = create<ConfigState>((set) => {
       localStorage.setItem('debug_mode', String(enabled));
       set({ debugMode: enabled });
     },
+    serviceStatus: 'available',
+    setServiceStatus: (status) => set({ serviceStatus: status }),
+    lastErrorStatus: null,
+    setLastErrorStatus: (status) => set({ lastErrorStatus: status }),
   };
 });

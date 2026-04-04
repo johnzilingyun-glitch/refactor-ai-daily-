@@ -55,9 +55,17 @@ export async function withRetry<T>(
       if (attempt >= maxRetries) {
         // Wrap quota/rate-limit errors with a user-friendly message
         const errStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
-        if (errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota')) {
-          throw new Error('API 配额已耗尽，请等待几分钟后重试，或在 https://ai.dev/rate-limit 查看额度状态。');
+        const isQuota = errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota');
+        
+        if (isQuota) {
+          if (useConfigStore.getState().debugMode) {
+            remoteLog('quota_exhausted_failure', { error: errStr, attempt });
+          }
+          useConfigStore.getState().setServiceStatus('quota_exhausted');
+          throw new Error('API 配额已耗尽 (Free tier limits hit)。请等待几分钟后重试，或切换到其他模型。');
         }
+        
+        useConfigStore.getState().setServiceStatus('error');
         if (errStr.includes('503') || errStr.toLowerCase().includes('unavailable')) {
           throw new Error('AI 模型当前负载过高，请稍后重试。建议使用「标准」模式减少 API 调用次数。');
         }
@@ -286,7 +294,7 @@ async function remoteLog(type: string, data: any) {
     const isDebug = useConfigStore.getState().debugMode;
     if (!isDebug) return;
 
-    await fetch('/api/logs/debug', {
+    await fetch('/api/diagnostics/logs/debug', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, data })
@@ -300,6 +308,11 @@ export async function generateContentWithUsage(ai: any, params: any) {
   const isDebug = useConfigStore.getState().debugMode;
   if (isDebug) {
     await remoteLog('ai_request_params', params);
+  }
+
+  // Clear previous error status on new request
+  if (useConfigStore.getState().serviceStatus !== 'available') {
+    useConfigStore.getState().setServiceStatus('available');
   }
 
   const result = await ai.models.generateContent(params);

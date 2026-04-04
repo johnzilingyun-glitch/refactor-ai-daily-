@@ -1,8 +1,14 @@
 import { Coins } from 'lucide-react';
 import { useConfigStore } from '../../stores/useConfigStore';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function TokenUsage() {
-  const { tokenUsage } = useConfigStore();
+  const { tokenUsage, serviceStatus } = useConfigStore();
 
   return (
     <div className="mb-12">
@@ -41,7 +47,7 @@ export function TokenUsage() {
             </div>
             
             <div className="space-y-1 md:pl-10">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">Session Total</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">Total Usage</p>
               <p className="text-xl font-mono font-bold text-indigo-600 tabular-nums tracking-tighter">
                 {tokenUsage.totalTokens.toLocaleString()}
               </p>
@@ -49,11 +55,27 @@ export function TokenUsage() {
 
             <div className="space-y-1 md:pl-10">
               <div className="flex items-center gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Remaining</p>
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest",
+                  serviceStatus === 'quota_exhausted' ? "text-rose-500" : 
+                  serviceStatus === 'error' ? "text-amber-500" : "text-emerald-600"
+                )}>Service Status</p>
+                <div className={cn(
+                  "h-1.5 w-1.5 rounded-full animate-pulse",
+                  serviceStatus === 'quota_exhausted' ? "bg-rose-500" : 
+                  serviceStatus === 'error' ? "bg-amber-500" : "bg-emerald-500"
+                )} />
               </div>
-              <p className="text-xl font-mono font-bold text-emerald-600 tabular-nums tracking-tighter">
-                {Math.max(0, 1000000 - tokenUsage.totalTokens).toLocaleString()}
+              <p className={cn(
+                "text-sm font-bold tracking-tight uppercase transition-colors duration-300",
+                serviceStatus === 'quota_exhausted' ? "text-rose-600" : 
+                serviceStatus === 'error' ? "text-amber-600" : "text-emerald-600"
+              )}>
+                {serviceStatus === 'quota_exhausted' ? 'Quota Exhausted' : 
+                 serviceStatus === 'error' ? 'Service Limited' : 'Active / Stable'}
+              </p>
+              <p className="text-[9px] text-zinc-400 font-medium tracking-tight">
+                {serviceStatus === 'quota_exhausted' ? 'Wait a few minutes' : 'Gemini Free-Tier Monitoring'}
               </p>
             </div>
           </div>

@@ -21,6 +21,11 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  
+  app.get('/api/ping-early', (req, res) => {
+    res.json({ ok: true, msg: 'Absolute earliest route' });
+  });
+
   app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
@@ -38,13 +43,21 @@ async function startServer() {
   });
 
   // Route modules
+  console.log('Mounting API routes...');
+  
+  app.use('/api/diagnostics', debugRoutes);
+  console.log('Registered: /api/diagnostics/logs/debug');
+
+  app.get('/api/ping-debug', (req, res) => {
+    res.json({ ok: true, msg: 'Direct route check works' });
+  });
+
   app.use('/api', (req, res, next) => {
     console.log(`API Request: ${req.method} ${req.url}`);
     next();
   }, historyRoutes);
   app.use('/api', feishuRoutes);
   app.use('/api', stockRoutes);
-  app.use('/api', debugRoutes);
 
   // Handle 404 for API routes explicitly to avoid falling through to SPA
   app.all('/api/*', (req, res) => {
