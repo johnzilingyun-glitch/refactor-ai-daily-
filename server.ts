@@ -27,20 +27,26 @@ async function startServer() {
 
   // API routes FIRST
   app.get('/api/health', (req, res) => {
+    console.log('Health check called');
     res.json({ status: 'ok' });
   });
 
   app.get('/api/health/data-sources', (req, res) => {
+    console.log('Data sources health check called');
     res.json(monitor.getHealthReport());
   });
 
   // Route modules
-  app.use('/api', historyRoutes);
+  app.use('/api', (req, res, next) => {
+    console.log(`API Request: ${req.method} ${req.url}`);
+    next();
+  }, historyRoutes);
   app.use('/api', feishuRoutes);
   app.use('/api', stockRoutes);
 
   // Handle 404 for API routes explicitly to avoid falling through to SPA
-  app.use('/api/*', (req, res) => {
+  app.all('/api/*', (req, res) => {
+    console.warn(`API 404: ${req.method} ${req.originalUrl}`);
     res.status(404).json({ error: `API route ${req.originalUrl} not found` });
   });
 

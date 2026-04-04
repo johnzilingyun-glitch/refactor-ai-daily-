@@ -36,15 +36,15 @@ const roleIcons: Record<AgentRole, React.ReactNode> = {
 };
 
 const roleColors: Record<AgentRole, string> = {
- "Technical Analyst": "text-indigo-600 bg-indigo-600/6 border-indigo-600/12",
- "Fundamental Analyst": "text-emerald-500 bg-emerald-500/8 border-emerald-500/15",
- "Sentiment Analyst": "text-purple-600 bg-purple-50/80 border-purple-200/50",
- "Risk Manager": "text-rose-500 bg-rose-500/6 border-rose-500/12",
- "Contrarian Strategist": "text-orange-600 bg-orange-50/80 border-orange-200/50",
- "Deep Research Specialist": "text-cyan-600 bg-cyan-50/80 border-cyan-200/50",
- "Professional Reviewer": "text-indigo-600 bg-indigo-50/80 border-indigo-200/50",
- "Chief Strategist": "text-indigo-600 bg-indigo-600/8 border-indigo-600/15",
- "Moderator": "text-zinc-500 bg-zinc-300/10 border-zinc-300/20",
+ "Technical Analyst": "text-indigo-600 bg-indigo-50 border-indigo-200/60",
+ "Fundamental Analyst": "text-emerald-600 bg-emerald-50 border-emerald-200/60",
+ "Sentiment Analyst": "text-purple-600 bg-purple-50 border-purple-200/60",
+ "Risk Manager": "text-rose-600 bg-rose-50 border-rose-200/60",
+ "Contrarian Strategist": "text-orange-600 bg-orange-50 border-orange-200/60",
+ "Deep Research Specialist": "text-cyan-600 bg-cyan-50 border-cyan-200/60",
+ "Professional Reviewer": "text-blue-600 bg-blue-50 border-blue-200/60",
+ "Chief Strategist": "text-amber-600 bg-amber-50 border-amber-200/60",
+ "Moderator": "text-zinc-500 bg-zinc-100 border-zinc-200/60",
 };
 
 const roleNames: Record<AgentRole, string> = {
@@ -576,12 +576,12 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
   </div>
   </motion.div>
   )}
- <AnimatePresence initial={false}>
- {messages.map((msg, i) => {
- const msgKey = msg.id ? `msg-id-${msg.id}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}-${Math.random().toString(36).slice(2, 7)}`;
- const showRoundDivider = msg.round != null && (i === 0 || messages[i - 1]?.round !== msg.round);
- return (
- <React.Fragment key={`frag-${msgKey}`}>
+  <AnimatePresence initial={false}>
+    {messages.map((msg, i) => {
+      const msgKey = msg.id ? `msg-id-${msg.id}-${i}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}-${Math.random().toString(36).slice(2, 7)}`;
+      const showRoundDivider = msg.round != null && (i === 0 || messages[i - 1]?.round !== msg.round);
+      return (
+        <React.Fragment key={`frag-${msgKey}`}>
  {showRoundDivider && (
  <div key={`divider-${msgKey}`} className="flex items-center gap-3 my-4 max-w-4xl mx-auto">
  <div className="flex-1 h-px bg-indigo-200/40" />
@@ -619,8 +619,16 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  </span>
  </div>
  <div className="relative">
- <div className={`text-[15px] leading-7 p-6 rounded-2xl rounded-tl-none border transition-all duration-200 ${msg.type === "research" ? "bg-cyan-50/50 border-cyan-200/60 text-zinc-700 hover:border-cyan-300" : msg.type === "review" ? "bg-indigo-50/30 border-indigo-200/60 text-zinc-700 hover:border-indigo-300" : msg.type === "fact_check" ? "bg-rose-50/50 border-rose-200/60 text-zinc-700 hover:border-rose-300" : msg.type === "user_question" ? "bg-white border-zinc-200 text-zinc-600" : "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300" }`}>
- <div className="prose prose-base max-w-none">
+ <div className={cn(
+ "text-[15px] leading-7 p-6 rounded-2xl rounded-tl-none border transition-all duration-300 shadow-sm",
+ msg.role === "Chief Strategist" ? "bg-amber-50/30 border-amber-200/60 ring-1 ring-amber-100/50" :
+ msg.type === "research" ? "bg-cyan-50/30 border-cyan-200/60 text-zinc-700 hover:border-cyan-300" : 
+ msg.type === "review" ? "bg-indigo-50/20 border-indigo-200/60 text-zinc-700 hover:border-indigo-300" : 
+ msg.type === "fact_check" ? "bg-rose-50/30 border-rose-200/60 text-zinc-700 hover:border-rose-300" : 
+ msg.type === "user_question" ? "bg-white border-zinc-200 text-zinc-600" : 
+ "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300 hover:shadow-md"
+ )}>
+ <div className="prose prose-sm md:prose-base max-w-none prose-zinc prose-headings:text-zinc-900 prose-headings:font-bold prose-p:text-zinc-600 prose-strong:text-zinc-900 prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1 prose-code:rounded prose-table:border prose-table:border-zinc-200 prose-th:bg-zinc-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2">
  <ReactMarkdown remarkPlugins={[remarkGfm]}>
  {msg.content}
  </ReactMarkdown>

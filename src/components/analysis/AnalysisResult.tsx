@@ -4,7 +4,7 @@ import {
   BarChart3, Info, MessageSquare, Newspaper, PieChart, Send,
   ShieldAlert, TrendingDown, TrendingUp, Zap, Share2, Download,
   AlertTriangle, Cpu, Award, Target, RefreshCcw, Clock, Layers,
-  Database, History, Coins, ShieldCheck, Search, LayoutGrid
+  Database, History, Coins, ShieldCheck, Search, LayoutGrid, User
 } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -197,17 +197,37 @@ export function AnalysisResult({
 
                   {/* Final Conclusion Card - hidden during active discussion */}
                   {analysis.finalConclusion && !isDiscussing && (
-                    <div className="p-5 rounded-2xl bg-indigo-600/5 border border-indigo-100 relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Award size={48} className="text-emerald-500" />
+                    <div className="p-8 rounded-[2rem] bg-indigo-600/5 border border-indigo-100 relative overflow-hidden group shadow-sm">
+                      <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+                        <Award size={120} className="text-indigo-600 rotate-12" />
                       </div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3 flex items-center gap-2">
-                        <Award size={14} />
-                        联席会议最终结论
-                      </h4>
-                      <p className="text-sm text-zinc-600 leading-relaxed font-medium relative z-10">
-                        {analysis.finalConclusion}
-                      </p>
+                      <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
+                            <Award size={20} />
+                          </div>
+                          <div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">联席会议最终结论</h4>
+                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Final Consensus & Strategic Directive</p>
+                          </div>
+                        </div>
+                        <div className="prose prose-zinc max-w-none prose-p:text-zinc-700 prose-p:text-lg prose-p:font-medium prose-p:leading-relaxed prose-p:tracking-tight">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {analysis.finalConclusion}
+                          </ReactMarkdown>
+                        </div>
+                        <div className="mt-8 pt-6 border-t border-zinc-200/60 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center overflow-hidden">
+                              <User size={16} className="text-zinc-400" />
+                            </div>
+                            <span className="text-xs font-bold text-zinc-900 uppercase tracking-widest">首席策略师 签发</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-zinc-400">
+                            VERIFIED BY MULTI-AGENT CONSENSUS
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -234,28 +254,46 @@ export function AnalysisResult({
 
                   {/* Trading Plan Card - hidden during active discussion */}
                   {analysis.tradingPlan && !isDiscussing && (
-                    <div className="p-5 rounded-2xl bg-indigo-50/30 border border-blue-500/20">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600 mb-4 flex items-center gap-2">
-                        <Target size={14} />
-                        联席会议执行计划
-                      </h4>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-zinc-400 uppercase font-semibold tracking-widest">入场位</p>
-                          <p className="text-xs text-indigo-600 font-semibold">{analysis.tradingPlan.entryPrice}</p>
+                    <div className="p-8 rounded-[2rem] bg-zinc-50/50 border border-zinc-200/60 relative overflow-hidden shadow-sm">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 rounded-2xl bg-indigo-600/10 text-indigo-600 border border-indigo-600/20">
+                            <Target size={20} />
+                          </div>
+                          <div>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">联席会议执行计划</h4>
+                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Tactical Execution & Risk Management</p>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-zinc-400 uppercase font-semibold tracking-widest">目标位</p>
-                          <p className="text-xs text-indigo-600 font-semibold">{analysis.tradingPlan.targetPrice}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[9px] text-zinc-400 uppercase font-semibold tracking-widest">止损位</p>
-                          <p className="text-xs text-rose-400 font-semibold">{analysis.tradingPlan.stopLoss}</p>
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-600/20">
+                          <Zap size={10} />
+                          ACTIVE PLAN
                         </div>
                       </div>
-                      <div className="pt-3 border-t border-zinc-200/50">
-                        <p className="text-[9px] text-zinc-400 uppercase font-semibold tracking-widest mb-1">核心策略</p>
-                        <p className="text-[11px] text-zinc-500 italic">{analysis.tradingPlan.strategy}</p>
+
+                      <div className="grid grid-cols-3 gap-6 mb-8">
+                        <div className="p-5 rounded-2xl bg-white border border-zinc-200/60 shadow-sm group hover:border-indigo-600/30 transition-all">
+                          <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-2">建议入场位</p>
+                          <p className="text-2xl font-semibold text-zinc-950 tracking-tighter group-hover:text-indigo-600 transition-colors">{analysis.tradingPlan.entryPrice}</p>
+                          <div className="mt-2 h-1 w-8 bg-indigo-600/20 rounded-full" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-white border border-zinc-200/60 shadow-sm group hover:border-emerald-500/30 transition-all">
+                          <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-2">目标止盈位</p>
+                          <p className="text-2xl font-semibold text-zinc-950 tracking-tighter group-hover:text-emerald-500 transition-colors">{analysis.tradingPlan.targetPrice}</p>
+                          <div className="mt-2 h-1 w-8 bg-emerald-500/20 rounded-full" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-white border border-zinc-200/60 shadow-sm group hover:border-rose-500/30 transition-all">
+                          <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-2">硬性止损位</p>
+                          <p className="text-2xl font-semibold text-zinc-950 tracking-tighter group-hover:text-rose-500 transition-colors">{analysis.tradingPlan.stopLoss}</p>
+                          <div className="mt-2 h-1 w-8 bg-rose-500/20 rounded-full" />
+                        </div>
+                      </div>
+
+                      <div className="p-6 rounded-2xl bg-indigo-600/5 border border-indigo-100/50">
+                        <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-2">核心战术策略</p>
+                        <p className="text-sm text-zinc-600 leading-relaxed font-medium italic">
+                          "{analysis.tradingPlan.strategy}"
+                        </p>
                       </div>
 
                       {/* Trading Plan Version History */}
@@ -302,35 +340,50 @@ export function AnalysisResult({
                     <div className="space-y-6">
                       {/* Expectation Gap */}
                       {expectationGap && (
-                        <div className="rounded-2xl border border-indigo-600/20 bg-indigo-600/5 p-5">
-                          <div className="mb-3 flex items-center justify-between gap-2 text-indigo-400">
-                            <div className="flex items-center gap-2">
-                              <Search size={16} />
-                              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em]">预期偏差识别 (Expectation Gap)</h4>
+                        <div className="p-8 rounded-[2rem] bg-indigo-600/5 border border-indigo-100 relative overflow-hidden shadow-sm">
+                          <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none">
+                            <Search size={120} className="text-indigo-600" />
+                          </div>
+                          
+                          <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2.5 rounded-2xl bg-indigo-600/10 text-indigo-600 border border-indigo-600/20">
+                                <Search size={20} />
+                              </div>
+                              <div>
+                                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">预期偏差识别 (Expectation Gap)</h4>
+                                <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Market Consensus vs. AI Insight</p>
+                              </div>
                             </div>
                             {expectationGap.confidenceScore && (
-                              <div className="px-2 py-0.5 rounded-full bg-indigo-600/10 text-indigo-400 text-[9px] font-semibold tracking-widest border border-indigo-600/20">
+                              <div className="px-3 py-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold tracking-widest shadow-lg shadow-indigo-600/20">
                                 CONFIDENCE: {expectationGap.confidenceScore}%
                               </div>
                             )}
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <p className="text-[10px] text-zinc-400 uppercase font-semibold tracking-widest">市场共识 (Market Consensus)</p>
-                              <p className="text-xs text-zinc-500 font-medium">{expectationGap.marketConsensus}</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 relative z-10">
+                            <div className="p-6 rounded-2xl bg-white border border-zinc-200/60 shadow-sm">
+                              <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-3">市场共识 (Market Consensus)</p>
+                              <p className="text-sm text-zinc-600 leading-relaxed font-medium">{expectationGap.marketConsensus}</p>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-[10px] text-emerald-500 uppercase font-semibold tracking-widest">AI 团队观点 (Our View)</p>
-                              <p className="text-xs text-indigo-600 font-semibold">{expectationGap.ourView}</p>
+                            <div className="p-6 rounded-2xl bg-indigo-600 border border-indigo-500 shadow-lg shadow-indigo-600/10">
+                              <p className="text-[9px] text-indigo-200 uppercase font-bold tracking-widest mb-3">AI 团队观点 (Our View)</p>
+                              <p className="text-sm text-white leading-relaxed font-bold">{expectationGap.ourView}</p>
                             </div>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-zinc-200/50">
-                            <p className="text-[10px] text-zinc-400 uppercase font-semibold tracking-widest mb-1">偏差逻辑 (Gap Reason)</p>
-                            <p className="text-[11px] text-zinc-500 leading-relaxed font-medium">{expectationGap.gapReason}</p>
+
+                          <div className="p-6 rounded-2xl bg-white/50 border border-zinc-200/60 relative z-10">
+                            <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-3 flex items-center gap-2">
+                              <Zap size={12} className="text-amber-500" />
+                              核心偏差逻辑 (Gap Reason)
+                            </p>
+                            <p className="text-sm text-zinc-600 leading-relaxed font-medium italic">
+                              "{expectationGap.gapReason}"
+                            </p>
                             {expectationGap.isSignificant && (
-                              <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-500 font-bold uppercase tracking-widest">
-                                <Zap size={10} />
-                                显著 Alpha 来源
+                              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-600 font-bold uppercase tracking-widest shadow-sm">
+                                <AlertTriangle size={14} />
+                                显著性偏差 (SIGNIFICANT GAP DETECTED)
                               </div>
                             )}
                           </div>
@@ -341,42 +394,56 @@ export function AnalysisResult({
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {scenarios.map((s, i) => (
                           <div key={`scenario-${s.case}-${s.probability}-${i}`} className={cn(
-                            "p-6 rounded-2xl border transition-all hover:scale-[1.02] duration-300",
-                            s.case === "Bull" ? "bg-indigo-600/5 border-indigo-100" :
+                            "p-8 rounded-[2rem] border transition-all hover:scale-[1.02] duration-500 shadow-sm relative overflow-hidden group",
+                            s.case === "Bull" ? "bg-emerald-500/5 border-emerald-500/20" :
                             s.case === "Stress" ? "bg-rose-500/5 border-rose-500/20" :
-                            "bg-indigo-50/30 border-blue-500/20"
+                            "bg-indigo-600/5 border-indigo-100"
                           )}>
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+                              {s.case === "Bull" ? <TrendingUp size={80} /> : s.case === "Stress" ? <AlertTriangle size={80} /> : <BarChart3 size={80} />}
+                            </div>
+                            
+                            <div className="flex items-center justify-between mb-6 relative z-10">
                               <span className={cn(
-                                "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border",
-                                s.case === "Bull" ? "text-indigo-600 border-indigo-600/30 bg-indigo-50" :
-                                s.case === "Stress" ? "text-rose-400 border-rose-500/30 bg-rose-500/10" :
-                                "text-indigo-600 border-blue-500/30 bg-blue-500/10"
+                                "text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border shadow-sm",
+                                s.case === "Bull" ? "text-emerald-600 border-emerald-600/30 bg-white" :
+                                s.case === "Stress" ? "text-rose-500 border-rose-500/30 bg-white" :
+                                "text-indigo-600 border-indigo-600/30 bg-white"
                               )}>
                                 {s.case === 'Bull' ? '乐观 (Bull)' : s.case === 'Stress' ? '压力 (Stress)' : '基准 (Base)'}
                               </span>
-                              <span className="text-lg font-semibold text-zinc-950">{s.probability}%</span>
+                              <div className="text-right">
+                                <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest">发生概率</p>
+                                <p className="text-xl font-semibold text-zinc-950">{s.probability}%</p>
+                              </div>
                             </div>
                             
-                            <div className="space-y-4">
+                            <div className="space-y-6 relative z-10">
                               <div>
-                                <p className="text-[10px] text-zinc-400 uppercase font-semibold tracking-widest mb-1">关键假设</p>
-                                <p className="text-xs text-zinc-500 leading-relaxed font-medium">{s.keyInputs}</p>
+                                <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-2">关键假设边界</p>
+                                <p className="text-sm text-zinc-600 leading-relaxed font-medium">{s.keyInputs}</p>
                               </div>
                               
-                              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-200/50">
+                              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-zinc-200/60">
                                 <div>
-                                  <p className="text-[10px] text-zinc-400 uppercase font-semibold tracking-widest mb-1">目标价</p>
-                                  <p className="text-lg font-semibold text-zinc-950 tracking-tighter">{s.targetPrice}</p>
+                                  <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest mb-1">目标估值</p>
+                                  <p className="text-2xl font-semibold text-zinc-950 tracking-tighter">{s.targetPrice}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[10px] text-emerald-500 uppercase font-semibold tracking-widest mb-1">预期回报</p>
-                                  <p className="text-lg font-semibold text-emerald-500 tracking-tighter">{s.expectedReturn}</p>
+                                  <p className={cn(
+                                    "text-[9px] uppercase font-bold tracking-widest mb-1",
+                                    s.case === "Stress" ? "text-rose-400" : "text-emerald-500"
+                                  )}>预期回报</p>
+                                  <p className={cn(
+                                    "text-2xl font-semibold tracking-tighter",
+                                    s.case === "Stress" ? "text-rose-500" : "text-emerald-500"
+                                  )}>{s.expectedReturn}</p>
                                 </div>
                               </div>
                               
-                              <div className="pt-2">
-                                <p className="text-[10px] text-zinc-400 uppercase font-semibold tracking-widest">安全边际: <span className="text-zinc-500">{s.marginOfSafety}</span></p>
+                              <div className="pt-2 flex items-center justify-between">
+                                <span className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest">安全边际评估</span>
+                                <span className="text-xs font-semibold text-zinc-600">{s.marginOfSafety}</span>
                               </div>
                             </div>
                           </div>
@@ -764,56 +831,68 @@ export function AnalysisResult({
       {/* Main Analysis Grid */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
-        <div className="premium-card p-8 md:p-12">
-          <div className="mb-12 flex flex-wrap items-end justify-between gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="rounded-xl bg-zinc-50/50 px-3 py-1 font-mono text-[10px] font-medium uppercase tracking-widest text-zinc-500 border border-zinc-200/60">
+        <div className="premium-card p-10 md:p-14 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
+            <BarChart3 size={240} className="text-zinc-900" />
+          </div>
+          
+          <div className="mb-14 flex flex-wrap items-end justify-between gap-10 relative z-10">
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <span className="rounded-xl bg-zinc-100 px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 border border-zinc-200/60 shadow-sm">
                   {analysis.stockInfo?.market}
                 </span>
-                <h2 className="text-4xl font-semibold tracking-tighter text-zinc-950">{analysis.stockInfo?.name}</h2>
-                <span className="font-mono text-xl font-medium text-zinc-400 tracking-tighter">{analysis.stockInfo?.symbol}</span>
+                <h2 className="text-5xl font-bold tracking-tighter text-zinc-950">{analysis.stockInfo?.name}</h2>
+                <span className="font-mono text-2xl font-medium text-zinc-400 tracking-tighter">{analysis.stockInfo?.symbol}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
                 {analysis.isDeepValue && (
-                  <div className="px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-semibold text-amber-500 uppercase tracking-widest flex items-center gap-1">
-                    <Award size={12} />
+                  <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                    <Award size={14} />
                     绝对安全边际 (Deep Value)
                   </div>
                 )}
                 {analysis.moatAnalysis && analysis.moatAnalysis.strength !== "None" && (
-                  <div className="px-2 py-1 rounded-md bg-indigo-600/10 border border-indigo-600/20 text-[10px] font-semibold text-indigo-400 uppercase tracking-widest flex items-center gap-1">
-                    <ShieldCheck size={12} />
+                  <div className="px-3 py-1.5 rounded-xl bg-indigo-600/10 border border-indigo-600/20 text-[10px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                    <ShieldCheck size={14} />
                     护城河: {analysis.moatAnalysis.strength === "Wide" ? "宽阔" : "狭窄"} ({analysis.moatAnalysis.type})
                   </div>
                 )}
                 {analysis.narrativeConsistency && (
                   <div className={cn(
-                    "px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-widest flex items-center gap-1",
-                    analysis.narrativeConsistency.score >= 80 ? "bg-indigo-50 border-indigo-100 text-emerald-500" :
-                    analysis.narrativeConsistency.score >= 50 ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
-                    "bg-rose-500/10 border-rose-500/20 text-rose-500"
+                    "px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm",
+                    analysis.narrativeConsistency.score >= 80 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" :
+                    analysis.narrativeConsistency.score >= 50 ? "bg-amber-500/10 border-amber-500/20 text-amber-600" :
+                    "bg-rose-500/10 border-rose-500/20 text-rose-600"
                   )}>
-                    <MessageSquare size={12} />
+                    <MessageSquare size={14} />
                     叙事一致性: {analysis.narrativeConsistency.score}%
                   </div>
                 )}
               </div>
-              <div className="flex items-baseline gap-6">
-                <span className="text-7xl font-semibold tracking-tighter text-zinc-950">
+              
+              <div className="flex items-baseline gap-8 pt-4">
+                <span className="text-8xl font-bold tracking-tighter text-zinc-950">
                   {analysis.stockInfo?.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  <span className="ml-3 text-2xl font-medium uppercase text-zinc-400">{analysis.stockInfo?.currency}</span>
+                  <span className="ml-4 text-3xl font-medium uppercase text-zinc-300 tracking-tight">{analysis.stockInfo?.currency}</span>
                 </span>
-                <div className={cn('flex items-center gap-2 text-2xl font-semibold tracking-tight px-4 py-1 rounded-2xl border', (analysis.stockInfo?.change ?? 0) >= 0 ? 'text-indigo-600 bg-indigo-50 border-indigo-100' : 'text-rose-400 bg-rose-500/10 border-rose-500/20')}>
-                  {(analysis.stockInfo?.change ?? 0) >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+                <div className={cn(
+                  'flex items-center gap-3 text-3xl font-bold tracking-tight px-6 py-2 rounded-[1.5rem] border shadow-sm', 
+                  (analysis.stockInfo?.change ?? 0) >= 0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-500 bg-rose-50 border-rose-100'
+                )}>
+                  {(analysis.stockInfo?.change ?? 0) >= 0 ? <TrendingUp size={32} /> : <TrendingDown size={32} />}
                   <span>{(analysis.stockInfo?.change ?? 0) >= 0 ? '+' : ''}{analysis.stockInfo?.change}</span>
-                  <span className="text-lg opacity-80">({analysis.stockInfo?.changePercent}%)</span>
+                  <span className="text-xl opacity-60">({analysis.stockInfo?.changePercent}%)</span>
                 </div>
               </div>
             </div>
-            <div className="text-right space-y-1">
-              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-400">最后更新</p>
-              <p className="text-sm font-medium text-zinc-500">{analysis.stockInfo?.lastUpdated}</p>
+            
+            <div className="text-right space-y-2 relative z-10">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400">最后更新 (Last Sync)</p>
+              <p className="text-base font-semibold text-zinc-500 flex items-center justify-end gap-2">
+                <Clock size={16} className="text-zinc-300" />
+                {analysis.stockInfo?.lastUpdated}
+              </p>
             </div>
           </div>
 
@@ -1318,7 +1397,7 @@ export function AnalysisResult({
 
           <div className="mb-6 max-h-96 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
             {chatHistory?.map((msg, idx) => (
-              <div key={`chat-msg-${msg.id || `${msg.role}-${idx}-${msg.content.substring(0, 20)}-${Math.random().toString(36).slice(2, 7)}`}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={`chat-msg-${msg.id || 'no-id'}-${idx}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.role === 'user' ? 'rounded-tr-none bg-emerald-600 text-zinc-950' : 'rounded-tl-none bg-zinc-50 text-zinc-500'}`}>
                   {msg.content}
                 </div>

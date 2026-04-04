@@ -25,8 +25,8 @@ export function createAI(config?: { apiKey?: string }) {
 
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 2000
+  maxRetries: number = 5,
+  baseDelay: number = 3000
 ): Promise<T> {
   let lastError: any;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
