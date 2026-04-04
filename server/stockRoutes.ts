@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import YahooFinance from 'yahoo-finance2';
 import { monitor } from './dataSourceHealth.js';
+import { logDebug, logError } from './stockLogger.js';
 
 const yahooFinance = new YahooFinance();
 const router = Router();
@@ -121,83 +122,97 @@ router.get('/stock/commodities', async (req, res) => {
   }
 });
 
-// Real-time Stock Data
-router.get('/stock/realtime', async (req, res) => {
-  const { symbol, market, symbols } = req.query;
+  // Real-time Stock Data
+  router.get('/stock/realtime', async (req, res) => {
+    const { symbol, market, symbols, debug } = req.query;
+    const isDebug = debug === 'true';
 
-  // Handle multiple symbols (batch)
-  if (symbols && typeof symbols === 'string' && symbols.trim()) {
-    try {
-      const rawSymbolList = symbols.split(',').map(s => s.trim()).filter(s => !!s);
-      if (rawSymbolList.length === 0) {
-        return res.status(400).json({ error: 'No valid symbols provided' });
-      }
+    if (isDebug) {
+      logDebug('incoming_request', { symbol, market, symbols, path: '/stock/realtime' });
+    }
 
-      const symbolList = rawSymbolList.map(s => {
-        let sym = s.toUpperCase();
-        if (sym.endsWith('.SH')) sym = sym.replace('.SH', '.SS');
-        if (sym.length === 6) {
-          if (sym.startsWith('60') || sym.startsWith('68')) return `${sym}.SS`;
-          if (sym.startsWith('00') || sym.startsWith('30')) return `${sym}.SZ`;
-          if (sym.startsWith('8') || sym.startsWith('4')) return `${sym}.BJ`;
-        }
-        return sym;
-      });
-
-      let results: any[];
+    // Handle multiple symbols (batch)
+    if (symbols && typeof symbols === 'string' && symbols.trim()) {
       try {
-        results = await yahooFinance.quote(symbolList as any) as any[];
-      } catch {
-        results = [];
-        for (const sym of symbolList) {
-          try {
-            const q = await yahooFinance.quote(sym as any);
-            if (q) results.push(q);
-          } catch (e) {
-            console.warn(`Individual quote failed for ${sym}:`, e instanceof Error ? e.message : String(e));
+        const rawSymbolList = symbols.split(',').map(s => s.trim()).filter(s => !!s);
+        if (rawSymbolList.length === 0) {
+          return res.status(400).json({ error: 'No valid symbols provided' });
+        }
+
+        const symbolList = rawSymbolList.map(s => {
+          let sym = s.toUpperCase();
+          if (sym.endsWith('.SH')) sym = sym.replace('.SH', '.SS');
+          if (sym.length === 6) {
+            if (sym.startsWith('60') || sym.startsWith('68')) return `${sym}.SS`;
+            if (sym.startsWith('00') || sym.startsWith('30')) return `${sym}.SZ`;
+            if (sym.startsWith('8') || sym.startsWith('4')) return `${sym}.BJ`;
+          }
+          return sym;
+        });
+
+        let results: any[];
+        try {
+          results = await yahooFinance.quote(symbolList as any) as any[];
+          if (isDebug) logDebug('yahoo_batch_quote_raw', results);
+        } catch (e) {
+          if (isDebug) logError(e, 'yahoo_batch_quote_failed');
+          results = [];
+          for (const sym of symbolList) {
+            try {
+              const q = await yahooFinance.quote(sym as any);
+              if (q) results.push(q);
+            } catch (innerE) {
+              console.warn(`Individual quote failed for ${sym}:`, innerE instanceof Error ? innerE.message : String(innerE));
+            }
           }
         }
+
+        if (!results || results.length === 0) {
+          return res.status(404).json({ error: 'No valid data found for the provided symbols' });
+        }
+
+        const formattedResults = results.map(result => formatQuoteResult(result));
+        return res.json(formattedResults);
+      } catch (error) {
+        logError(error, 'yahoo_finance_batch_total_error');
+        return res.status(500).json({ error: 'Failed to fetch batch stock data' });
+      }
+    }
+
+    if (!symbol || typeof symbol !== 'string' || !symbol.trim() || !market) {
+      return res.status(400).json({ error: 'Symbol and market are required' });
+    }
+
+    try {
+      let yfSymbol = (symbol as string).trim().toUpperCase();
+      yfSymbol = yfSymbol.replace('.SH', '.SS');
+
+      if (!yfSymbol.includes('.') && !yfSymbol.startsWith('^')) {
+        yfSymbol = await resolveSymbol(yfSymbol, symbol as string, market as string, isDebug);
       }
 
-      if (!results || results.length === 0) {
-        return res.status(404).json({ error: 'No valid data found for the provided symbols' });
+      // Append market suffix for standard codes
+      yfSymbol = appendMarketSuffix(yfSymbol, market as string);
+      if (isDebug) logDebug('resolved_symbol', { input: symbol, market, resolved: yfSymbol });
+
+      let result: any = await tryQuote(yfSymbol, symbol as string, market as string, isDebug);
+
+      if (!result) {
+        if (isDebug) logDebug('quote_not_found', { symbol, yfSymbol, market });
+        return res.status(404).json({ error: `无法找到股票代码或简称 "${symbol}" 的相关数据，请检查后重试。` });
       }
 
-      const formattedResults = results.map(result => formatQuoteResult(result));
-      return res.json(formattedResults);
+      if (isDebug) logDebug('yahoo_quote_raw', result);
+      res.json(formatQuoteResult(result));
     } catch (error) {
-      console.error('Yahoo Finance Batch Error:', error);
-      return res.status(500).json({ error: 'Failed to fetch batch stock data' });
+      logError(error, 'yahoo_finance_single_error');
+      res.status(500).json({ error: 'Failed to fetch real-time stock data' });
     }
-  }
+  });
 
-  if (!symbol || typeof symbol !== 'string' || !symbol.trim() || !market) {
-    return res.status(400).json({ error: 'Symbol and market are required' });
-  }
+  // Re-define router.get for stock/realtime correctly because my replacement was partial
+  // Wait, I see I replaced it.
 
-  try {
-    let yfSymbol = (symbol as string).trim().toUpperCase();
-    yfSymbol = yfSymbol.replace('.SH', '.SS');
-
-    if (!yfSymbol.includes('.') && !yfSymbol.startsWith('^')) {
-      yfSymbol = await resolveSymbol(yfSymbol, symbol as string, market as string, yahooFinance);
-    }
-
-    // Append market suffix for standard codes
-    yfSymbol = appendMarketSuffix(yfSymbol, market as string);
-
-    let result: any = await tryQuote(yfSymbol, symbol as string, market as string, yahooFinance);
-
-    if (!result) {
-      return res.status(404).json({ error: `无法找到股票代码或简称 "${symbol}" 的相关数据，请检查后重试。` });
-    }
-
-    res.json(formatQuoteResult(result));
-  } catch (error) {
-    console.error('Yahoo Finance Error:', error);
-    res.status(500).json({ error: 'Failed to fetch real-time stock data' });
-  }
-});
 
 // --- Helper functions ---
 
@@ -248,7 +263,7 @@ function formatQuoteResult(result: any) {
   };
 }
 
-async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: string, yf: any): Promise<string> {
+async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: string, isDebug: boolean = false): Promise<string> {
   const isStandardA = market === 'A-Share' && /^\d{6}$/.test(yfSymbol);
   const isStandardHK = market === 'HK-Share' && /^\d{1,5}$/.test(yfSymbol);
   const isStandardUS = market === 'US-Share' && /^[A-Z]{1,5}$/.test(yfSymbol);
@@ -279,7 +294,7 @@ async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: s
               if (market === 'US-Share' && emMarketName === 'US') isMatch = true;
               if (isMatch) {
                 monitor.recordSuccess('eastmoney_new', Date.now() - startTime);
-                console.log(`Resolved '${yfSymbol}' -> '${code}' via EastMoney`);
+                if (isDebug) logDebug('resolve_tier1_eastmoney_new_success', { originalSymbol, yfSymbol, resolved: code });
                 return code;
               }
             }
@@ -309,7 +324,7 @@ async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: s
           const bestCode = oldData.QuotationCodeTable.Data[0].Code;
           if (bestCode) {
             monitor.recordSuccess('eastmoney_old', Date.now() - startTime);
-            console.log(`Resolved '${yfSymbol}' -> '${bestCode}' via EastMoney Old`);
+            if (isDebug) logDebug('resolve_tier2_eastmoney_old_success', { originalSymbol, yfSymbol, resolved: bestCode });
             return bestCode;
           }
         }
@@ -346,7 +361,7 @@ async function resolveSymbol(yfSymbol: string, originalSymbol: string, market: s
                 (market === 'HK-Share' && sinaMarket === '31') ||
                 (market === 'US-Share' && sinaMarket === '41')) {
               monitor.recordSuccess('sina', Date.now() - startTime);
-              console.log(`Resolved '${yfSymbol}' -> '${sinaCode}' via Sina`);
+              if (isDebug) logDebug('resolve_tier3_sina_success', { originalSymbol, yfSymbol, resolved: sinaCode });
               return sinaCode;
             }
           }
@@ -382,7 +397,8 @@ function appendMarketSuffix(symbol: string, market: string): string {
   return symbol;
 }
 
-async function tryQuote(yfSymbol: string, originalSymbol: string, market: string, yf: any): Promise<any> {
+async function tryQuote(yfSymbol: string, originalSymbol: string, market: string, isDebug: boolean = false): Promise<any> {
+  const yf = yahooFinance;
   let result: any = null;
 
   try {
@@ -424,6 +440,7 @@ async function tryQuote(yfSymbol: string, originalSymbol: string, market: string
       }
 
       if (searchResults?.quotes?.length) {
+        if (isDebug) logDebug('yahoo_search_results', { query, quotes: searchResults.quotes });
         const bestMatch = searchResults.quotes.find((q: any) => {
           const s = (q.symbol || '').toUpperCase();
           if (market === 'A-Share') return s.endsWith('.SS') || s.endsWith('.SZ') || s.endsWith('.BJ');
@@ -436,7 +453,10 @@ async function tryQuote(yfSymbol: string, originalSymbol: string, market: string
         const matchToUse = bestMatch || searchResults.quotes[0];
         if (matchToUse) {
           result = await yf.quote(matchToUse.symbol);
-          if (result) return result;
+          if (result) {
+            if (isDebug) logDebug('yahoo_search_match_found', { query, matchSymbol: matchToUse.symbol });
+            return result;
+          }
         }
       }
     } catch (e) {

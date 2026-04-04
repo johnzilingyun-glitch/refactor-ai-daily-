@@ -16,6 +16,8 @@ interface ConfigState {
   setAvailableModels: (models: { id: string, name: string, description: string, status?: string, statusMessage?: string }[]) => void;
   feishuWebhookUrl: string;
   setFeishuWebhookUrl: (webhook: string) => void;
+  debugMode: boolean;
+  setDebugMode: (enabled: boolean) => void;
 }
 
 export const useConfigStore = create<ConfigState>((set) => {
@@ -54,6 +56,11 @@ export const useConfigStore = create<ConfigState>((set) => {
     setFeishuWebhookUrl: (webhook: string) => {
       localStorage.setItem('feishu_webhook', webhook);
       set({ feishuWebhookUrl: webhook });
+    },
+    debugMode: localStorage.getItem('debug_mode') === 'true',
+    setDebugMode: (enabled: boolean) => {
+      localStorage.setItem('debug_mode', String(enabled));
+      set({ debugMode: enabled });
     },
   };
 });

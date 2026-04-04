@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, generateAndParseJsonWithRetry } from "./geminiService";
+import { useConfigStore } from "../stores/useConfigStore";
 import { getAnalyzeStockPrompt, getChatMessagePrompt, getStockReportPrompt, getDiscussionReportPrompt, getChatReportPrompt } from "./prompts";
 import { Market, StockAnalysis, AgentMessage, Scenario, AgentDiscussion, GeminiConfig } from "../types";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
@@ -16,7 +17,8 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
   const beijingShortDate = beijingDate.split(/[-/]/).slice(1).join('/');
 
   let realtimeData: any = null;
-  const res = await fetch(`/api/stock/realtime?symbol=${encodeURIComponent(symbol)}&market=${market}`);
+  const isDebug = useConfigStore.getState().debugMode;
+  const res = await fetch(`/api/stock/realtime?symbol=${encodeURIComponent(symbol)}&market=${market}${isDebug ? '&debug=true' : ''}`);
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.error || `无法获取股票信息，请检查代码或拼写。`);

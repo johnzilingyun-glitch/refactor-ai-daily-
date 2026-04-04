@@ -13,7 +13,7 @@ const AVAILABLE_MODELS = [
 ];
 
 export function SettingsModal() {
-  const { config, setConfig, tokenUsage, availableModels, setAvailableModels, feishuWebhookUrl, setFeishuWebhookUrl } = useConfigStore();
+  const { config, setConfig, tokenUsage, availableModels, setAvailableModels, feishuWebhookUrl, setFeishuWebhookUrl, debugMode, setDebugMode } = useConfigStore();
   const { isSettingsOpen, setIsSettingsOpen } = useUIStore();
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [fetchMessage, setFetchMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
@@ -160,6 +160,63 @@ export function SettingsModal() {
                     <p className="text-xs text-indigo-600/70 leading-relaxed">
                       配置飞书 Webhook 链接，以便在分析完成后接收实时通知。
                     </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Debug Mode Section */}
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-indigo-600" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">系统诊断与优化</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                      {debugMode ? '调试模式已开启' : '调试模式已关闭'}
+                    </span>
+                    <button
+                      onClick={() => setDebugMode(!debugMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                        debugMode ? 'bg-indigo-600' : 'bg-zinc-200'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          debugMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-zinc-50 border border-zinc-100 italic">
+                  <Cpu size={16} className="text-zinc-400 shrink-0 mt-0.5" />
+                  <div className="space-y-3 w-full">
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                      开启后，系统将记录所有后台请求与 API 响应数据。这有助于工程师分析数据偏差、优化 AI 推理逻辑并提高系统整体稳定性。
+                    </p>
+                    <div className="flex gap-2">
+                      <a 
+                        href="/api/logs/debug" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200 text-[10px] font-bold text-zinc-600 hover:bg-zinc-50"
+                      >
+                        查看调试日志
+                      </a>
+                      <button 
+                        onClick={async () => {
+                          if (confirm('确定要清除所有调试日志吗？')) {
+                            await fetch('/api/logs/debug', { method: 'DELETE' });
+                            alert('日志已清除');
+                          }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200 text-[10px] font-bold text-rose-500 hover:bg-rose-50"
+                      >
+                        清除日志
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>

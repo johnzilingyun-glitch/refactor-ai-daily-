@@ -281,8 +281,41 @@ export async function generateAndParseJsonWithRetry<T>(
   );
 }
 
+async function remoteLog(type: string, data: any) {
+  try {
+    const isDebug = useConfigStore.getState().debugMode;
+    if (!isDebug) return;
+
+    await fetch('/api/logs/debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data })
+    });
+  } catch (e) {
+    console.error('Failed to send remote log:', e);
+  }
+}
+
 export async function generateContentWithUsage(ai: any, params: any) {
+  const isDebug = useConfigStore.getState().debugMode;
+  if (isDebug) {
+    await remoteLog('ai_request_params', params);
+  }
+
   const result = await ai.models.generateContent(params);
+  
+  if (isDebug) {
+    await remoteLog('ai_response_raw', {
+      text: result.text,
+      usage: result.usageMetadata,
+      candidates: result.candidates?.map((c: any) => ({
+        index: c.index,
+        finishReason: c.finishReason,
+        safetyRatings: c.safetyRatings
+      }))
+    });
+  }
+
   if (result.usageMetadata) {
     useConfigStore.getState().addTokenUsage({
       promptTokens: result.usageMetadata.promptTokenCount || 0,

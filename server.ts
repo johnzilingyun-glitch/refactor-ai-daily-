@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import historyRoutes, { addLogEntry } from './server/historyRoutes';
 import feishuRoutes from './server/feishuRoutes';
 import stockRoutes from './server/stockRoutes';
+import debugRoutes from './server/debugRoutes';
 import { monitor } from './server/dataSourceHealth';
 
 dotenv.config();
@@ -43,6 +44,7 @@ async function startServer() {
   }, historyRoutes);
   app.use('/api', feishuRoutes);
   app.use('/api', stockRoutes);
+  app.use('/api', debugRoutes);
 
   // Handle 404 for API routes explicitly to avoid falling through to SPA
   app.all('/api/*', (req, res) => {
