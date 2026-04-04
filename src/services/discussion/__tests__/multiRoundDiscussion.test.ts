@@ -10,6 +10,7 @@ vi.mock('../../geminiService', async () => {
   return {
     ...actual as any,
     generateContentWithUsage: vi.fn(),
+    generateAndParseJsonWithRetry: vi.fn(),
     delay: vi.fn().mockResolvedValue(undefined), // Skip delays in tests
   };
 });
@@ -39,8 +40,8 @@ const mockAnalysis: StockAnalysis = {
 
 function mockExpertResponse(content: string, extra?: Record<string, any>) {
   return {
-    text: JSON.stringify({ content, ...extra }),
-    usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 20, totalTokenCount: 30 },
+    content,
+    ...extra
   };
 }
 
@@ -53,19 +54,30 @@ describe('startMultiRoundDiscussion', () => {
 
     // Mock fetch for /api/stock/commodities and /api/admin/history
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url.includes('commodities')) {
-        return Promise.resolve({ ok: true, json: async () => [] });
-      }
-      if (url.includes('history')) {
-        return Promise.resolve({ ok: true, json: async () => [] });
-      }
-      return Promise.resolve({ ok: true, json: async () => null });
+      const resp = {
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => [],
+        text: async () => '[]',
+      };
+      return Promise.resolve(resp);
     });
 
-    // Mock AI - each call returns a unique expert response
-    (geminiService.generateContentWithUsage as any).mockImplementation(() => {
+    // Mock AI - use generateAndParseJsonWithRetry directly
+    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation(() => {
       callCount++;
       return Promise.resolve(mockExpertResponse(`Expert response #${callCount}`));
+    });
+
+    // Also mock generateContentWithUsage for synthesis step if needed
+    (geminiService.generateContentWithUsage as any).mockImplementation(() => {
+      return Promise.resolve({
+        text: JSON.stringify({ 
+          finalConclusion: 'Final synthesis result',
+          messages: []
+        }),
+        usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1, totalTokenCount: 2 }
+      });
     });
   });
 
@@ -118,7 +130,7 @@ describe('startMultiRoundDiscussion', () => {
   it('messages accumulate across rounds (each expert sees previous messages)', async () => {
     const prompts: string[] = [];
 
-    (geminiService.generateContentWithUsage as any).mockImplementation((_ai: any, params: any) => {
+    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any) => {
       prompts.push(params.contents);
       callCount++;
       return Promise.resolve(mockExpertResponse(`Response #${callCount}`));
@@ -129,7 +141,7 @@ describe('startMultiRoundDiscussion', () => {
     // The last multi-round expert (Chief Strategist, second-to-last prompt before synthesis)
     // should see previous expert messages in the prompt
     const csPrompt = prompts[prompts.length - 2];
-    expect(csPrompt).toContain('前轮专家发言');
+    expect(csPrompt).toContain('前轮专家分析结论');
     // Should contain previous responses
     expect(csPrompt).toContain('Response #');
   });
@@ -138,7 +150,7 @@ describe('startMultiRoundDiscussion', () => {
     const controller = new AbortController();
 
     // Abort after first call
-    (geminiService.generateContentWithUsage as any).mockImplementation(() => {
+    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation(() => {
       callCount++;
       if (callCount === 1) {
         controller.abort();
@@ -160,10 +172,10 @@ describe('startMultiRoundDiscussion', () => {
   });
 
   it('uses googleSearch tool instead of responseSchema', async () => {
-    (geminiService.generateContentWithUsage as any).mockImplementation((_ai: any, params: any) => {
+    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any) => {
       // Verify config uses googleSearch, not responseSchema
       expect(params.config.tools).toEqual([{ googleSearch: {} }]);
-      expect(params.config.responseSchema).toBeUndefined();
+      expect(params.config.responseSchema).toBeDefined(); // Now passed via options.config
       expect(params.config.responseMimeType).toBe('application/json');
       callCount++;
       return Promise.resolve(mockExpertResponse(`Response #${callCount}`));
@@ -191,11 +203,11 @@ describe('startMultiRoundDiscussion', () => {
   });
 
   it('handles expert structured data extraction', async () => {
-    (geminiService.generateContentWithUsage as any).mockImplementation((_ai: any, params: any) => {
+    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any) => {
       callCount++;
       const prompt = params.contents as string;
 
-      if (prompt.includes('Deep Research Specialist') && !prompt.includes('前轮专家发言')) {
+      if (prompt.includes('Deep Research Specialist') && !prompt.includes('前轮专家分析结论')) {
         return Promise.resolve(mockExpertResponse('DR analysis', {
           coreVariables: [{ name: 'Revenue', value: '100B' }],
         }));
