@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Settings, ShieldCheck, Cpu, AlertTriangle, Globe, Info, RefreshCw, Loader2, CheckCircle2, Sparkles } from 'lucide-react';
+import { X, Settings, ShieldCheck, Cpu, AlertTriangle, Globe, Info, RefreshCw, Loader2, CheckCircle2, Sparkles, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useConfigStore } from '../stores/useConfigStore';
 import { useUIStore } from '../stores/useUIStore';
@@ -17,6 +17,7 @@ export function SettingsModal() {
   const { isSettingsOpen, setIsSettingsOpen } = useUIStore();
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [fetchMessage, setFetchMessage] = useState<{type: 'error' | 'success', text: string} | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const displayModels = availableModels.length > 0 ? availableModels : AVAILABLE_MODELS;
 
@@ -98,18 +99,43 @@ export function SettingsModal() {
                 </div>
                 
                 <div className="space-y-4">
-                  <div className="relative group">
-                    <input
-                      type="password"
-                      placeholder="AIzaSy... (输入您的 Gemini API Key)"
-                      id="api-key-input"
-                      value={config.apiKey || ''}
-                      onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                      className="input-premium h-12 pl-4 pr-10 font-mono"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-300">
-                      <Globe size={16} />
+                  <div className="group relative flex flex-col gap-2">
+                    <div className="relative">
+                      <input
+                        type={showApiKey ? "text" : "password"}
+                        placeholder="AIzaSy... (输入您的 Gemini API Key)"
+                        id="api-key-input"
+                        value={config.apiKey || ''}
+                        onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+                        className="input-premium pr-24 font-mono w-full"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        {config.apiKey && (
+                          <button
+                            onClick={() => setConfig({ ...config, apiKey: '' })}
+                            className="p-1.5 text-zinc-300 hover:text-rose-500 transition-colors"
+                            title="清空"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="p-1.5 text-zinc-300 hover:text-indigo-600 transition-colors"
+                          title={showApiKey ? "隐藏" : "显示"}
+                        >
+                          {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
+                    {config.apiKey && (
+                      <div className="flex items-center gap-1.5 px-3">
+                        <div className={`h-1.5 w-1.5 rounded-full ${config.apiKey.startsWith('AIzaSy') ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
+                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                          {config.apiKey.startsWith('AIzaSy') ? 'Gemini Key 格式正确' : '非标准 Gemini Key 格式'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   {(window as any).aistudio?.openSelectKey && (
