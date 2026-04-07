@@ -399,6 +399,7 @@ export interface GeminiConfig {
   model: string;
   apiKey?: string;
   feishuWebhookUrl?: string;
+  tier?: 'free' | 'paid';
 }
 
 export interface ReportPreference {

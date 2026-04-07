@@ -24,6 +24,8 @@ interface ConfigState {
   setLastErrorStatus: (status: string | null) => void;
   language: 'en' | 'zh-CN';
   setLanguage: (lang: 'en' | 'zh-CN') => void;
+  cooldownUntil: number;
+  setCooldownUntil: (until: number) => void;
 }
 
 export const useConfigStore = create<ConfigState>((set) => {
@@ -77,5 +79,7 @@ export const useConfigStore = create<ConfigState>((set) => {
       localStorage.setItem('app_language', lang);
       set({ language: lang });
     },
+    cooldownUntil: 0,
+    setCooldownUntil: (until: number) => set({ cooldownUntil: until }),
   };
 });

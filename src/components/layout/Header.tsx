@@ -21,7 +21,26 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
   const { isTriggeringReport, showAdminPanel, setShowAdminPanel, setIsSettingsOpen, analysisLevel, setAnalysisLevel } = useUIStore();
   const { dailyReport } = useMarketStore();
   const { symbol, setSymbol, market, setMarket } = useAnalysisStore();
-  const { language, setLanguage } = useConfigStore();
+  const { language, setLanguage, cooldownUntil, setCooldownUntil } = useConfigStore();
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) {
+      setCooldownRemaining(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+      setCooldownRemaining(remaining);
+      if (remaining <= 0) {
+        setCooldownUntil(0);
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownUntil, setCooldownUntil]);
 
   const isComposing = useRef(false);
   const [localSymbol, setLocalSymbol] = useState(symbol);
@@ -37,7 +56,13 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
   };
 
   return (
-    <header className="mb-12 animate-premium text-zinc-950 dark:text-white">
+    <header className="mb-12 animate-premium text-zinc-950 dark:text-white relative">
+      {cooldownRemaining > 0 && (
+        <div className="absolute -top-6 left-0 right-0 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-1.5 rounded-full text-xs font-bold text-center flex items-center justify-center gap-2 animate-pulse z-50">
+          <Clock size={12} strokeWidth={2.5} />
+          <span>System cooling down to reset AI quota... ({cooldownRemaining}s remaining)</span>
+        </div>
+      )}
       <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div className="cursor-pointer" onClick={onResetToHome}>
           <div className="flex items-center gap-2 mb-3">

@@ -1,5 +1,6 @@
 
 import { delay } from './geminiService';
+import { useConfigStore } from '../stores/useConfigStore';
 
 type Task<T> = () => Promise<T>;
 
@@ -45,10 +46,24 @@ class RequestScheduler {
 
     while (this.queue.length > 0) {
       const now = Date.now();
+      
+      // Check if we are in a cooldown period (e.g. after a 429 error)
+      const cooldownUntil = useConfigStore.getState().cooldownUntil || 0;
+      if (now < cooldownUntil) {
+        const waitTime = cooldownUntil - now;
+        console.warn(`System is in cooldown. Waiting ${Math.round(waitTime/1000)}s...`);
+        await delay(Math.min(waitTime, 5000)); // Wait in small chunks to check length/abort
+        continue;
+      }
+
+      // Determine interval based on tier
+      const tier = useConfigStore.getState().config?.tier || 'free';
+      const dynamicInterval = tier === 'paid' ? 400 : 4500;
+      
       const timeSinceLast = now - this.lastRequestTime;
       
-      if (timeSinceLast < this.minIntervalMs) {
-        const waitTime = this.minIntervalMs - timeSinceLast;
+      if (timeSinceLast < dynamicInterval) {
+        const waitTime = dynamicInterval - timeSinceLast;
         await delay(waitTime);
       }
 
@@ -57,8 +72,21 @@ class RequestScheduler {
         this.lastRequestTime = Date.now();
         try {
           const result = await item.task();
+          // Reset cooldown on successful request
+          if (useConfigStore.getState().cooldownUntil) {
+            useConfigStore.getState().setCooldownUntil(0);
+          }
           item.resolve(result);
-        } catch (error) {
+        } catch (error: any) {
+          const errStr = String(error?.message || error || '');
+          const isQuota = errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota');
+          
+          if (isQuota) {
+            // Set a 60-second cooldown on 429
+            const newCooldown = Date.now() + 60000;
+            useConfigStore.getState().setCooldownUntil(newCooldown);
+            console.error("Quota reached, entering 60s cooldown...");
+          }
           item.reject(error);
         }
       }
@@ -69,6 +97,13 @@ class RequestScheduler {
 
   public getQueueLength(): number {
     return this.queue.length;
+  }
+
+  public reset(minInterval: number = 4500) {
+    this.queue = [];
+    this.isProcessing = false;
+    this.lastRequestTime = 0;
+    this.minIntervalMs = minInterval;
   }
 }
 

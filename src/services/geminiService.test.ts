@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { generateContentWithUsage, fetchAvailableModelsList } from './geminiService';
 import { useConfigStore } from '../stores/useConfigStore';
 import { GoogleGenAI } from '@google/genai';
+import { requestScheduler } from './requestScheduler';
 
 // Mock zustand store
 vi.mock('../stores/useConfigStore', () => ({
@@ -33,9 +34,13 @@ vi.mock('@google/genai', () => {
 describe('geminiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    requestScheduler.reset(0);
     (useConfigStore.getState as any).mockReturnValue({
       serviceStatus: 'available',
       setServiceStatus: vi.fn(),
+      cooldownUntil: 0,
+      setCooldownUntil: vi.fn(),
+      debugMode: false,
     });
   });
 
@@ -46,6 +51,9 @@ describe('geminiService', () => {
         addTokenUsage: mockAddTokenUsage,
         serviceStatus: 'available',
         setServiceStatus: vi.fn(),
+        cooldownUntil: 0,
+        setCooldownUntil: vi.fn(),
+        debugMode: false,
       });
 
       const mockAi = {
@@ -77,6 +85,9 @@ describe('geminiService', () => {
         addTokenUsage: mockAddTokenUsage,
         serviceStatus: 'available',
         setServiceStatus: vi.fn(),
+        cooldownUntil: 0,
+        setCooldownUntil: vi.fn(),
+        debugMode: false,
       });
 
       const mockAi = {

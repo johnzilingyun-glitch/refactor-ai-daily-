@@ -128,14 +128,38 @@ export function SettingsModal() {
                         </button>
                       </div>
                     </div>
-                    {config.apiKey && (
-                      <div className="flex items-center gap-1.5 px-3">
-                        <div className={`h-1.5 w-1.5 rounded-full ${config.apiKey.startsWith('AIzaSy') ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
+                    
+                    {/* Tier Selection */}
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex bg-zinc-100 p-1 rounded-lg">
+                        <button
+                          onClick={() => setConfig({ ...config, tier: 'free' })}
+                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                            (config.tier || 'free') === 'free'
+                              ? 'bg-white text-zinc-950 shadow-sm'
+                              : 'text-zinc-400 hover:text-zinc-600'
+                          }`}
+                        >
+                          免费层级 (15 RPM)
+                        </button>
+                        <button
+                          onClick={() => setConfig({ ...config, tier: 'paid' })}
+                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                            config.tier === 'paid'
+                              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
+                              : 'text-zinc-400 hover:text-zinc-600'
+                          }`}
+                        >
+                          付费/绑定层级 (高速)
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <div className={`h-1.5 w-1.5 rounded-full ${config.apiKey?.startsWith('AIzaSy') ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                          {config.apiKey.startsWith('AIzaSy') ? 'Gemini Key 格式正确' : '非标准 Gemini Key 格式'}
+                          {config.apiKey?.startsWith('AIzaSy') ? '格式正确' : '格式不合规'}
                         </span>
                       </div>
-                    )}
+                    </div>
                   </div>
                   
                   {(window as any).aistudio?.openSelectKey && (

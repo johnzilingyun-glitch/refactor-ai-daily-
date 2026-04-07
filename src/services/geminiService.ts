@@ -24,6 +24,86 @@ export function createAI(config?: { apiKey?: string }) {
   return new GoogleGenAI({ apiKey });
 }
 
+export async function generateAndParseJsonWithRetry<T>(
+  ai: any,
+  params: any,
+  options?: {
+    transportRetries?: number;
+    baseDelayMs?: number;
+    parseRetries?: number;
+    parseDelayMs?: number;
+    responseSchema?: any;
+    responseMimeType?: string;
+    tools?: any[];
+    role?: string;
+  }
+): Promise<T> {
+  const transportRetries = options?.transportRetries ?? 3;
+  const baseDelayMs = options?.baseDelayMs ?? 2000;
+  const parseRetries = options?.parseRetries ?? 2;
+  const parseDelayMs = options?.parseDelayMs ?? 1200;
+
+  let lastParseError: unknown;
+
+  for (let attempt = 1; attempt <= parseRetries; attempt++) {
+    let responseText: string;
+    try {
+      responseText = await withRetry(async () => {
+        const generationConfig = {
+          responseMimeType: options?.responseMimeType || params.config?.responseMimeType || (options?.responseSchema ? 'application/json' : undefined),
+          responseSchema: options?.responseSchema || params.config?.responseSchema,
+        };
+
+        const mergedParams = {
+          ...params,
+          tools: options?.tools || params.config?.tools || params.tools,
+          generationConfig: {
+            ...params.generationConfig,
+            ...generationConfig
+          }
+        };
+
+        const result = await generateContentWithUsage(ai, mergedParams);
+        return result.text;
+      }, transportRetries, baseDelayMs);
+    } catch (transportErr) {
+      throw transportErr;
+    }
+
+    try {
+      return parseJsonResponse<T>(responseText);
+    } catch (error) {
+      lastParseError = error;
+      if (attempt >= parseRetries) break;
+
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`Gemini JSON parse failed, retrying generation (${attempt}/${parseRetries}): ${msg}`);
+      await delay(parseDelayMs * attempt);
+    }
+  }
+
+  throw new Error(
+    lastParseError instanceof Error
+      ? lastParseError.message
+      : 'Failed to parse Gemini JSON response after retries.'
+  );
+}
+
+export async function remoteLog(type: string, data: any) {
+  try {
+    const isDebug = useConfigStore.getState().debugMode;
+    if (!isDebug) return;
+
+    await fetch('/api/diagnostics/logs/debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data })
+    });
+  } catch (e) {
+    console.error('Failed to send remote log:', e);
+  }
+}
+
 export async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 5,
@@ -248,83 +328,6 @@ export function parseJsonResponse<T>(raw: string): T {
   }
 }
 
-export async function generateAndParseJsonWithRetry<T>(
-  ai: any,
-  params: any,
-  options?: {
-    transportRetries?: number;
-    baseDelayMs?: number;
-    parseRetries?: number;
-    parseDelayMs?: number;
-    responseSchema?: any;
-    responseMimeType?: string;
-    tools?: any[];
-    role?: string;
-  }
-): Promise<T> {
-  const transportRetries = options?.transportRetries ?? 3;
-  const baseDelayMs = options?.baseDelayMs ?? 2000;
-  const parseRetries = options?.parseRetries ?? 2;
-  const parseDelayMs = options?.parseDelayMs ?? 1200;
-
-  let lastParseError: unknown;
-
-  for (let attempt = 1; attempt <= parseRetries; attempt++) {
-    const responseText = await requestScheduler.schedule(async () => {
-      return await withRetry(async () => {
-        // Merge generation config from options into params if needed
-        const generationConfig = {
-          responseMimeType: options?.responseMimeType || params.config?.responseMimeType || (options?.responseSchema ? 'application/json' : undefined),
-          responseSchema: options?.responseSchema || params.config?.responseSchema,
-        };
-
-        const mergedParams = {
-          ...params,
-          tools: options?.tools || params.config?.tools || params.tools,
-          generationConfig: {
-            ...params.generationConfig,
-            ...generationConfig
-          }
-        };
-
-        const result = await generateContentWithUsage(ai, mergedParams);
-        return result.text;
-      }, transportRetries, baseDelayMs);
-    });
-
-    try {
-      return parseJsonResponse<T>(responseText);
-    } catch (error) {
-      lastParseError = error;
-      if (attempt >= parseRetries) break;
-
-      const msg = error instanceof Error ? error.message : String(error);
-      console.warn(`Gemini JSON parse failed, retrying generation (${attempt}/${parseRetries}): ${msg}`);
-      await delay(parseDelayMs * attempt);
-    }
-  }
-
-  throw new Error(
-    lastParseError instanceof Error
-      ? lastParseError.message
-      : 'Failed to parse Gemini JSON response after retries.'
-  );
-}
-
-async function remoteLog(type: string, data: any) {
-  try {
-    const isDebug = useConfigStore.getState().debugMode;
-    if (!isDebug) return;
-
-    await fetch('/api/diagnostics/logs/debug', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, data })
-    });
-  } catch (e) {
-    console.error('Failed to send remote log:', e);
-  }
-}
 
 export async function generateContentWithUsage(ai: any, params: any) {
   const isDebug = useConfigStore.getState().debugMode;
@@ -337,7 +340,9 @@ export async function generateContentWithUsage(ai: any, params: any) {
     useConfigStore.getState().setServiceStatus('available');
   }
 
-  const result = await ai.models.generateContent(params);
+  const result = await requestScheduler.schedule(async () => {
+    return await ai.models.generateContent(params);
+  });
   
   if (isDebug) {
     await remoteLog('ai_response_raw', {
@@ -386,9 +391,11 @@ export async function fetchAvailableModelsList(config?: any): Promise<ModelInfo[
 
   for (const m of modelsToCheck) {
     try {
-      await ai.models.generateContent({
-        model: m.id,
-        contents: "ping",
+      await requestScheduler.schedule(async () => {
+        return await ai.models.generateContent({
+          model: m.id,
+          contents: "ping",
+        });
       });
       results.push({ ...m, status: 'available' });
     } catch (e: any) {
