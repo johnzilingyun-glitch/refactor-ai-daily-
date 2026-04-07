@@ -1,5 +1,6 @@
 import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, delay, generateAndParseJsonWithRetry } from "./geminiService";
-import { StockAnalysis, AgentMessage, AgentDiscussion, GeminiConfig, AnalysisLevel, AgentRole, ExpertOutput } from "../types";
+import { StockAnalysis, AgentMessage, AgentDiscussion, GeminiConfig, AnalysisLevel, AgentRole, ExpertOutput, Language } from "../types";
+import { useConfigStore } from "../stores/useConfigStore";
 import { getCommoditiesData } from "./marketService";
 import { getPreviousStockAnalysis } from "./adminService";
 import { performBacktest } from "./backtestService";
@@ -63,6 +64,7 @@ export async function startMultiRoundDiscussion(
 ): Promise<AgentDiscussion> {
   const ai = createAI(config);
   const commoditiesData = await getCommoditiesData();
+  const language = useConfigStore.getState().language;
   const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
   const backtest = performBacktest(analysis, previousAnalysis);
 
@@ -99,18 +101,20 @@ export async function startMultiRoundDiscussion(
         messages: [...allMessages],
       });
 
-      const prompt = getExpertPrompt(role, analysis, allMessages, commoditiesData, backtest);
+      const prompt = getExpertPrompt(role, analysis, allMessages, commoditiesData, backtest, language);
 
       const invokeExpert = async (inputPrompt: string) => {
         return generateAndParseJsonWithRetry<any>(ai, {
           model: config?.model || GEMINI_MODEL,
           contents: inputPrompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: getExpertResponseSchema(role),
-            tools: [{ googleSearch: {} }],
-          },
-        }, { transportRetries: 5, baseDelayMs: 3000 });
+        }, { 
+          transportRetries: 5, 
+          baseDelayMs: 3000,
+          responseMimeType: "application/json",
+          responseSchema: getExpertResponseSchema(role),
+          tools: [{ googleSearch: {} }],
+          role
+        });
       };
       let parsed = await invokeExpert(prompt);
       let content = String(parsed?.content || '').trim();
@@ -213,9 +217,9 @@ export async function startMultiRoundDiscussion(
 
     try {
       const synthesis = await startAgentDiscussion(analysis, config, allMessages, {
-        commoditiesData,
-        backtest,
-      });
+          commoditiesData,
+          backtest,
+      }, language);
       // Merge: multi-round messages + synthesis structured data
       const merged = {
         ...synthesis,
@@ -364,7 +368,8 @@ export async function answerDiscussionQuestion(
   const commoditiesData = await getCachedCommodities();
   const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
   const backtest = performBacktest(analysis, previousAnalysis);
-  const prompt = getExpertPrompt(expertRole, analysis, history, commoditiesData, backtest);
+  const language = useConfigStore.getState().language;
+  const prompt = getExpertPrompt(expertRole, analysis, history, commoditiesData, backtest, language);
   
   const additionalContext = `
 【用户提问】
@@ -402,7 +407,8 @@ export async function generateNewConclusion(
   const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
   const backtest = performBacktest(analysis, previousAnalysis);
 
-  const prompt = getExpertPrompt('Chief Strategist', analysis, history, commoditiesData, backtest);
+  const language = useConfigStore.getState().language;
+  const prompt = getExpertPrompt('Chief Strategist', analysis, history, commoditiesData, backtest, language);
   
   const additionalContext = `
 【最终总结指令】
@@ -413,10 +419,9 @@ export async function generateNewConclusion(
   const raw = await generateAndParseJsonWithRetry<any>(ai, {
     model: config?.model || GEMINI_MODEL,
     contents: prompt + additionalContext,
-    config: {
-      responseMimeType: "application/json",
-      tools: [{ googleSearch: {} }]
-    }
+  }, { 
+    responseMimeType: "application/json",
+    tools: [{ googleSearch: {} }]
   });
 
   const message: AgentMessage = {
@@ -440,9 +445,11 @@ export async function startAgentDiscussion(
   prefetched?: {
     commoditiesData?: any[];
     backtest?: ReturnType<typeof performBacktest> | null;
-  }
+  },
+  language?: Language
 ): Promise<AgentDiscussion> {
   const ai = createAI(config);
+  const currentLanguage = language ?? useConfigStore.getState().language;
   const historyContext = history ? `\n\n**PREVIOUS DISCUSSION HISTORY**:\n${JSON.stringify(history)}` : "";
   const commoditiesData = prefetched?.commoditiesData ?? await getCommoditiesData();
   const resolvedBacktest = prefetched?.backtest ?? await (async () => {
@@ -459,15 +466,15 @@ export async function startAgentDiscussion(
     - **强制指令**: 深度研究专家和首席策略师必须在讨论中明确引用上述历史业绩情况。如果是"预测被打脸"或"逻辑漂移"，必须解释原因并修正逻辑；如果是"目标达成"，则讨论是否该止盈或提高目标价。
   ` : "";
 
-  const prompt = getDiscussionPrompt(analysis, commoditiesData, memoryContext, historyContext);
+  const prompt = getDiscussionPrompt(analysis, commoditiesData, memoryContext, historyContext, currentLanguage);
   
   const raw = await generateAndParseJsonWithRetry<AgentDiscussion>(ai, {
     model: config?.model || GEMINI_MODEL,
     contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      tools: [{ googleSearch: {} }]
-    }
+  }, { 
+    responseMimeType: "application/json",
+    tools: [{ googleSearch: {} }],
+    responseSchema: AgentDiscussionSchema
   });
 
   const parsed = validateResponse(AgentDiscussionSchema, raw, 'AgentDiscussion') as AgentDiscussion;

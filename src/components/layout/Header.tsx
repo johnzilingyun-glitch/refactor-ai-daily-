@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp, Zap, BarChart3, Microscope } from 'lucide-react';
+import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp, Zap, BarChart3, Microscope, Languages } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Market, AnalysisLevel } from '../../types';
 import { useUIStore, selectLoading } from '../../stores/useUIStore';
 import { useMarketStore } from '../../stores/useMarketStore';
 import { useAnalysisStore } from '../../stores/useAnalysisStore';
+import { useConfigStore } from '../../stores/useConfigStore';
 
 interface HeaderProps {
   onSearch: (e: React.FormEvent) => void;
@@ -14,10 +16,12 @@ interface HeaderProps {
 }
 
 export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHistory, onFetchAdminData }: HeaderProps) {
+  const { t, i18n } = useTranslation();
   const loading = useUIStore(selectLoading);
   const { isTriggeringReport, showAdminPanel, setShowAdminPanel, setIsSettingsOpen, analysisLevel, setAnalysisLevel } = useUIStore();
   const { dailyReport } = useMarketStore();
   const { symbol, setSymbol, market, setMarket } = useAnalysisStore();
+  const { language, setLanguage } = useConfigStore();
 
   const isComposing = useRef(false);
   const [localSymbol, setLocalSymbol] = useState(symbol);
@@ -26,25 +30,42 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
     setLocalSymbol(symbol);
   }, [symbol]);
 
+  const toggleLanguage = () => {
+    const newLang = language === 'en' ? 'zh-CN' : 'en';
+    setLanguage(newLang);
+    i18n.changeLanguage(newLang);
+  };
+
   return (
-    <header className="mb-12 animate-premium">
+    <header className="mb-12 animate-premium text-zinc-950 dark:text-white">
       <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div className="cursor-pointer" onClick={onResetToHome}>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-6 w-1 bg-indigo-600 rounded-full" />
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400">
-              AI Market Intelligence
+              {t('header.brand')}
             </span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-950 sm:text-5xl">
-            每日股票智能分析
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            {t('header.title')}
           </h1>
           <p className="mt-4 text-zinc-500 font-medium max-w-xl leading-relaxed">
-            基于深度学习的市场研判引擎，为专业投资者提供极简、直观且具备深度的交易决策支持。
+            {t('header.subtitle')}
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
+          <button
+            onClick={toggleLanguage}
+            className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl overflow-hidden relative group"
+            title={language === 'en' ? 'Switch to Chinese' : '切换为英文'}
+          >
+            <Languages size={20} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
+            <span className="absolute bottom-1 right-1 text-[8px] font-bold opacity-70">
+              {language === 'en' ? 'EN' : 'ZH'}
+            </span>
+          </button>
+          
           {dailyReport && (
             <button
               onClick={() => {
@@ -59,7 +80,7 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
                 URL.revokeObjectURL(url);
               }}
               className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-              title="下载每日报告"
+              title={t('header.downloadReport')}
             >
               <Download size={20} strokeWidth={1.5} />
             </button>
@@ -70,12 +91,12 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
             className="btn-secondary h-12 px-5 rounded-xl disabled:opacity-50"
           >
             {isTriggeringReport ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} strokeWidth={1.5} />}
-            <span className="text-sm">触发简报</span>
+            <span className="text-sm">{t('header.triggerBrief')}</span>
           </button>
           <button
             onClick={onOpenHistory}
             className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-            title="查看历史研判"
+            title={t('header.history')}
           >
             <History size={20} strokeWidth={1.5} />
           </button>
@@ -85,14 +106,14 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
               if (!showAdminPanel) onFetchAdminData();
             }}
             className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-            title="系统日志"
+            title={t('header.sysLogs')}
           >
             <Clock size={20} strokeWidth={1.5} />
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
             className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-            title="系统设置"
+            title={t('header.settings')}
           >
             <Settings size={20} strokeWidth={1.5} />
           </button>
@@ -107,9 +128,9 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
             onChange={(e) => setMarket(e.target.value as Market)}
             className="h-14 w-full sm:w-48 cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-white px-5 pr-12 text-sm font-semibold text-zinc-700 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600/40 hover:bg-zinc-50"
           >
-            <option value="A-Share">A-Share市场</option>
-            <option value="HK-Share">HKG港股</option>
-            <option value="US-Share">USA美股</option>
+            <option value="A-Share">{t('markets.aShare')}</option>
+            <option value="HK-Share">{t('markets.hkShare')}</option>
+            <option value="US-Share">{t('markets.usShare')}</option>
           </select>
           <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400">
             <TrendingUp size={16} strokeWidth={1.5} />
@@ -122,7 +143,7 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
           </div>
           <input
             type="text"
-            placeholder="搜索股票代码或简拼 (例如: 600938)..."
+            placeholder={t('header.searchPlaceholder')}
             value={localSymbol}
             onCompositionStart={() => { isComposing.current = true; }}
             onCompositionEnd={(e) => {
@@ -145,9 +166,9 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
         {/* Analysis Level Selector */}
         <div className="flex rounded-xl border border-zinc-200 bg-white overflow-hidden h-14 flex-shrink-0">
           {([
-            { level: 'quick' as AnalysisLevel, icon: Zap, label: '快扫' },
-            { level: 'standard' as AnalysisLevel, icon: BarChart3, label: '标准' },
-            { level: 'deep' as AnalysisLevel, icon: Microscope, label: '深研' },
+            { level: 'quick' as AnalysisLevel, icon: Zap, label: t('levels.quick') },
+            { level: 'standard' as AnalysisLevel, icon: BarChart3, label: t('levels.standard') },
+            { level: 'deep' as AnalysisLevel, icon: Microscope, label: t('levels.deep') },
           ] as const).map(({ level, icon: Icon, label }) => (
             <button
               key={level}
@@ -173,7 +194,7 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
           {loading ? (
             <Loader2 className="animate-spin" size={20} />
           ) : (
-            <span>开始智能研判</span>
+            <span>{t('header.startAnalysis')}</span>
           )}
         </button>
       </form>

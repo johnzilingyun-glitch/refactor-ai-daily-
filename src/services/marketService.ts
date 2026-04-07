@@ -2,6 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, generateAndParseJsonWithRetry } from "./geminiService";
 import { getMarketOverviewPrompt, getDailyReportPrompt } from "./prompts";
 import { MarketOverview, GeminiConfig, Market } from "../types";
+import { useConfigStore } from "../stores/useConfigStore";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
 import { getBeijingDate } from "./dateUtils";
 import { MarketOverviewSchema, validateResponse } from "./schemas";
@@ -9,6 +10,7 @@ import { MarketOverviewSchema, validateResponse } from "./schemas";
 export async function getMarketOverview(config?: GeminiConfig, market: Market = "A-Share", forceRefresh: boolean = false): Promise<MarketOverview> {
   const now = new Date();
   const today = getBeijingDate(now);
+  const language = useConfigStore.getState().language;
   
   const ai = createAI(config);
   const history = await getHistoryContext();
@@ -25,7 +27,7 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
   }
 
   const commoditiesData = await getCommoditiesData();
-  const prompt = getMarketOverviewPrompt(indicesData, commoditiesData, history, beijingDate, now, market);
+  const prompt = getMarketOverviewPrompt(indicesData, commoditiesData, history, beijingDate, now, market, language);
 
   const raw = await generateAndParseJsonWithRetry<MarketOverview>(ai, {
     model: config?.model || GEMINI_MODEL,
@@ -62,8 +64,9 @@ export async function getDailyReport(marketOverview: MarketOverview, config?: Ge
   const ai = createAI(config);
   const now = new Date();
   const beijingDate = getBeijingDate(now);
+  const language = useConfigStore.getState().language;
   const commoditiesData = await getCommoditiesData();
-  const prompt = getDailyReportPrompt(marketOverview, commoditiesData, now, beijingDate);
+  const prompt = getDailyReportPrompt(marketOverview, commoditiesData, now, beijingDate, language);
 
   const response = await withRetry(async () => {
     const result = await generateContentWithUsage(ai, {

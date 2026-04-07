@@ -1,4 +1,5 @@
 export type Market = "A-Share" | "HK-Share" | "US-Share";
+export type Language = "en" | "zh-CN";
 
 export interface StockInfo {
   symbol: string;

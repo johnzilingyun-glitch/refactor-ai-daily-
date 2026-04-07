@@ -22,6 +22,8 @@ interface ConfigState {
   setServiceStatus: (status: 'available' | 'quota_exhausted' | 'error') => void;
   lastErrorStatus: string | null;
   setLastErrorStatus: (status: string | null) => void;
+  language: 'en' | 'zh-CN';
+  setLanguage: (lang: 'en' | 'zh-CN') => void;
 }
 
 export const useConfigStore = create<ConfigState>((set) => {
@@ -70,5 +72,10 @@ export const useConfigStore = create<ConfigState>((set) => {
     setServiceStatus: (status) => set({ serviceStatus: status }),
     lastErrorStatus: null,
     setLastErrorStatus: (status) => set({ lastErrorStatus: status }),
+    language: (localStorage.getItem('app_language') as 'en' | 'zh-CN') || 'en',
+    setLanguage: (lang: 'en' | 'zh-CN') => {
+      localStorage.setItem('app_language', lang);
+      set({ language: lang });
+    },
   };
 });

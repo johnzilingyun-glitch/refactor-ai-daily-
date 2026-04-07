@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { useStockAnalysis, useDiscussion, useChat, useReporting, useMarketData } from './hooks';
 import { useUIStore } from './stores/useUIStore';
 import { useMarketStore } from './stores/useMarketStore';
 import { useAnalysisStore } from './stores/useAnalysisStore';
 import { useDiscussionStore } from './stores/useDiscussionStore';
 import { useScenarioStore } from './stores/useScenarioStore';
+import { useConfigStore } from './stores/useConfigStore';
 import { SettingsModal } from './components/SettingsModal';
 import { HistoryModal } from './components/HistoryModal';
 import { ErrorNotice } from './components/ErrorNotice';
@@ -18,7 +20,13 @@ import { DetailModal } from './components/shared/DetailModal';
 
 export default function App() {
   console.log('App is rendering');
+  const { i18n } = useTranslation();
+  const { language } = useConfigStore();
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    i18n.changeLanguage(language);
+  }, [language, i18n]);
 
   const { analysisError, showAdminPanel } = useUIStore();
   const { analysis, setAnalysis, setSymbol, setMarket, setChatHistory } = useAnalysisStore();

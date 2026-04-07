@@ -33,13 +33,19 @@ vi.mock('@google/genai', () => {
 describe('geminiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (useConfigStore.getState as any).mockReturnValue({
+      serviceStatus: 'available',
+      setServiceStatus: vi.fn(),
+    });
   });
 
   describe('generateContentWithUsage', () => {
     it('should add token usage to the store when available', async () => {
       const mockAddTokenUsage = vi.fn();
       (useConfigStore.getState as any).mockReturnValue({
-        addTokenUsage: mockAddTokenUsage
+        addTokenUsage: mockAddTokenUsage,
+        serviceStatus: 'available',
+        setServiceStatus: vi.fn(),
       });
 
       const mockAi = {
@@ -68,7 +74,9 @@ describe('geminiService', () => {
     it('should not break if usageMetadata is missing', async () => {
       const mockAddTokenUsage = vi.fn();
       (useConfigStore.getState as any).mockReturnValue({
-        addTokenUsage: mockAddTokenUsage
+        addTokenUsage: mockAddTokenUsage,
+        serviceStatus: 'available',
+        setServiceStatus: vi.fn(),
       });
 
       const mockAi = {

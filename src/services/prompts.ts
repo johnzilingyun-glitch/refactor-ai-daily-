@@ -1,7 +1,9 @@
-import { Market, MarketOverview, StockAnalysis, AgentMessage, Scenario } from "../types";
+import { Market, MarketOverview, StockAnalysis, AgentMessage, Scenario, Language } from "../types";
 import { formatCommoditiesToMarkdown } from "./formatUtils";
 
-export const getMarketOverviewPrompt = (indicesData: any[], commoditiesData: any[], history: any[], beijingDate: string, now: Date, market: Market = "A-Share") => `
+export const getMarketOverviewPrompt = (indicesData: any[], commoditiesData: any[], history: any[], beijingDate: string, now: Date, market: Market = "A-Share", language: Language = "en") => {
+  const isChinese = language === "zh-CN";
+  return `
 Current date and time (UTC): ${now.toISOString()}
 Current date and time (China Standard Time): ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
 
@@ -50,7 +52,7 @@ Requirements:
 6. **RECOMMENDATIONS**: Provide recommended stocks or sectors in the ${market} market based on the above analysis.
 7. Include exactly 5 major financial news items from the latest market day for the ${market} market.
 8. Each news item must have title, source, time, url, and summary.
-9. All user-facing text fields must be in Simplified Chinese.
+9. **LANGUAGE (MANDATORY)**: All user-facing text fields MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
 10. **ANTI-HALLUCINATION (CRITICAL)**: If you cannot find the data, state it clearly in the summary. Do NOT invent numbers.
 11. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
    - Each "url" MUST be the exact, direct, and publicly accessible link to the SPECIFIC article.
@@ -61,9 +63,8 @@ Requirements:
    - If a specific article URL is not available, do NOT include that news item.
    - **LATEST DATA**: Use Google Search to ensure all news and data are from the most recent trading session or the current day.
    - **TEST CASE**: A valid URL should look like 'https://finance.sina.com.cn/stock/s/2024-03-22/doc-imnvvxyz1234567.shtml' not 'https://finance.sina.com.cn/'.
-8. Use real source URLs, never placeholder/example URLs.
-9. Continuity: Based on previous analysis, identify if trends are continuing or reversing.
-10. **LANGUAGE (MANDATORY)**: All output MUST be in Simplified Chinese (简体中文).
+11. Use real source URLs, never placeholder/example URLs.
+12. Continuity: Based on previous analysis, identify if trends are continuing or reversing.
 
 JSON schema:
 {
@@ -110,8 +111,11 @@ JSON schema:
   "marketSummary": "string"
 }
 `.trim();
+};
 
-export const getAnalyzeStockPrompt = (symbol: string, market: Market, realtimeData: any, commoditiesData: any[], history: any[], beijingDate: string, beijingShortDate: string, now: Date) => `
+export const getAnalyzeStockPrompt = (symbol: string, market: Market, realtimeData: any, commoditiesData: any[], history: any[], beijingDate: string, beijingShortDate: string, now: Date, language: Language = "en") => {
+  const isChinese = language === "zh-CN";
+  return `
 Current date and time (UTC): ${now.toISOString()}
 Current date and time (China Standard Time): ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
 
@@ -127,7 +131,7 @@ ${formatCommoditiesToMarkdown(commoditiesData)}
 
 You are a professional equity analyst.
 Analyze stock "${symbol}" in the ${market} market using the latest available public information and Google Search grounding.
-All output MUST be in Simplified Chinese (简体中文).
+**LANGUAGE (MANDATORY)**: All output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
 
 **DATA SOURCE HIERARCHY (CRITICAL)**: 
 1. If the "REAL-TIME DATA TOOL OUTPUT" is provided above, you **MUST MUST MUST** use its exact values for ALL matching fields in your JSON output. This includes: "price", "change", "changePercent", "previousClose", "lastUpdated", "dailyHigh" (use dayHigh), "dailyLow" (use dayLow), "pe" (use pe), and currency.
@@ -169,74 +173,64 @@ Requirements:
 6. **DEEP FUNDAMENTAL ANALYSIS (CRITICAL)**: 
    - **INDUSTRY-SPECIFIC LOGIC (CRITICAL)**: Avoid boilerplate analysis. You MUST identify the 3 most critical value drivers for this SPECIFIC stock (e.g., for Mindray: R&D efficiency, healthcare policy, overseas expansion; for a tech stock: compute power costs, user growth). **Use Google Search to find these specific drivers.**
    - **FULL-DIMENSIONAL PENETRATION (NEW)**: Do not just look at financial statements. Penetrate to the business level: analyze management quality, supply chain control, customer stickiness, and technological moats.
-   - **FORWARD-LOOKING JUDGMENT (NEW)**: Based on your research, provide a high-conviction prediction for the next 2-4 quarters. Identify potential inflection points or trend continuations. **PREVENT OVERCONFIDENCE (CRITICAL)**: If key evidence for a forward-looking judgment is missing, you MUST explicitly label it as "Logical Gap due to Missing Information" (信息缺失导致的逻辑断层) instead of forcing a prediction.
+   - **FORWARD-LOOKING JUDGMENT (NEW)**: Based on your research, provide a high-conviction prediction for the next 2-4 quarters. Identify potential inflection points or trend continuations. **PREVENT OVERCONFIDENCE (CRITICAL)**: If key evidence for a forward-looking judgment is missing, you MUST explicitly label it as "Logical Gap due to Missing Information" instead of forcing a prediction.
    - **SEARCH NOISE FILTERING (MANDATORY)**: When performing penetration research, prioritize official announcements, authoritative media, deep research reports, and industry data. **Be extremely cautious** and filter out unverified forum rumors, marketing content, or social media noise.
-    - **DATA SOURCE & VERIFICATION (MANDATORY)**: For EVERY fundamental data point (PE, PB, ROE, EPS, Revenue Growth, etc.) presented in your analysis, you MUST:
-      1. **Pre-label the source and date**: Before presenting the value, explicitly state the source and the date of the data (e.g., 'Source: East Money, 2026-03-31').
-      2. **Cross-verify**: You MUST cross-verify this data point against at least TWO authoritative sources (e.g., Sina Finance, East Money, Xueqiu). If there is a discrepancy, explain how you resolved it or which source you prioritized and why.
-   - **TABLE 1: REAL-TIME CORE INDICATORS & DEVIATION (MANDATORY)**: Must include columns: 指标 (2026E), 实时数值 (必须标注数据来源与日期), 市场共识预期, 偏离度 (%), 备注. Include EPS, PE (Forward), ROE, Dividend Yield. **DATA CONSISTENCY (CRITICAL)**: Prioritize the latest real-time data from search and explicitly label the data date. **OUTLIER HANDLING**: If consensus data is missing (e.g., for niche small-caps), you MUST state "Estimated based on historical averages" or "Missing Information" instead of making up data.
-   - **TABLE 2: 行业核心变量与宏观锚点 (DYNAMIC)**: Must include columns: 关键变量/原材料（需标注单位，如：美元/吨）, 当前价格/数值 (必须提供具体的量化数值，严禁使用定性描述如“高/低/上涨”), 逻辑权重（需标注哪个是“第一驱动力”）, 近 30 日涨跌幅 (必须提供具体的百分比数值), 成本/收入传导逻辑, **数据来源与日期时间 (MANDATORY)**。
-   - **变量选择与验证 (CRITICAL)**: 严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**必须进行多源交叉验证**，并明确标注每个变量的数据来源（如：生意社、LME、Wind、公司公告）及具体的时间戳。
-   - **单位标准化 (MANDATORY)**: 强制要求在表格中注明单位（如：美元/吨、点位、人民币/片），防止跨市场分析时产生数值混淆。
+     - **DATA SOURCE & VERIFICATION (MANDATORY)**: For EVERY fundamental data point (PE, PB, ROE, EPS, Revenue Growth, etc.) presented in your analysis, you MUST:
+       1. **Pre-label the source and date**: Before presenting the value, explicitly state the source and the date of the data.
+       2. **Cross-verify**: You MUST cross-verify this data point against at least TWO authoritative sources. If there is a discrepancy, explain how you resolved it or which source you prioritized and why.
+   - **TABLE 1: REAL-TIME CORE INDICATORS & DEVIATION (MANDATORY)**: Must include columns: Indicator (2026E), Real-time Value, Market Consensus, Deviation (%), Note. Include EPS, PE (Forward), ROE, Dividend Yield. **DATA CONSISTENCY (CRITICAL)**: Prioritize the latest real-time data from search and explicitly label the data date.
+   - **TABLE 2: INDUSTRY CORE VARIABLES & MACRO ANCHORS (DYNAMIC)**: Must include columns: Variable/Material (with units), Current Value, Logic Weight, Last 30 Days Change (%), cost/revenue transmission logic, **Data Source and Date (MANDATORY)**.
+   - **VARIABLE SELECTION & VERIFICATION (CRITICAL)**: DO NOT include irrelevant variables. You must use industry-specific variables relevant to this stock.
    - **EXPECTATION GAP IDENTIFICATION**: Identify market blind spots and Alpha sources.
-   - **TARGET PRICE & SENTIMENT**: Provide a 6-month target range (with confidence interval) and a sentiment score (0-100). **CONFIDENCE INTERVAL LOGIC (NEW)**: Adjust the interval width based on industry volatility. High-volatility sectors (e.g., crypto, concept stocks) should have wider intervals; low-volatility sectors (e.g., utilities) should have narrower intervals.
-   - **EVIDENCE LEVEL (MANDATORY)**: When identifying these critical value drivers, you MUST label the source and its "Evidence Level" (证据级别) (e.g., "Mentioned in financial report", "Mainstream research consensus", "Third-party real-time monitoring").
+   - **TARGET PRICE & SENTIMENT**: Provide a 6-month target range (with confidence interval) and a sentiment score (0-100).
+   - **EVIDENCE LEVEL (MANDATORY)**: When identifying these critical value drivers, you MUST label the source and its "Evidence Level".
    - **REVERSE VERIFICATION (CRITICAL)**: After identifying the core indicators, you MUST ask and answer: "If this indicator changes by 10% in an unfavorable direction, how much impact will the company's net profit suffer?" Provide a specific quantitative estimate.
-   - **RELEVANCE CHECK (STRICT)**: **DO NOT** include irrelevant macro variables (e.g., Gold/Oil prices for a medical device company) in your analysis or sensitivity tables unless there is a direct, logical causal link. If you include a macro variable, you MUST explain the specific transmission mechanism (e.g., "Oil price affects plastic casing costs for medical devices"). If no direct link exists, use industry-specific variables (e.g., "Medical Insurance Reimbursement Rates") instead.
-   - **LOOK THROUGH SURFACE DATA**: Do NOT just report PE, PB, or reported profits. These can be misleading (迷惑数据).
-   - **PENETRATE TO OPERATIONS**: Analyze actual operating cash flow, asset turnover, inventory cycles, and R&D efficiency.
-   - **NARRATIVE VS DATA CONSISTENCY**: Detect if management's growth narrative (e.g., "AI transformation") matches actual financial data (e.g., R&D Efficiency, CAPEX). If there's a mismatch, flag it.
+   - **RELEVANCE CHECK (STRICT)**: **DO NOT** include irrelevant macro variables in your analysis or sensitivity tables unless there is a direct, logical causal link.
+   - **LOOK THROUGH SURFACE DATA**: Do NOT just report PE, PB, or reported profits. Analyze actual operating cash flow, asset turnover, inventory cycles, and R&D efficiency.
+   - **NARRATIVE VS DATA CONSISTENCY**: Detect if management's growth narrative matches actual financial data. If there's a mismatch, flag it.
    - **NET-NET CALCULATION**: Calculate Graham's "Net-Net" value: (Current Assets - Total Liabilities). If Price < Net-Net, it's "Deep Value".
-   - **BUFFETT'S MOAT THEORY**: Analyze the company's "Economic Moat" (Wide, Narrow, or None) and its source (Brand, Network Effect, Switching Costs, Cost Advantage).
-   - **EXPECTATION VS REALITY**: Compare current performance with previous market expectations. Is the growth sustainable or a one-time accounting gain?
-   - **MARGIN OF SAFETY**: Incorporate "Margin of Safety" (安全边际) theory into the fundamental analysis and trading advice.
+   - **BUFFETT'S MOAT THEORY**: Analyze the company's "Economic Moat" (Wide, Narrow, or None) and its source.
+   - **EXPECTATION VS REALITY**: Compare current performance with previous market expectations.
+   - **MARGIN OF SAFETY**: Incorporate "Margin of Safety" theory into the fundamental analysis and trading advice.
 7. **HISTORICAL CONTEXT (NEW)**: Include historical price ranges and major historical events affecting the stock.
 7. **CRITICAL DATA ACCURACY (HIGH PRIORITY)**: 
    - You MUST search for the most recent trading data for this stock. 
    - **CROSS-REFERENCE (MANDATORY)**: You MUST cross-reference at least TWO authoritative financial sources to verify the current price, previous close, change, and changePercent.
    - **MARKET STATUS**: Determine if the market is currently open or closed. If open, provide real-time data. If closed, provide the latest closing data.
    - **CALCULATION CHECK (CRITICAL)**: The "change" MUST be (Current Price - Previous Close). The "changePercent" MUST be (Change / Previous Close * 100). 
-   - **EXAMPLE CHECK**: For ${symbol} on ${beijingDate}, if the price is X and it rose from Y, the change is (X-Y). If you report old data, you will fail validation. DOUBLE CHECK THE DATE.
-   - **PREVENT SWAPPING (CRITICAL)**: Double check if you are swapping "Current Price" and "Previous Close". "Previous Close" is the price from the END of the PREVIOUS trading day. "Current Price" is the price as of today.
+   - **EXAMPLE CHECK**: For ${symbol} on ${beijingDate}, if the price is X and it rose from Y, the change is (X-Y). DOUBLE CHECK THE DATE.
+   - **PREVENT SWAPPING (CRITICAL)**: Double check if you are swapping "Current Price" and "Previous Close".
    - **SOURCE NAMING**: You MUST explicitly state the source name (e.g., "Source: Sina Finance") AND the direct URL of the financial page you used for the price data at the end of the "summary" field.
    - **BEIJING TIME (CRITICAL)**: For A-shares and HK-shares, all times MUST be in Beijing Time (CST). The "lastUpdated" field MUST be in "YYYY-MM-DD HH:mm:ss CST" format.
    - **REASONABLENESS CHECK**: If the price is significantly different from the previous close or historical ranges, you MUST double-check the stock code and market.
-   - **NAME VERIFICATION**: Ensure the company name matches the stock code exactly.
-   - **TIMESTAMP**: The "lastUpdated" field MUST reflect the actual time of the data point (e.g., "${beijingDate} 15:00 CST").
-   - If there is a discrepancy between sources, prioritize the most recent one and note the source, time, and the "Previous Close" value used for calculation in the "summary". Also explicitly mention the calculation steps (e.g., "Price 10.5 - Prev Close 10.6 = -0.1 (-0.94%)").
-   - **DATA INTEGRITY CHECK**: If the "change" or "changePercent" is exactly 0, verify if the stock was suspended or if it's a non-trading day. Check the "Turnover" (成交额) to confirm trading activity.
-   - **DAILY RANGE CHECK**: You MUST find the "Daily High" (最高) and "Daily Low" (最低). The "Current Price" MUST be within this range. If not, you MUST re-verify the data.
+   - **TIMESTAMP**: The "lastUpdated" field MUST reflect the actual time of the data point.
+   - If there is a discrepancy between sources, prioritize the most recent one.
+   - **DATA INTEGRITY CHECK**: If the "change" or "changePercent" is exactly 0, verify if the stock was suspended or if it's a non-trading day.
+   - **DAILY RANGE CHECK**: You MUST find the "Daily High" and "Daily Low". The "Current Price" MUST be within this range.
 8. **DATA TYPES**: 
-   - "price", "change", and "changePercent" MUST be numbers (not strings). Ensure the "price" matches the "currency" (e.g., CNY for A-shares). Double-check the sign of "change" and "changePercent" (negative for price drops).
-   - "changePercent" should be the percentage value (e.g., 5.2 for 5.2% increase, -0.7 for 0.7% decrease), not a decimal (e.g., 0.052).
+   - "price", "change", and "changePercent" MUST be numbers (not strings).
+   - "changePercent" should be the percentage value (e.g., 5.2 for 5.2% increase).
 9. Include 3 to 5 recent and relevant news items for this exact company.
 10. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
    - Each "url" MUST be the exact, direct, and publicly accessible link to the SPECIFIC article.
-   - **STRICTLY PROHIBITED**: Do NOT use homepages (e.g., finance.sina.com.cn), search result pages, or login-required/paywalled content.
+   - **STRICTLY PROHIBITED**: Do NOT use homepages, search result pages, or login-required/paywalled content.
    - **VERIFICATION**: You MUST verify that the URL actually points to the specific article described by the title.
-   - **SOURCES**: Prioritize authoritative and highly accessible sources: Sina Finance (新浪财经), East Money (东方财富), Xueqiu (雪球), and Phoenix Finance (凤凰财经).
-   - **AVOID**: Avoid sources that frequently have broken links or paywalls like Economic Observer (经济观察网 - eeo.com.cn) unless you are certain the link is public.
-   - If a specific article URL is not available, do NOT include that news item.
-   - **LATEST DATA**: Use Google Search to ensure all news and data are from the most recent trading session or the current day.
-   - **TEST CASE**: A valid URL should look like 'https://finance.sina.com.cn/stock/s/2024-03-22/doc-imnvvxyz1234567.shtml' not 'https://finance.sina.com.cn/'.
+10. All user-facing text fields must be in ${isChinese ? "Simplified Chinese" : "English"}.
 11. Provide summary, technicalAnalysis, fundamentalAnalysis, sentiment, score, recommendation, keyRisks, keyOpportunities, and a detailed tradingPlan.
-12. **MARGIN OF SAFETY (NEW)**: Incorporate "Margin of Safety" (安全边际) theory into the fundamental analysis and trading plan.
-13. **EVIDENCE-BASED REASONING (CRITICAL)**: For every claim made in the analysis, you MUST provide specific evidence (data points, news snippets, or financial ratios). Avoid vague storytelling (叙事过强).
-14. **CAUSATION VS CORRELATION**: Explicitly distinguish between variables that are merely correlated and those that have a verified causal link to the stock's performance.
-15. **CYCLE & VOLATILITY (NEW)**: For cyclical stocks, identify the current stage (Early/Mid/Late/Bottom/Peak) and analyze how volatility characteristics affect the thesis.
-16. **TRACKABLE METRICS (NEW)**: Define specific "Verification Metrics" with thresholds and timeframes (e.g., "If X > Y for Z weeks, then thesis is confirmed").
-17. **CAPITAL BEHAVIOR (NEW)**: Analyze Northbound flow, institutional changes, and AH premium to verify if the market "believes" your fundamental logic.
+12. **MARGIN OF SAFETY (NEW)**: Incorporate "Margin of Safety" theory into the fundamental analysis and trading plan.
+13. **EVIDENCE-BASED REASONING (CRITICAL)**: For every claim made in the analysis, you MUST provide specific evidence.
+14. **CAUSATION VS CORRELATION**: Explicitly distinguish between variables.
+15. **CYCLE & VOLATILITY (NEW)**: For cyclical stocks, identify the current stage.
+16. **TRACKABLE METRICS (NEW)**: Define specific "Verification Metrics".
+17. **CAPITAL BEHAVIOR (NEW)**: Analyze Northbound flow, institutional changes, and AH premium.
 18. **TRADING PLAN LOGIC (NEW)**: 
-    - If the recommendation is NOT "Buy" or "Strong Buy", the tradingPlan should state "Not Recommended" (不推荐) for entryPrice, targetPrice, and stopLoss. 
-    - Do NOT provide specific price levels if not recommended.
-    - **STRATEGY RISKS (NEW)**: Clearly state the specific risks associated with the recommended entry/target/stop-loss levels (e.g., "if stop-loss is too tight, it may be triggered by normal volatility"). This is separate from general keyRisks.
+    - If the recommendation is NOT "Buy" or "Strong Buy", the tradingPlan should state "Not Recommended" for entryPrice, targetPrice, and stopLoss. 
+    - **STRATEGY RISKS (NEW)**: Clearly state the specific risks associated with the recommended strategy.
 19. tradingPlan must include: entryPrice, targetPrice, stopLoss, strategy, and strategyRisks (all as strings).
 20. sentiment must be one of: Bullish, Bearish, Neutral.
 21. recommendation must be one of: Strong Buy, Buy, Hold, Sell, Strong Sell.
-22. All long-form text fields must be in Simplified Chinese.
-23. Continuity: Based on previous analysis of this stock, identify if trends are continuing or reversing.
-24. **ANTI-HALLUCINATION (CRITICAL)**: If you cannot find the data, state it clearly in the summary. Do NOT invent numbers.
-25. **REASONABLENESS CHECK**: If the price is significantly different from the previous close or historical ranges, you MUST double-check if you have the correct stock and market.
+22. Continuity: Based on previous analysis of this stock, identify if trends are continuing or reversing.
+23. **ANTI-HALLUCINATION (CRITICAL)**: If you cannot find the data, state it clearly in the summary. Do NOT invent numbers.
 
 JSON schema:
 {
@@ -350,8 +344,11 @@ JSON schema:
   }
 }
 `.trim();
+};
 
-export const getChatMessagePrompt = (userMessage: string, analysis: StockAnalysis, commoditiesData: any[]) => `
+export const getChatMessagePrompt = (userMessage: string, analysis: StockAnalysis, commoditiesData: any[], language: Language = "en") => {
+  const isChinese = language === "zh-CN";
+  return `
 You are a professional equity analyst answering a follow-up question from a user.
 
 Existing analysis JSON:
@@ -364,12 +361,16 @@ ${formatCommoditiesToMarkdown(commoditiesData)}
 User question:
 ${userMessage}
 
-Answer in Simplified Chinese.
+**LANGUAGE (MANDATORY)**: All output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
 Be concise, balanced, and practical.
 If the question goes beyond the known analysis, say so clearly instead of inventing facts.
 `.trim();
+};
 
-export const getStockReportPrompt = (analysis: StockAnalysis) => `
+export const getStockReportPrompt = (analysis: StockAnalysis, language: Language = "en") => {
+    const isChinese = language === "zh-CN";
+    return `
+    ${isChinese ? `
     基于以下个股分析数据，生成一份完整的个股深度研究报告。
     
     报告应包含：
@@ -381,15 +382,32 @@ export const getStockReportPrompt = (analysis: StockAnalysis) => `
     5. 📈 **交易计划**：建议买入价、目标价、止损价。
     6. ⚠️ **核心机会与风险提示**。
     ${analysis.backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${analysis.backtestResult.previousRecommendation}, 实际收益 ${analysis.backtestResult.actualReturn}` : ''}
+    ` : `
+    Based on the following stock analysis data, generate a comprehensive stock research report.
     
-    分析数据：
+    The report should include:
+    1. 🚀 **Stock Basic Info**: Name, Symbol, Price, Change.
+    2. 🧠 **AI Core Insights Summary**:
+       - Core analysis conclusions from technical, fundamental, sentiment, and risk management perspectives.
+    3. 🎯 **AI Final Conclusion**: Clear operational advice.
+    4. 🛡️ **Margin of Safety Assessment**: In-depth evaluation based on Margin of Safety theory.
+    5. 📈 **Trading Plan**: Recommended Entry Price, Target Price, Stop Loss.
+    6. ⚠️ **Key Opportunities & Risks**.
+    ${analysis.backtestResult ? `7. ⏪ **Historical Backtest Review**: Previous Recommendation ${analysis.backtestResult.previousRecommendation}, Actual Return ${analysis.backtestResult.actualReturn}` : ''}
+    `}
+    
+    Analysis Data:
     ${JSON.stringify(analysis)}
     
-    请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。**不需要包含完整研讨记录**。
-    回答语言：简体中文。
+    Please use a format friendly to Feishu cards: do not use #, >, - or other Markdown symbols. Use **bold text** and Emojis as headers. Each major block must be separated by '---'. Ensure table data uses standard Markdown table format for alignment. **Do not include full discussion records**.
+    Answer language: ${isChinese ? "Simplified Chinese" : "English"}.
 `.trim();
+};
 
-export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: AgentMessage[], commoditiesData: any[], scenarios?: Scenario[], backtestResult?: any) => `
+export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: AgentMessage[], commoditiesData: any[], scenarios?: Scenario[], backtestResult?: any, language: Language = "en") => {
+    const isChinese = language === "zh-CN";
+    return `
+    ${isChinese ? `
     基于以下个股分析数据、AI 专家组研讨记录以及场景概率分布，生成一份完整的个股深度研究报告。
     
     报告应包含：
@@ -402,25 +420,42 @@ export const getDiscussionReportPrompt = (analysis: StockAnalysis, discussion: A
     5. 📈 **交易计划**：建议买入价、目标价、止损价。
     6. ⚠️ **核心机会与风险提示**。
     ${backtestResult ? `7. ⏪ **历史回测复盘**: 上次建议 ${backtestResult.previousRecommendation}, 实际收益 ${backtestResult.actualReturn}` : ''}
+    ` : `
+    Based on the following stock analysis data, AI expert group discussion records, and scenario probability distributions, generate a comprehensive deep research report.
     
-    分析数据：
+    The report should include:
+    1. 🚀 **Stock Basic Info**: Name, Symbol, Price, Change.
+    2. 🧠 **AI Expert Group Discussion Summary**:
+       - Core views from technical, fundamental, sentiment, risk management, and contrarian strategy perspectives.
+       - Main points of disagreement or consensus in the discussion.
+    3. 🎯 **Chief Strategist's Final Conclusion**: Clear operational advice.
+    4. 🛡️ **Margin of Safety Assessment**: In-depth evaluation based on Margin of Safety theory.
+    5. 📈 **Trading Plan**: Recommended Entry Price, Target Price, Stop Loss.
+    6. ⚠️ **Key Opportunities & Risks**.
+    ${backtestResult ? `7. ⏪ **Historical Backtest Review**: Previous Recommendation ${backtestResult.previousRecommendation}, Actual Return ${backtestResult.actualReturn}` : ''}
+    `}
+    
+    Analysis Data:
     ${JSON.stringify(analysis)}
 
     **REAL-TIME COMMODITY DATA (GROUND TRUTH)**:
     ${JSON.stringify(commoditiesData, null, 2)}
-    **IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the stock. If the provided commodities are not relevant, use Google Search to find the most critical industry-specific variables instead.
+    **IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the stock.
     
-    研讨记录：
+    Discussion Records:
     ${discussion.map(m => `[${m.role}]: ${m.content}`).join('\n\n')}
     
-    请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。**不需要包含完整研讨记录**。
-    回答语言：简体中文。
+    Please use a format friendly to Feishu cards: do not use #, >, - or other Markdown symbols. Use **bold text** and Emojis as headers. Each major block must be separated by '---'. Ensure table data uses standard Markdown table format for alignment. **Do not include full discussion records**.
+    Answer language: ${isChinese ? "Simplified Chinese" : "English"}.
 `.trim();
+};
 
-export const getDailyReportPrompt = (marketOverview: MarketOverview, commoditiesData: any[], now: Date, beijingDate: string) => `
+export const getDailyReportPrompt = (marketOverview: MarketOverview, commoditiesData: any[], now: Date, beijingDate: string, language: Language = "en") => {
+    const isChinese = language === "zh-CN";
+    return `
     Current date and time: ${now.toISOString()}
     
-    You are a professional China-focused markets analyst.
+    You are a professional markets analyst.
     Use Google Search grounding to gather the latest available public information about the market situation from the previous day or the weekend.
     
     Market Overview Data (for context):
@@ -428,46 +463,45 @@ export const getDailyReportPrompt = (marketOverview: MarketOverview, commodities
 
     **REAL-TIME COMMODITY DATA (GROUND TRUTH)**:
     ${formatCommoditiesToMarkdown(commoditiesData)}
-    **IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the market trend or the specific sectors being discussed.
+    **IMPORTANT**: Use the commodity data above ONLY if it is logically relevant.
     
     Requirements:
-    1. Summarize the A-share market tone (previous day or weekend news).
-    2. Include key indices performance (SSE, SZSE, ChiNext, CSI 300, HSI).
+    1. Summarize the market tone.
+    2. Include key indices performance.
     3. List 3-5 major financial news items.
     4. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
-       - Each news item MUST include a direct, publicly accessible URL to the SPECIFIC article.
-       - **STRICTLY PROHIBITED**: Do NOT use homepages (e.g., finance.sina.com.cn), search result pages, or login-required/paywalled content.
-       - **SOURCES**: Prioritize authoritative and highly accessible sources: Sina Finance (新浪财经), East Money (东方财富), Xueqiu (雪球), and Phoenix Finance (凤凰财经).
-       - **AVOID**: Avoid sources that frequently have broken links or paywalls like Economic Observer (经济观察网 - eeo.com.cn) unless you are certain the link is public.
-       - **LATEST DATA**: Use Google Search to ensure all news and data are from the most recent trading session or the current day.
+       - Each news item MUST include a direct, publicly accessible URL.
     5. Provide a prediction for today's market opening and trend.
     6. Recommend 3 stocks or sectors to watch today with brief reasons.
-    7. 请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。
-    8. 使用丰富的 Emoji 增加可读性。
-    9. 回答语言：简体中文。
+    7. Please use a format friendly to Feishu cards: do not use #, >, - or other Markdown symbols. Use **bold text** and Emojis as headers. Each major block must be separated by '---'.
+    8. Answer language: ${isChinese ? "Simplified Chinese" : "English"}.
     
     Structure:
-    # 📅 每日早间市场内参 (${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(now)})
+    # 📅 Daily Market Insight (${new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(now)})
     
     ---
     
-    ## 🏦 1. 大盘回顾与总结
+    ## 🏦 1. Market Review
     ...
     
-    ## 📰 2. 核心财经要闻
+    ## 📰 2. Core Financial News
     ...
     
-    ## 🔮 3. 今日预测与操作建议
+    ## 🔮 3. Prediction and Strategy
     ...
     
-    ## 🌟 4. 今日关注个股/板块
+    ## 🌟 4. Stocks/Sectors to Watch
     ...
     
     ---
-    *本报告由 TradingAgents AI 专家组自动生成，仅供参考。*
+    *This report is automatically generated by TradingAgents AI expert group.*
 `.trim();
+};
 
-export const getChatReportPrompt = (stockName: string, chatHistory: { role: string; content: string }[]) => `
+export const getChatReportPrompt = (stockName: string, chatHistory: { role: string; content: string }[], language: Language = "en") => {
+  const isChinese = language === "zh-CN";
+  return `
+    ${isChinese ? `
     基于以下关于 ${stockName} 的深度追问会话记录，生成一份专业、简洁的研讨总结报告。
     
     报告应包含：
@@ -475,237 +509,138 @@ export const getChatReportPrompt = (stockName: string, chatHistory: { role: stri
     2. 🧠 **核心问答摘要**：提炼投资者最关心的几个问题及其对应的 AI 专家解答。
     3. 🎯 **关键结论与建议**：基于讨论内容总结出的最新操作建议或观点。
     4. ⚠️ **新增风险/机会提示**：讨论中新发现的风险点或机会点。
+    ` : `
+    Based on the following session history of ${stockName}, generate a professional and concise discussion summary report.
     
-    会话记录：
+    The report should include:
+    1. 💬 **Session Background**: Briefly describe the target stock of this discussion.
+    2. 🧠 **Core Q&A Summary**: Extract key questions from investors and their corresponding AI expert answers.
+    3. 🎯 **Key Conclusions & Suggestions**: Summarize latest operational advice or views based on the discussion.
+    4. ⚠️ **New Risks/Opportunities**: New risk or opportunity points discovered during the discussion.
+    `}
+    
+    Session History:
     ${JSON.stringify(chatHistory)}
     
-    请使用飞书卡片友好的格式：不要使用 #, >, - 等 Markdown 符号。使用 **加粗文本** 和 Emoji 作为标题。每个主要区块之间必须使用 '---' 作为分隔符。表格数据请确保使用标准的 Markdown 表格格式以便对齐。
-    回答语言：简体中文。
+    Please use a format friendly to Feishu cards: do not use #, >, - or other Markdown symbols. Use **bold text** and Emojis as headers. Each major block must be separated by '---'.
+    Answer language: ${isChinese ? "Simplified Chinese" : "English"}.
 `.trim();
+};
 
 export const getDiscussionPrompt = (
   analysis: StockAnalysis,
   commoditiesData: any[],
   memoryContext: string,
-  historyContext: string
+  historyContext: string,
+  language: Language = "en"
 ) => {
+  const isChinese = language === "zh-CN";
   const now = new Date().toISOString();
   const today = now.split('T')[0];
   return `
-    你是一支由8位顶级金融分析精英组成的专家团队，正在召开高规格联席研讨会议，对以下股票进行机构级深度研讨。
-    这不是一份普通分析报告，而是一场真实的、多轮的、有激烈辩论和数据交锋的专业级研讨会议。
+    You are a professional team of 8 elite financial analysts conducting a high-level joint meeting to provide institutional-grade research on the following stock.
+    This is not a simple report, but a realistic, multi-round professional deliberation with intense debate and data cross-examination.
 
-    **当前日期**: ${today}
-    **数据时效性红线 (CRITICAL)**: 所有宏观变量（汇率、利率、大宗商品价格等）必须优先使用下方的 **REAL-TIME COMMODITY DATA**。若该数据中不包含所需变量，则必须通过 Google Search 获取今天 (${today}) 的最新报价。严禁使用训练数据中的记忆值。若某变量今天无交易，标注最近交易日期。
-    **口径优先级红线 (CRITICAL)**: 本次讨论所有量化结论必须遵循 **内置 REAL-TIME 数据 > 权威金融 API > Google Search 权威来源 > 其他来源**。若冲突，JSON 输出口径必须保留内置数据作为主口径，搜索数据仅用于差异解释。
+    **LANGUAGE (MANDATORY)**: All communication and output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
+
+    **Current Date**: ${today}
+    **Data Timeliness Redline (CRITICAL)**: All macro variables (exchange rates, interest rates, commodities) MUST prioritize the **REAL-TIME COMMODITY DATA** below. If missing, use Google Search for today's (${today}) latest quotes.
+    **Data Priority Redline (CRITICAL)**: QUANTITATIVE CONCLUSIONS MUST FOLLOW **BUILT-IN REAL-TIME DATA > AUTHORITATIVE API > GOOGLE SEARCH > OTHERS**.
 
     **REAL-TIME COMMODITY DATA (GROUND TRUTH - ${today})**:
     ${formatCommoditiesToMarkdown(commoditiesData)}
-    **IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the stock's industry. 
     
     ${memoryContext}
-    - **STRICT RELEVANCE CONSTRAINT (CRITICAL)**: Use the commodity data above ONLY if it is a DIRECT and MATERIAL cost or revenue driver for the stock's industry. 
-    - **DYNAMIC VARIABLE SELECTION (MANDATORY)**: If the provided commodities (Gold, Oil, Copper, etc.) are NOT highly relevant to the target stock, you MUST **ignore them completely**. 
-    - **SEARCH-DRIVEN ANCHORS**: Instead, use Google Search to identify the 2-3 most critical macro variables or raw material prices for this specific stock (e.g., Lithium Carbonate for EV batteries, Pulp for paper, DRAM prices for semiconductors, Freight rates for shipping, etc.).
-    - **FAILURE TO COMPLY**: Including irrelevant variables (like Oil for a software company) will be treated as a "hallucination/logic failure".
-    - Prioritize industry-specific variables: Policy changes, R&D progress, supply chain bottlenecks, exchange rates, or sector-specific raw materials.
+    - **STRICT RELEVANCE CONSTRAINT (CRITICAL)**: Use commodity data ONLY if it is a DIRECT and MATERIAL driver for the industry. 
+    - **DYNAMIC VARIABLE SELECTION (MANDATORY)**: If provided commodities are NOT relevant, IGNORE them.
+    - **SEARCH-DRIVEN ANCHORS**: Use Google Search to identify the 2-3 most critical macro variables or raw material prices for this specific stock.
+    
+    **Team Members (8, in order of speaking)**:
+    1. **Deep Research Specialist**: First speaker, responsible for full-dimension data penetration.
+       - Use Google Search for deep qualitative insights (management, supply chain, moats).
+       - Select 4-6 most core industry-specific quantitative indicators.
+       - **Table 1: Real-time Core Indicators & Deviation (MANDATORY)**.
+       - **Table 2: Industry Core Variables & Macro Anchors (DYNAMIC)**.
+       - Label each data point with Source and Date.
+       - **[Structured Output] Core Variables (MANDATORY)**: Populate \`coreVariables\` in JSON.
 
-    **团队成员（8位，按发言顺序）**：
-    1. **深度研究专家 (Deep Research Specialist)**：第一个发言，负责全维度数据穿透调研。
-       - **全维度数据穿透调研 (CRITICAL)**：严禁只看表面财报。你必须穿透到业务底层，分析：管理层历史诚信与执行力、供应链议价权、客户粘性（转换成本）、技术护城河的宽度。利用 Google Search 挖掘 these 非公开或深层信息。
-       - **动态指标选择 (CRITICAL)**：拒绝死板的固定模板。你必须根据标的的行业属性（如：医药看集采政策/研发管线，科技看先进制程/算力需求，消费看同店增长/毛利拐点）**主动使用 Google Search 关联查询**最核心的 4-6 个量化指标指标。
-       - **定义"证据级别" (MANDATORY)**：在动态指标选择时，必须标注该指标的来源及其证据级别（如：财报提及、主流研报共识、第三方实时数据监控）。
-       - **多源数据交叉验证 (MANDATORY)**：必须对比至少两个不同来源的数据（如：官方财报 vs 卖方一致预期 vs 实时监控数据）。**必须明确列出两个不同来源的具体数值**。若存在偏差（>1%），必须在发言中进行深度逻辑溯源并给出修正建议。
-       - **表格 1：实时核心指标与业绩偏离度 (MANDATORY)**：必须包含以下列：指标 (2026E)、实时数值、市场共识预期、偏离度 (%)、备注。指标应包括但不限于 EPS、PE (Forward)、ROE、股息率。**数据源一致性 (CRITICAL)**：必须优先使用搜索获取的最新实时数据，并明确标注数据日期。**异常值处理 (MANDATORY)**：若搜索不到市场预期数据（如冷门小盘股），必须注明"基于历史平均值推算"或"信息缺失"，严禁编造数据。
-       - **增加"反向验证" (CRITICAL)**：在给出核心指标后，必须自问并回答："如果这个指标向不利方向变动 10%，该公司的净利润会受到多大冲击？"请给出具体的量化估算。
-       - **前瞻性逻辑判断 (NEW)**：基于穿透调研与预期偏差，给出对未来 2-4 个季度的**高胜率预测判断**。**防止"过度自信的幻觉" (CRITICAL)**：如果缺乏支撑前瞻判断的关键证据，必须明确标注"信息缺失导致的逻辑断层"，而非强行预测。
-       - **搜索噪音过滤 (MANDATORY)**：在进行穿透式调研时，必须优先采信官方公告、权威媒体、深度研报和行业数据。**严厉警惕并过滤**无来源的论坛传闻、营销号"小作文"或社交媒体噪音。
-       - **表格 2：行业核心变量与宏观锚点 (DYNAMIC)**：必须包含以下列：关键变量/原材料（需标注单位，如：美元/吨）、当前价格/数值、逻辑权重（需标注哪个是"第一驱动力"）、近 30 日趋势、成本/收入传导逻辑、**数据来源与日期时间 (MANDATORY)**。
-       - **变量选择与验证 (CRITICAL)**：严禁死板地引用无关大宗商品。你必须基于 Google Search 查询到的、与该股票相关度最高的行业核心变量填充此表。**必须进行多源交叉验证**，并明确标注每个变量的数据来源（如：生意社、LME、Wind、公司公告）及具体的时间戳。
-      - **数据源优先级协议 (CRITICAL)**：核心变量取值必须遵循 **权威金融 API > Google Search 权威来源 > 其他来源**。若 API 与搜索数据冲突，默认以 API 为准，搜索结果用于解释差异。
-       - **单位标准化 (MANDATORY)**：强制要求在表格中注明单位（如：美元/吨、点位、人民币/片），防止跨市场分析时产生数值混淆。
-       - **预期偏差识别 (Expectation Gap)**：必须明确识别市场共识中的盲点，指出 Alpha 来源。
-       - **目标价与情绪评分 (MANDATORY)**：必须给出 6 个月目标区间（含置信区间）及情绪评分（0-100）。**置信区间逻辑 (NEW)**：根据行业波动率自动调整区间宽度。高波动行业（如数字货币、纯概念股）应放宽区间；低波动行业（如公用事业、长江电力）应收窄区间。
-       - **内容要求**：必须包含上述 2 个 Markdown 表格，所有关键数据必须有明确的时间戳和来源标注（Source: ...）。
-      - **[结构化输出] 核心变量 (MANDATORY)**：除了 Markdown 内容外，你还必须提炼出 3-5 个核心经济变量，填入返回 JSON 的 \`coreVariables\` 数组。每个变量需包含：name（变量名）、value（当前值，必须是按优先级协议选取的最新值）、unit（单位）、marketExpect（市场预期）、delta（偏离说明）、reason（偏离原因）、evidenceLevel（证据级别：财报/研报共识/第三方监控/推算/信息缺失）、**source（数据来源，如：API/Wind/东方财富/中国外汇交易中心/LME/生意社）**、**dataDate（数据日期，格式 YYYY-MM-DD，必须是最新可获取的日期）**。
-       - **数据时效性红线 (CRITICAL)**：coreVariables 中的 value 必须优先来自内置的 **REAL-TIME COMMODITY DATA**。若缺失，则必须来自 Google Search 获取的最新报价。例如 USD/CNY 汇率必须优先使用内置数据，若无则搜索今天的中间价，严禁使用训练数据中的记忆值。若搜索到的最新数据日期 ≠ 今天，必须在 dataDate 中如实标注。
-      - **口径统一 (MANDATORY)**：若同一变量存在多个来源，\`value\` 字段必须使用最高优先级来源的数值；\`reason\` 中简述其它来源差异及原因。
-    
-    2. **技术分析师 (Technical Analyst)**：负责技术面深度分析。必须提供：
-       - 趋势定性（主升浪/调整浪/下跌通道，引用具体价位和涨幅数据）
-       - 量化关键价位（支撑位/阻力位，精确到小数点后两位，附计算逻辑如黄金分割、均线等）
-       - MACD/RSI/成交量等技术指标的具体数值和信号判读
-       - H股/跨市场联动分析（如适用）
-       - 明确的3-6个月价格预测和操作建议
-    
-    3. **基本面分析师 (Fundamental Analyst)**：负责基本面价值分析。
-       - **核心价值驱动因子**：根据标的特性（如现金流、资产负债率、毛利趋势等）选择最关键的3个驱动因子进行量化拆解，拒绝套路化分析。
-       - **估值逻辑拆解**：当前PE/PB vs 行业均值 vs 历史分位，并结合深度研究专家的最新数据进行动态调整。
-       - **对比法/DCF估值推导的目标价**：附带详细计算过程，并说明假设条件的合理性。
-       - **对其他分析师观点的明确引用和回应**。
-       - **[结构化输出] 商业模型 (MANDATORY)**：你必须识别该公司的行业类型（manufacturing/saas/banking/retail/healthcare/tech/other），并给出量化利润公式（如：利润 = 产量 × (售价 - 成本)）。将结果填入返回 JSON 的 \`businessModel\` 字段，包含：businessType、formula、drivers（关键因子及其值）、projectedProfit（预测利润）、confidenceScore（0-100 置信度）。
-    
-    4. **情绪分析师 (Sentiment Analyst)**：负责市场情绪与资金面分析。
-       - **资金结构探测 (CRITICAL)**：严禁只看散户情绪。你必须深度拆解资金结构：**北向资金进出、公募基金仓位变动、AH 股溢价率趋势**。利用 Google Search 查询最近一周的资金流向。
-       - **区分"出货"与"恐慌" (MANDATORY)**：严禁将"价格下跌+放量"简单视为"底部信号"。你必须分析这是属于"机构有序撤离"还是"非理性割肉"。
-       - **情绪量化指标**：给出具体的融资融券余额变化、社交媒体热度及其与股价的相关性。
-    
-    5. **风险合规官 (Risk Manager)**：负责极端风险场景分析。必须提供：
-       - 明确的"黑天鹅"剧本和量化跌幅预期
-       - 对牛方观点的直接反驳（必须指名道姓驳斥）
-       - 核心量化风险指标和止损警示线
-       - 悲观情境下的EPS下修预测和对应目标价
-       - **[结构化输出] 量化风险矩阵 (MANDATORY)**：对每个主要风险，你必须评估：概率 p (0-100)、对利润的影响幅度 Δ% (负数)、期望损失 = p × Δ / 100。将结果填入返回 JSON 的 \`quantifiedRisks\` 数组，每项含：name、probability、impactPercent、expectedLoss、mitigation（对冲手段）。同时计算 \`riskAdjustedValuation\`（综合风险折价后的估值）。
-    
-    6. **反向策略师 (Contrarian Strategist)**：负责挑战所有共识。必须提供：
-       - "拥挤交易"风险分析
-       - 对市场主流叙事的解构（指出哪些是"伪逻辑"）
-       - 反向操作建议和目标价
-       - 必须与牛方形成鲜明对立，提供具体的量化反驳
-    
-    7. **高级评审专家 (Professional Reviewer)**：负责逻辑审计与数据脱水。
-       - **打击叙事陷阱 (CRITICAL)**：严厉审查所有分析师引用的"叙事逻辑"是否具有虚假的线性对冲（如：硅料下跌能被出口完全抵消）。必须明确指出**利润结构差异**和**时间错配风险**。
-       - **估值脱水 (MANDATORY)**：如果基本面分析师给出的 PE/PB 明显偏离历史均值，必须强制要求其提供**对标西门子能源、日立能源等国际龙头的锚定逻辑**。
-       - **模型一致性审计**：审计 Risk Adjusted Valuation 逻辑是否与风控官的黑天鹅剧本匹配。
-       - **SOTP 决策矩阵**：输出分类加总估值表，包含板块、估值倍数、合理估值、锚定标的。
-       - **审查官最终指令**：策略修正和风险监控红线。
-    
-    8. **首席策略师 (Chief Strategist)**：最后发言，负责统一决策。
-       - **决策统一化 (CRITICAL)**：严禁简单的观点汇总。你必须使用**概率加权框架**：Σ(乐观/中性/悲观概率 × 目标价) = **期望价格**。如果结果低于当前价，必须降低推荐级别。
-       - **分层时间维度结论 (MANDATORY)**：必须给出 1-2周（择时）、1-3月（波段）、3-6月（趋势）的阶梯式结论。
-       - **资源预算与仓位建议**：基于风险收益比和胜率，给出最大单头仓位 (%) 建议。
-       - **[结构化输出] 核心决策数据**：在返回 JSON 中增加 \`expectedValueOutcome\`（含计算公式）和 \`sensitivityMatrix\`（反映多变量对冲的真实利润冲击）。
+    2. **Technical Analyst**: Responsible for deep technical analysis.
+       - Trend qualification, key levels (Support/Resistance), MACD/RSI/Volume signal interpretation.
 
-    **分析标的数据**：${JSON.stringify(analysis)}
+    3. **Fundamental Analyst**: Responsible for fundamental value analysis.
+       - Core value drivers, valuation logic (PE/PB vs industry/history), DCF/Comparative valuation.
+       - **[Structured Output] Business Model (MANDATORY)**: Populate \`businessModel\` in JSON.
+
+    4. **Sentiment Analyst**: Responsible for market sentiment and capital flow analysis.
+       - Capital structure search (Northbound, Mutual Funds, AH Premium). Distinguish between "distribution" and "panic".
+
+    5. **Risk Manager**: Responsible for extreme risk scenario analysis.
+       - Black swan scenarios, direct rebuttals to bullish views, quantified risk metrics.
+       - **[Structured Output] Quantitative Risk Matrix (MANDATORY)**: Populate \`quantifiedRisks\` in JSON.
+
+    6. **Contrarian Strategist**: Responsible for challenging all consensus.
+       - Crowded trade analysis, deconstructing mainstream narratives, contrarian advice.
+
+    7. **Professional Reviewer**: Responsible for logic auditing and data "dehydration".
+       - Attacking narrative traps, valuation consistency audit, SOTP decision matrix.
+
+    8. **Chief Strategist**: Last speaker, responsible for unified decision.
+       - Probability-weighted framework (Σ(P_i * TargetPrice_i)), position sizing, exit triggers.
+       - **[Structured Output] Core Decision Data**: Populate \`expectedValueOutcome\` and \`sensitivityMatrix\` in JSON.
+
+    **Analysis Target Data**: ${JSON.stringify(analysis)}
     ${historyContext}
 
-    **研讨质量要求（严格执行，否则视为不合格）**：
-    1. **数据准确性与实时性**：必须使用内置的 Google Search 工具获取最新的市场数据、新闻和公告。
-    1.1 **来源优先级**：所有关键数值遵循 **权威金融 API > Google Search 权威来源 > 其他来源**。
-    1.2 **口径一致性**：分析师正文与最终 JSON 字段（coreVariables/scenarios/tradingPlan/expectedValueOutcome）必须使用同一优先级口径，禁止正文与结构化字段口径不一致。
-    2. **权威来源标注**：所有引用的关键数据（如财报数据、宏观指标、机构持仓等）必须明确标注来源（如：东方财富、雪球、路透社、公司公告等）。
-    3. **金融 API 交叉验证 (MANDATORY)**：将搜索获取的数据与传入的 \`analysis.stockInfo\`（视为金融机构 API 提供的基准数据）进行对比；若冲突，默认以 API 为口径输出，并记录差异原因。
-       - **必须核对的字段**：当前价格 (price)、涨跌幅 (changePercent)、市盈率 (pe)、市净率 (pb)、总市值。
-       - 如果存在显著差异（>1%），必须在 \`dataVerification\` 字段中详细说明，并由 **高级评审专家** 在发言中进行纠偏。
-    - 若 API 字段存在且有效，禁止在最终 JSON 中使用低优先级来源覆盖该字段。
-    4. **数据密度**：每位分析师的 content 字段必须包含丰富的具体数据（价格、百分比、倍数、金额等），禁止空泛的定性描述。
-    5. **Markdown格式**：content 字段必须使用 Markdown 格式（### 标题、表格、加粗、列表等），使内容结构清晰。
-    6. **深度研究专家和高级评审专家** 的 content 字段必须各包含至少1个 Markdown 表格。
-    7. **辩论交锋**：分析师之间必须有直接的引用 and 反驳。
-    8. **时间锚点**：所有数据必须标注数据时间点。
-    9. **所有内容必须使用简体中文**。
+    **Deliberation Quality Requirements**:
+    1. **Data Accuracy**: Use Google Search for latest data.
+    2. **Authoritative Labeling**: All data must have Source and Date.
+    3. **API Cross-Verification (MANDATORY)**: Compare search data with \`analysis.stockInfo\` (Bank/API ground truth).
+    4. **Data Density**: High quantifiable data usage (prices, %, multiples).
+    5. **Markdown Format**: Use Markdown for content fields (### Headers, Tables, Bold).
+    6. **Direct Debate**: Analysts MUST reference and challenge each other.
 
-    仅返回 JSON，不要包含 markdown 代码块标记或任何 JSON 之外的文字。
+    Return JSON ONLY. No markdown code blocks, no extraneous text.
 
-    JSON 结构如下：
+    JSON Structure:
     {
       "messages": [
-        { 
-          "role": "Deep Research Specialist", 
-          "content": "（使用 Markdown 格式的深度研究报告，含表格和量化数据，必须标注来源）", 
-          "timestamp": "${now}", 
-          "type": "research",
-          "references": [ { "title": "来源标题", "url": "来源链接" } ]
-        },
-        { "role": "Technical Analyst", "content": "...", "timestamp": "...", "type": "discussion" },
-        { "role": "Fundamental Analyst", "content": "...", "timestamp": "...", "type": "discussion" },
-        { "role": "Sentiment Analyst", "content": "...", "timestamp": "...", "type": "discussion" },
-        { "role": "Risk Manager", "content": "...", "timestamp": "...", "type": "discussion" },
-        { "role": "Contrarian Strategist", "content": "...", "timestamp": "...", "type": "discussion" },
-        { "role": "Professional Reviewer", "content": "...", "timestamp": "...", "type": "review" },
-        { "role": "Chief Strategist", "content": "...", "timestamp": "...", "type": "discussion" }
+        { "role": "Deep Research Specialist", "content": "Markdown content with tables...", "timestamp": "${now}", "type": "research", "references": [] },
+        ...
       ],
       "dataVerification": [
-        {
-          "source": "数据来源名称",
-          "isVerified": true,
-          "discrepancy": "如果有差异，描述差异内容",
-          "confidence": 95,
-          "lastChecked": "${now}"
-        }
+        { "source": "Source Name", "isVerified": true, "discrepancy": "None", "confidence": 95, "lastChecked": "${now}" }
       ],
-      "finalConclusion": "首席策略师的最终综合结论（必须提供）：包含明确的操作评级、目标价位区间、建仓策略和核心风险提示",
+      "finalConclusion": "Comprehensive strategic conclusion...",
       "tradingPlan": {
-        "entryPrice": "精确的建议买入价位或区间",
-        "targetPrice": "精确的目标价位（含计算逻辑）",
-        "stopLoss": "精确的止损价位（含逻辑）",
-        "strategy": "详细的操作策略",
-        "strategyRisks": "策略特定风险提示",
-        "positionPlan": [
-          { "price": "145", "positionPercent": 30 },
-          { "price": "138", "positionPercent": 40 },
-          { "price": "135", "positionPercent": 30 }
-        ],
-        "logicBasedStopLoss": "基于逻辑证伪的止损条件（非固定百分比）",
+        "entryPrice": "Entry level",
+        "targetPrice": "Target level",
+        "stopLoss": "Stop loss level",
+        "strategy": "Logical strategy...",
+        "strategyRisks": "Specific risks...",
+        "positionPlan": [{ "price": "X", "positionPercent": Y }],
+        "logicBasedStopLoss": "Condition-based stop",
         "riskRewardRatio": 2.5
       },
       "coreVariables": [
-        { "name": "核心变量名", "value": "当前值(必须是今天搜索到的最新数值)", "unit": "单位", "marketExpect": "市场预期", "delta": "偏离说明", "reason": "偏离原因", "evidenceLevel": "财报/研报共识/第三方监控/推算/信息缺失", "source": "数据来源(如Wind/东方财富/LME)", "dataDate": "YYYY-MM-DD(数据日期)" }
+        { "name": "Var Name", "value": "Val", "unit": "Unit", "marketExpect": "Exp", "delta": "Delta", "reason": "Reason", "evidenceLevel": "Lvl", "source": "Src", "dataDate": "Date" }
       ],
-      "businessModel": {
-        "businessType": "manufacturing/saas/banking/retail/healthcare/tech/other",
-        "formula": "利润推演公式",
-        "drivers": { "因子名": "因子值" },
-        "projectedProfit": "预测利润",
-        "confidenceScore": 85
-      },
-      "quantifiedRisks": [
-        { "name": "风险名称", "probability": 30, "impactPercent": -40, "expectedLoss": -12, "mitigation": "对冲手段" }
-      ],
+      "businessModel": { ... },
+      "quantifiedRisks": [ ... ],
       "riskAdjustedValuation": 150,
-      "scenarios": [
-        { "case": "Bull", "probability": 30, "keyInputs": "乐观情境的关键假设（具体数据）", "targetPrice": "乐观目标价", "marginOfSafety": "安全边际", "expectedReturn": "预期回报率", "logic": "完整的逻辑推演链" },
-        { "case": "Base", "probability": 50, "keyInputs": "基准情境的关键假设", "targetPrice": "基准目标价", "marginOfSafety": "安全边际", "expectedReturn": "预期回报率", "logic": "完整的逻辑推演链" },
-        { "case": "Stress", "probability": 20, "keyInputs": "压力情境的关键假设", "targetPrice": "压力目标价", "marginOfSafety": "安全边际", "expectedReturn": "预期回报率", "logic": "压力测试的演化路径" }
-      ],
-      "sensitivityFactors": [
-        { "factor": "影响因子", "change": "变动幅度", "impact": "对目标价的量化影响", "logic": "影响传导逻辑", "formula": "计算公式" }
-      ],
-      "expectationGap": {
-        "marketConsensus": "市场当前的主流共识",
-        "ourView": "AI 团队的差异化观点",
-        "gapReason": "偏差形成的深层原因和Alpha来源",
-        "isSignificant": true,
-        "confidenceScore": 75
-      },
-      "expectedValueOutcome": {
-        "expectedPrice": 27.5,
-        "calculationLogic": "Σ(P_i * Price_i) = 30%*32 + 50%*27 + 20%*21",
-        "confidenceInterval": "[21, 32]"
-      },
-      "sensitivityMatrix": [
-        { "variable": "硅料价格", "change": "-10%", "profitImpact": "-1.2B CNY", "timeLag": "Immediate" },
-        { "variable": "铜价/大宗", "change": "+5%", "profitImpact": "-0.3B CNY", "timeLag": "Delayed (3mo)" },
-        { "variable": "出口订单", "change": "+10%", "profitImpact": "+0.5B CNY", "timeLag": "Long-term (18mo)" }
-      ],
-      "controversialPoints": ["核心分歧点1", "核心分歧点2"],
-      "calculations": [
-        { "formulaName": "估值模型名称", "inputs": { "参数名": "参数值" }, "output": "计算结果", "timestamp": "${now}" }
-      ],
+      "scenarios": [ ... ],
+      "sensitivityFactors": [ ... ],
+      "expectationGap": { ... },
+      "expectedValueOutcome": { ... },
+      "sensitivityMatrix": [ ... ],
+      "controversialPoints": [ ... ],
+      "calculations": [ ... ],
       "dataFreshnessStatus": "Fresh",
-      "stressTestLogic": "完整的压力测试逻辑链",
-      "catalystList": [
-        { "event": "催化事件描述", "probability": 60, "impact": "对股价的量化影响" }
-      ],
-      "verificationMetrics": [
-        { "indicator": "可跟踪验证指标", "threshold": "判定阈值", "timeframe": "验证周期", "logic": "若达到/未达到阈值的操作指引" }
-      ],
-      "capitalFlow": {
-        "northboundFlow": "北向资金流向的具体数据和趋势",
-        "institutionalHoldings": "机构持仓变化的具体数据",
-        "ahPremium": "AH 溢价率及趋势",
-        "marketSentiment": "综合情绪评分和来源"
-      },
-      "positionManagement": {
-        "layeredEntry": ["第一层", "第二层", "第三层"],
-        "sizingLogic": "仓位计算的量化逻辑",
-        "riskAdjustedStance": "基于风险收益比的立场评估"
-      },
-      "timeDimension": {
-        "expectedDuration": "预期持仓周期及理由",
-        "keyMilestones": ["里程碑事件1", "里程碑事件2"],
-        "exitTriggers": ["止盈退出条件", "止损退出条件", "论点证伪退出条件"]
-      }
+      "stressTestLogic": "...",
+      "catalystList": [ ... ],
+      "verificationMetrics": [ ... ],
+      "capitalFlow": { ... },
+      "positionManagement": { ... },
+      "timeDimension": { ... }
     }
   `;
 };
@@ -715,30 +650,35 @@ export const getQuickScanPrompt = (
   market: Market,
   realtimeData: any,
   beijingDate: string,
-) => `
-你是一位资深金融分析师。基于以下实时数据，对 ${symbol} (${market}) 进行快速评估。
+  language: Language = "en"
+) => {
+  const isChinese = language === "zh-CN";
+  return `
+You are a senior financial analyst. Based on the following real-time data, perform a Quick Scan evaluation for ${symbol} (${market}).
 
-**实时数据 (绝对真实)**:
+**Real-time Data (Absolute Ground Truth)**:
 ${JSON.stringify(realtimeData, null, 2)}
 
-**日期**: ${beijingDate}
+**Date**: ${beijingDate}
+**LANGUAGE (MANDATORY)**: All output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
 
-请返回 JSON:
+Please return JSON:
 {
-  "stockInfo": { "symbol": "${symbol}", "name": "公司名", "price": 数字, "change": 数字, "changePercent": 数字, "market": "${market}", "currency": "CNY/HKD/USD", "lastUpdated": "时间", "previousClose": 数字 },
+  "stockInfo": { "symbol": "${symbol}", "name": "Name", "price": number, "change": number, "changePercent": number, "market": "${market}", "currency": "Currency", "lastUpdated": "Time", "previousClose": number },
   "score": 0-100,
   "sentiment": "Bullish" | "Bearish" | "Neutral",
   "recommendation": "Strong Buy" | "Buy" | "Hold" | "Sell" | "Strong Sell",
-  "summary": "2-3 句核心判断",
-  "keyRisks": ["风险1"],
-  "keyOpportunities": ["机会1"],
+  "summary": "Core judgment in 2-3 sentences",
+  "keyRisks": ["Risk 1"],
+  "keyOpportunities": ["Opportunity 1"],
   "news": [],
-  "technicalAnalysis": "简要技术面判断",
-  "fundamentalAnalysis": "简要基本面判断"
+  "technicalAnalysis": "Short technical view",
+  "fundamentalAnalysis": "Short fundamental view"
 }
 
-要求：
-1. 基于实时价格、涨跌幅、市场状态快速判断
-2. Score 反映短期趋势强度和估值合理性
-3. 给出明确的一句话推荐理由
+Requirements:
+1. Quick assessment based on price, change, and market status.
+2. Score reflects trend strength and valuation.
+3. Provide a clear one-sentence "Reason for Recommendation".
 `;
+};

@@ -32,8 +32,9 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
     throw new Error(`请核实查询代码及范围：无法在 港股 中找到 "${symbol}"。你可能输入了非港股代码。`);
   }
 
+  const language = useConfigStore.getState().language;
   const commoditiesData = await getCommoditiesData();
-  const prompt = getAnalyzeStockPrompt(symbol, market, realtimeData, commoditiesData, history, beijingDate, beijingShortDate, now);
+  const prompt = getAnalyzeStockPrompt(symbol, market, realtimeData, commoditiesData, history, beijingDate, beijingShortDate, now, language);
 
   const raw = await generateAndParseJsonWithRetry<StockAnalysis>(
     ai,
@@ -66,7 +67,8 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
 export async function sendChatMessage(userMessage: string, analysis: StockAnalysis, config?: GeminiConfig): Promise<string> {
   const ai = createAI(config);
   const commoditiesData = await getCommoditiesData();
-  const prompt = getChatMessagePrompt(userMessage, analysis, commoditiesData);
+  const language = useConfigStore.getState().language;
+  const prompt = getChatMessagePrompt(userMessage, analysis, commoditiesData, language);
 
   const response = await withRetry(async () => {
     const result = await generateContentWithUsage(ai, {
@@ -81,7 +83,8 @@ export async function sendChatMessage(userMessage: string, analysis: StockAnalys
 
 export async function getStockReport(analysis: StockAnalysis, config?: GeminiConfig): Promise<string> {
   const ai = createAI(config);
-  const prompt = getStockReportPrompt(analysis);
+  const language = useConfigStore.getState().language;
+  const prompt = getStockReportPrompt(analysis, language);
 
   const response = await withRetry(async () => {
     const result = await generateContentWithUsage(ai, {
@@ -96,7 +99,8 @@ export async function getStockReport(analysis: StockAnalysis, config?: GeminiCon
 
 export async function getChatReport(stockName: string, chatHistory: { role: string; content: string }[], config?: GeminiConfig): Promise<string> {
   const ai = createAI(config);
-  const prompt = getChatReportPrompt(stockName, chatHistory);
+  const language = useConfigStore.getState().language;
+  const prompt = getChatReportPrompt(stockName, chatHistory, language);
 
   const response = await withRetry(async () => {
     const result = await generateContentWithUsage(ai, {
@@ -117,7 +121,9 @@ export async function getDiscussionReport(
   config?: GeminiConfig
 ): Promise<string> {
   const ai = createAI(config);
-  const prompt = getDiscussionReportPrompt(analysis, discussion, scenarios ?? [], backtestResult);
+  const language = useConfigStore.getState().language;
+  const commoditiesData = await getCommoditiesData();
+  const prompt = getDiscussionReportPrompt(analysis, discussion, commoditiesData, scenarios ?? [], backtestResult, language);
 
   const response = await withRetry(async () => {
     const result = await generateContentWithUsage(ai, {

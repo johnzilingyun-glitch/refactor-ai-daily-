@@ -10,9 +10,9 @@ describe('Discussion Orchestrator', () => {
       maxConcurrency: 3,
     };
 
-    it('generates 5 rounds for deep analysis', () => {
+    it('generates 8 rounds for deep analysis', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds).toHaveLength(5);
+      expect(rounds).toHaveLength(8);
     });
 
     it('starts with Deep Research Specialist in round 1', () => {
@@ -23,34 +23,31 @@ describe('Discussion Orchestrator', () => {
       expect(rounds[0].dependsOn).toEqual([]);
     });
 
-    it('parallelizes Technical + Fundamental analysts in round 2', () => {
+    it('sequentially calls Technical analyst in round 2', () => {
       const rounds = buildTopology(deepConfig);
       expect(rounds[1].round).toBe(2);
-      expect(rounds[1].experts).toContain('Technical Analyst');
-      expect(rounds[1].experts).toContain('Fundamental Analyst');
-      expect(rounds[1].parallel).toBe(true);
+      expect(rounds[1].experts).toEqual(['Technical Analyst']);
+      expect(rounds[1].parallel).toBe(false);
       expect(rounds[1].dependsOn).toEqual([1]);
     });
 
-    it('has Sentiment Analyst + Risk Manager + Contrarian Strategist in round 3', () => {
+    it('has Fundamental Analyst in round 3', () => {
       const rounds = buildTopology(deepConfig);
       expect(rounds[2].round).toBe(3);
-      expect(rounds[2].experts).toContain('Sentiment Analyst');
-      expect(rounds[2].experts).toContain('Risk Manager');
-      expect(rounds[2].experts).toContain('Contrarian Strategist');
-      expect(rounds[2].parallel).toBe(true);
+      expect(rounds[2].experts).toEqual(['Fundamental Analyst']);
+      expect(rounds[2].parallel).toBe(false);
     });
 
-    it('has Professional Reviewer in round 4', () => {
+    it('has Professional Reviewer in round 7', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds[3].round).toBe(4);
-      expect(rounds[3].experts).toContain('Professional Reviewer');
+      expect(rounds[6].round).toBe(7);
+      expect(rounds[6].experts).toContain('Professional Reviewer');
     });
 
-    it('ends with Chief Strategist in round 5', () => {
+    it('ends with Chief Strategist in round 8', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds[4].round).toBe(5);
-      expect(rounds[4].experts).toEqual(['Chief Strategist']);
+      expect(rounds[7].round).toBe(8);
+      expect(rounds[7].experts).toEqual(['Chief Strategist']);
     });
   });
 
@@ -83,14 +80,14 @@ describe('Discussion Orchestrator', () => {
   });
 
   describe('buildTopology - standard level', () => {
-    it('generates 4 rounds for standard analysis', () => {
+    it('generates 6 rounds for standard analysis', () => {
       const config: OrchestratorConfig = {
         level: 'standard',
         assetType: 'stock',
         maxConcurrency: 3,
       };
       const rounds = buildTopology(config);
-      expect(rounds).toHaveLength(4);
+      expect(rounds).toHaveLength(6);
     });
   });
 

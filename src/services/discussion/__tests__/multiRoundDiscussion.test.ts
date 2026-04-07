@@ -41,6 +41,7 @@ const mockAnalysis: StockAnalysis = {
 function mockExpertResponse(content: string, extra?: Record<string, any>) {
   return {
     content,
+    messages: [], // Required for AgentDiscussion validation
     ...extra
   };
 }
@@ -120,9 +121,7 @@ describe('startMultiRoundDiscussion', () => {
   it('standard mode runs single iteration (no repetition)', async () => {
     const result = await startMultiRoundDiscussion(mockAnalysis, 'standard');
 
-    // Standard topology: DR + [TA+FA+RM + Reviewer] + CS = 1 + 3 + 1 + 1 = 6
-    // No repetition since ITERATION_COUNT.standard = 1
-    // Standard topology has 4 rounds: DR(1), TA+FA+RM(3), Reviewer(1), CS(1) = 6 calls + 1 synthesis = 7
+    // Standard topology: DR + TA + FA + RM + Reviewer + CS = 6 expert calls + 1 synthesis = 7
     expect(callCount).toBe(7);
     expect(result.messages).toHaveLength(6);
   });
@@ -141,7 +140,7 @@ describe('startMultiRoundDiscussion', () => {
     // The last multi-round expert (Chief Strategist, second-to-last prompt before synthesis)
     // should see previous expert messages in the prompt
     const csPrompt = prompts[prompts.length - 2];
-    expect(csPrompt).toContain('前轮专家分析结论');
+    expect(csPrompt).toMatch(/(PREVIOUS DISCUSSION|前轮专家分析)/i);
     // Should contain previous responses
     expect(csPrompt).toContain('Response #');
   });
@@ -172,11 +171,14 @@ describe('startMultiRoundDiscussion', () => {
   });
 
   it('uses googleSearch tool instead of responseSchema', async () => {
-    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any) => {
+    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any, options: any) => {
       // Verify config uses googleSearch, not responseSchema
-      expect(params.config.tools).toEqual([{ googleSearch: {} }]);
-      expect(params.config.responseSchema).toBeDefined(); // Now passed via options.config
-      expect(params.config.responseMimeType).toBe('application/json');
+      const tools = options?.tools || params.config?.tools;
+      const schema = options?.responseSchema || params.config?.responseSchema;
+      
+      expect(tools).toEqual([{ googleSearch: {} }]);
+      expect(schema).toBeDefined();
+      expect(options?.responseMimeType || params.config?.responseMimeType).toBe('application/json');
       callCount++;
       return Promise.resolve(mockExpertResponse(`Response #${callCount}`));
     });
@@ -188,42 +190,45 @@ describe('startMultiRoundDiscussion', () => {
   it('round numbers are assigned to messages', async () => {
     const result = await startMultiRoundDiscussion(mockAnalysis, 'standard');
 
-    // Standard: 4 rounds
-    // Round 1: DR (1 expert)
-    // Round 2: TA+FA+RM (3 experts)
-    // Round 3: Reviewer (1 expert)
-    // Round 4: CS (1 expert)
+    // Standard: 6 rounds (sequential)
     const rounds = result.messages.map((m) => m.round);
     expect(rounds[0]).toBe(1); // DR
     expect(rounds[1]).toBe(2); // TA
-    expect(rounds[2]).toBe(2); // FA
-    expect(rounds[3]).toBe(2); // RM
-    expect(rounds[4]).toBe(3); // Reviewer
-    expect(rounds[5]).toBe(4); // CS
+    expect(rounds[2]).toBe(3); // FA
+    expect(rounds[3]).toBe(4); // RM
+    expect(rounds[4]).toBe(5); // Reviewer
+    expect(rounds[5]).toBe(6); // CS
   });
 
   it('handles expert structured data extraction', async () => {
-    (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any) => {
-      callCount++;
-      const prompt = params.contents as string;
-
-      if (prompt.includes('Deep Research Specialist') && !prompt.includes('前轮专家分析结论')) {
+    const m = geminiService.generateAndParseJsonWithRetry as any;
+    m.mockImplementation((_ai: any, params: any, options: any) => {
+      const role = options?.role;
+      
+      if (role === 'Deep Research Specialist') {
         return Promise.resolve(mockExpertResponse('DR analysis', {
-          coreVariables: [{ name: 'Revenue', value: '100B' }],
+          coreVariables: [{ name: 'Revenue', value: '100B', source: 'Test', dataDate: '2026-04-07' }],
         }));
       }
-      if (prompt.includes('Risk Manager') && !prompt.includes('首席策略师')) {
+      if (role === 'Risk Manager') {
         return Promise.resolve(mockExpertResponse('Risk analysis', {
           quantifiedRisks: [{ name: 'Market Risk', probability: 30 }],
         }));
       }
-      if (prompt.includes('Chief Strategist')) {
+      if (role === 'Chief Strategist') {
         return Promise.resolve(mockExpertResponse('Final plan', {
           tradingPlan: { entryPrice: '100', targetPrice: '120' },
           scenarios: [{ case: 'Bull', probability: 60 }],
         }));
       }
-      return Promise.resolve(mockExpertResponse(`Response #${callCount}`));
+      if (!role) {
+        // Synthesis call usually doesn't have a role in options yet (or it's the 3rd arg)
+        return Promise.resolve({
+          finalConclusion: 'Final Synth',
+          messages: []
+        });
+      }
+      return Promise.resolve(mockExpertResponse(`${role} analysis`));
     });
 
     const result = await startMultiRoundDiscussion(mockAnalysis, 'standard');

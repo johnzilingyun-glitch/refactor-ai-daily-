@@ -81,10 +81,10 @@ describe('Deep Research Specialist Prompt Requirements', () => {
     const lastCall = (geminiService.generateAndParseJsonWithRetry as any).mock.calls[0];
     const prompt = lastCall[1].contents;
 
-    expect(prompt).toContain('动态指标选择');
-    expect(prompt).toContain('多源数据交叉验证 (MANDATORY)');
-    expect(prompt).toContain('对比至少两个不同来源的数据');
-    expect(prompt).toContain('拒绝死板的固定模板');
-    expect(prompt).toContain('深度逻辑溯源');
+    expect(prompt).toContain('responsible for full-dimension data penetration');
+    expect(prompt).toContain('Select 4-6 most core industry-specific quantitative indicators');
+    expect(prompt).toContain('API Cross-Verification (MANDATORY)');
+    expect(prompt).toContain('Industry Core Variables & Macro Anchors (DYNAMIC)');
+    expect(prompt).toContain('Data Accuracy');
   });
 });

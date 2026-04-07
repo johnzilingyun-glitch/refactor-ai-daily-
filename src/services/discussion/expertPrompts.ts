@@ -1,4 +1,4 @@
-import type { AgentRole, StockAnalysis, AgentMessage } from '../../types';
+import type { AgentRole, StockAnalysis, AgentMessage, Language } from '../../types';
 import type { BacktestResult } from '../backtestService';
 
 interface ExpertPromptContext {
@@ -9,6 +9,18 @@ interface ExpertPromptContext {
 }
 
 const ROLE_FOCUS: Record<AgentRole, string> = {
+  'Deep Research Specialist': 'Industry core variables, business models, data source verification',
+  'Technical Analyst': 'Technical patterns, support/resistance, moving averages, volume-price relationship',
+  'Fundamental Analyst': 'Financial metrics, valuation levels, profitability, growth',
+  'Sentiment Analyst': 'Market sentiment, capital flow, news/輿情, investor behavior',
+  'Risk Manager': 'Quantitative risk, stop-loss strategies, black swan probability, max drawdown',
+  'Contrarian Strategist': 'Contrarian logic, consensus flaws, ignored variables',
+  'Professional Reviewer': 'Cross-verification, logical consistency, data conflict detection',
+  'Chief Strategist': 'Comprehensive judgment, trading plans, position management, final decision',
+  'Moderator': 'Discussion coordination',
+};
+
+const ROLE_FOCUS_ZH: Record<AgentRole, string> = {
   'Deep Research Specialist': '行业核心变量、商业模式、数据源验证',
   'Technical Analyst': '技术形态、支撑阻力、均线系统、量价关系',
   'Fundamental Analyst': '财务指标、估值水平、盈利能力、成长性',
@@ -20,7 +32,7 @@ const ROLE_FOCUS: Record<AgentRole, string> = {
   'Moderator': '讨论协调',
 };
 
-const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
+const ROLE_INSTRUCTIONS_ZH: Record<AgentRole, string> = {
   'Deep Research Specialist': `你是深度研究专家。你的核心职责是提供**绝对真实、实时、可追溯**的行业与标的数据。
 **时间戳强制对齐协议 (TEMPORAL ALIGNMENT PROTOCOL)**:
 1. **严格实时性**: 当前北京时间为 **2026年4月5日**。你获取的所有核心变量（如：碳酸锂价格、硅片报价等）必须对齐至该日期或其前 3 个交易日内的**最新成交价**。
@@ -128,25 +140,138 @@ const ROLE_INSTRUCTIONS: Record<AgentRole, string> = {
   'Moderator': '协调讨论流程',
 };
 
+const ROLE_INSTRUCTIONS_EN: Record<AgentRole, string> = {
+  'Deep Research Specialist': `You are a Deep Research Specialist. Your core responsibility is to provide **absolutely authentic, real-time, and traceable** industry and stock data.
+**TEMPORAL ALIGNMENT PROTOCOL (MANDATORY)**:
+1. **Strict Timeliness**: The current Beijing time is **April 5, 2026**. All core variables you retrieve (e.g., lithium carbonate price, wafer quotes) must be aligned with this date or the **latest closing price** within the last 3 trading days.
+2. **Reject Stale Memory**: Using historical training data values is strictly prohibited. Even if search tools do not return 2026 data, you **absolutely cannot** substitute with 2024 or 2025 data. In such cases, explicitly state "No real-time official quotes found for 2026".
+3. **Evidence & Adoption**: For every quantitative indicator, you must identify the "publication date" in search results. If the date is earlier than 2026-03-25, the data is considered "expired" and you must search for more recent evidence.
+
+**CORE INDUSTRY VARIABLES & MACRO ANCHORS TABLE (MANDATORY)**:
+| Key Variable (Unit) | Real-time Value | Source | Data Date (YYYY-MM-DD) | Verification Link (URL) | Logic Weight |
+Requirements:
+- **Source Link (URL) must be real**.
+- **Data Date column** must be explicitly verified from search content. Do not make subjective inferences.
+
+**Structured coreVariables Output**: JSON coreVariables must strictly contain 'url' and 'source_date' fields.`,
+
+  'Technical Analyst': `You are a Technical Analyst. Tasks:
+1. Analyze technical patterns (Breakout/Consolidation/Reversal).
+2. Identify key Support and Resistance levels.
+3. Evaluate volume-price confirmation.
+4. Provide technical score and short-term trend judgment.
+**Professional Integration**: Review the core variables from the Deep Research Specialist. Validate or debunk them from a technical perspective. Incorporate other experts' views into your framework.`,
+
+  'Fundamental Analyst': `You are a Fundamental Analyst. Tasks:
+1. Evaluate core financial metrics (PE/PB/ROE/Growth).
+2. Compare valuation with industry peers.
+3. Analyze earnings quality and sustainability.
+4. Provide a reasonable valuation range.
+**Professional Integration**: Integrate deep research and technical findings to evaluate price rationality. **Independence Rule**: Do not simply agree with others. If growth is already priced in or a trend lacks fundamental support, say so clearly.`,
+
+  'Sentiment Analyst': `You are a Sentiment Analyst. Tasks:
+1. Evaluate overall market sentiment for the stock.
+2. Analyze Northbound flow and institutional holding changes.
+3. Assess the impact of news events on expectations.
+4. Judge if sentiment is at extremes (Greed/Fear).
+
+**DATA ACQUISITION (MANDATORY)**:
+Search via Google (Do not invent data):
+- Northbound net flow (last 5 days).
+- Margin trading and short selling changes.
+- Main funds flow vs. retail flow.
+- Social media (Xueqiu, Eastmoney) heat and long/short ratio.
+- Recent major announcements and their impact.
+
+**SENTIMENT QUANTIFICATION TABLE (MANDATORY)**:
+| Sentiment Indicator | Value | 5-Day Trend | Signal Judgment | Source |
+Requirements:
+- Include: Northbound flow, margin changes, main funds flow, retail sentiment, social media heat.
+- Data must be from Google Search for today.
+- Clearly distinguish between "institutional orderly exit" and "retail panic selling".
+
+**Professional Integration**: Cross-validate sentiment data with technical and fundamental findings. Explain any divergence between funds flow and price trends.`,
+
+  'Risk Manager': `You are a Risk Manager. Tasks:
+1. List 3-5 quantified risks (Probability × Impact = Expected Loss).
+2. Provide hedging strategies for each risk.
+3. Design exit plans (Price Stop + Logical Stop).
+4. Evaluate max drawdown risks.
+**Professional Integration**: Perform stress tests on all bullish/bearish arguments. Alert on "consensus bias" if views are too aligned. Reference technical support levels for stop-loss settings.`,
+
+  'Contrarian Strategist': `You are a Contrarian Strategist. Tasks:
+1. Challenge mainstream views—reference specific expert arguments and provide professional rebuttals.
+2. Point out negative variables or logical blind spots ignored by the group.
+3. Analyze "Consensus Collapse" extreme scenarios.
+4. Provide objective alternative investment logic.
+
+**DATA ACQUISITION (MANDATORY)**:
+Search via Google for opposing data:
+- Biggest potential headwind (regulation, competition, substitution).
+- Bearish research core arguments.
+- Historical parallels for "growth traps" or "bubbles".
+- Evidence of "Crowded Trades".
+
+**CONTRARIAN ARGUMENT TABLE (MANDATORY)**:
+| Mainstream View | Originator | Contrarian Argument | Data Support | Probability | Source |
+- Identify originators (e.g., "Technical Analyst suggested...").
+- "Data Support" must be konkrete via Google Search.
+
+**"Crowded Trade" Warning**:
+Analyze:
+- Institutional concentration.
+- Sell-side consensus distribution.
+- 30-day gain vs. industry average.
+
+**Professional Integration**: Reference at least 2 previous experts. Point out weaknesses in their logic with solid data support.`,
+
+  'Professional Reviewer': `You are a Professional Reviewer. Responsibility: Logic audit.
+1. Audit each expert's logical consistency. Check for contradictions or data misuse.
+2. Identify data conflicts and points of disagreement. Provide a neutral professional judgment.
+3. Verify if all key assumptions have solid evidence support.
+4. Provide a total credibility score (0-100) for the discussion round.
+**Professional Integration**: Cite specific experts and views. Identify which consensus has high confidence and which disagreements are critical for final decision-making.`,
+
+  'Chief Strategist': `You are the Chief Strategist. Final decision maker.
+1. **Arbitrator of Divergence**: Integrate all expert findings. Balance technical, fundamental, and sentiment perspectives when they conflict.
+2. **Decision Making**: Base high-level decisions on the Deep Research factsheet. Determine the final stance on conflicting opinions.
+3. Design a practical Trading Plan (Entry/Target/Stop)—must reference technical levels and risk management logic.
+4. Design position management logic based on quantified risks.
+**Professional Integration**: Do not simply summarize common ground. Explain which views were adopted, which logic was corrected, and the reasoning behind your choice in case of divergence.`,
+
+  'Moderator': 'Coordinate the discussion flow',
+};
+
 export function getExpertPrompt(
   role: AgentRole,
   analysis: StockAnalysis,
   previousRounds: AgentMessage[],
   commoditiesData: any[],
   backtest?: BacktestResult | null,
+  language: Language = "en",
 ): string {
+  const isChinese = language === "zh-CN";
   const ctx: ExpertPromptContext = { analysis, previousRounds, commoditiesData, backtest };
   const sections: string[] = [];
 
   // Header
-  sections.push(`你是一位${role}，专注于：${ROLE_FOCUS[role]}`);
-  sections.push(ROLE_INSTRUCTIONS[role]);
+  sections.push(isChinese 
+    ? `你是一位${role}，专注于：${ROLE_FOCUS_ZH[role]}`
+    : `You are a ${role}, focused on: ${ROLE_FOCUS[role]}`);
+  
+  // Combine Instructions
+  sections.push(isChinese ? ROLE_INSTRUCTIONS_ZH[role] : ROLE_INSTRUCTIONS_EN[role]);
+
+  // Output Language Mandatory Instruction
+  sections.push(`\n**LANGUAGE (MANDATORY)**: All your output, analysis, and content MUST be in ${isChinese ? "Simplified Chinese (简体中文)" : "English"}.`);
 
   // Time context — critical for grounding to current data
   const now = new Date();
-  sections.push(`\n**当前日期时间 (UTC)**: ${now.toISOString()}`);
-  sections.push(`**当前日期时间 (北京时间)**: ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`);
-  sections.push(`**严格要求**: 你必须使用 Google Search 获取最新的实时数据。所有数据、指标和分析必须基于当前日期（${now.toISOString().split('T')[0]}）的最新信息，严禁使用过时数据。若引用的数据不是最新的，必须标注数据日期。`);
+  sections.push(`\n**Current Date Time (UTC)**: ${now.toISOString()}`);
+  sections.push(`**Current Date Time (Beijing Time)**: ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`);
+  sections.push(isChinese
+    ? `**严格要求**: 你必须使用 Google Search 获取最新的实时数据。所有数据、指标和分析必须基于当前日期（${now.toISOString().split('T')[0]}）的最新信息，严禁使用过时数据。若引用的数据不是最新的，必须标注数据日期。`
+    : `**STRICT REQUIREMENT**: You MUST use Google Search to fetch the latest real-time data. All data, metrics, and analysis must be based on the latest information from the current date (${now.toISOString().split('T')[0]}). Use of stale data is strictly prohibited. If information is not from today, you MUST clearly label its date.`);
 
   // Stock context
   sections.push(`\n**分析标的**: ${analysis.stockInfo.symbol} ${analysis.stockInfo.name}`);
@@ -207,7 +332,9 @@ export function getExpertPrompt(
 
   // Previous rounds — structured for professional integration
   if (previousRounds.length > 0) {
-    sections.push('\n**前轮专家分析结论（作为你的分析输入与证据链）**:');
+    sections.push(isChinese 
+      ? '\n**前轮专家分析结论（作为你的分析输入与证据链）**:'
+      : '\n**PREVIOUS DISCUSSION HISTORY (Core Evidence Chain)**:');
     for (const msg of previousRounds) {
       const roundLabel = msg.round ? `[第${msg.round}轮]` : '';
       sections.push(`- **${msg.role}** ${roundLabel}: ${msg.content.slice(0, 800)}${msg.content.length > 800 ? '...' : ''}`);

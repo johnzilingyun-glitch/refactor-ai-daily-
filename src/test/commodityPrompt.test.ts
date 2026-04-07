@@ -38,8 +38,8 @@ describe('AI Discussion Commodity Data Integration', () => {
   };
 
   const mockCommodities = [
-    { name: '伦敦金 (XAU)', symbol: 'GC=F', price: 2588.5, changePercent: 1.2, unit: '$/oz' },
-    { name: 'LME铜 (HG)', symbol: 'HG=F', price: 10450.2, changePercent: 0.8, unit: '$/lb' }
+    { name: '伦敦金 (XAU)', symbol: 'GC=F', price: 2588.5, changePercent: 1.2, unit: '$/oz', lastUpdated: '2026-03-30 15:00:00 CST' },
+    { name: 'LME铜 (HG)', symbol: 'HG=F', price: 10450.2, changePercent: 0.8, unit: '$/lb', lastUpdated: '2026-03-30 15:00:00 CST' }
   ];
 
   const mockDiscussionResult = {
@@ -88,15 +88,15 @@ describe('AI Discussion Commodity Data Integration', () => {
     const lastCall = (geminiService.generateAndParseJsonWithRetry as any).mock.calls[0];
     const prompt = lastCall[1].contents;
     
-    expect(prompt).toContain('REAL-TIME COMMODITY DATA (GROUND TRUTH -');
-    expect(prompt).toMatch(/REAL-TIME COMMODITY DATA \(GROUND TRUTH - \d{4}-\d{2}-\d{2}\)/);
+    expect(prompt).toContain('**REAL-TIME COMMODITY DATA (GROUND TRUTH -');
+    expect(prompt).toMatch(/\*\*REAL-TIME COMMODITY DATA \(GROUND TRUTH - \d{4}-\d{2}-\d{2}\)\*\*/);
     expect(prompt).toContain('| 商品种类 | 实时价格 | 24h 涨跌幅 | 单位 | 最后更新 |');
     expect(prompt).toContain('| --- | --- | --- | --- | --- |');
     expect(prompt).toContain('伦敦金 (XAU) (GC=F)');
     expect(prompt).toContain('$2588.5');
     expect(prompt).toContain('LME铜 (HG) (HG=F)');
     expect(prompt).toContain('$10450.2');
-    expect(prompt).toContain('**IMPORTANT**: Use the commodity data above ONLY if it is logically relevant');
+    expect(prompt).toContain('- **STRICT RELEVANCE CONSTRAINT (CRITICAL)**: Use commodity data ONLY if it is a DIRECT and MATERIAL driver');
   });
 
   it('should fetch commodities from the correct API endpoint', async () => {

@@ -256,6 +256,10 @@ export async function generateAndParseJsonWithRetry<T>(
     baseDelayMs?: number;
     parseRetries?: number;
     parseDelayMs?: number;
+    responseSchema?: any;
+    responseMimeType?: string;
+    tools?: any[];
+    role?: string;
   }
 ): Promise<T> {
   const transportRetries = options?.transportRetries ?? 3;
@@ -268,7 +272,22 @@ export async function generateAndParseJsonWithRetry<T>(
   for (let attempt = 1; attempt <= parseRetries; attempt++) {
     const responseText = await requestScheduler.schedule(async () => {
       return await withRetry(async () => {
-        const result = await generateContentWithUsage(ai, params);
+        // Merge generation config from options into params if needed
+        const generationConfig = {
+          responseMimeType: options?.responseMimeType || params.config?.responseMimeType || (options?.responseSchema ? 'application/json' : undefined),
+          responseSchema: options?.responseSchema || params.config?.responseSchema,
+        };
+
+        const mergedParams = {
+          ...params,
+          tools: options?.tools || params.config?.tools || params.tools,
+          generationConfig: {
+            ...params.generationConfig,
+            ...generationConfig
+          }
+        };
+
+        const result = await generateContentWithUsage(ai, mergedParams);
         return result.text;
       }, transportRetries, baseDelayMs);
     });
