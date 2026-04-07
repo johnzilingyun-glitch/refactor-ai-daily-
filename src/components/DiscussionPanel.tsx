@@ -36,6 +36,7 @@ const roleIcons: Record<AgentRole, React.ReactNode> = {
   "Moderator": <User size={18} />,
 };
 
+// Role color and icon mappings remain as they are visual/functional.
 const roleColors: Record<AgentRole, string> = {
   "Technical Analyst": "text-indigo-600 bg-indigo-50 border-indigo-200/60",
   "Fundamental Analyst": "text-emerald-600 bg-emerald-50 border-emerald-200/60",
@@ -46,18 +47,6 @@ const roleColors: Record<AgentRole, string> = {
   "Professional Reviewer": "text-blue-600 bg-blue-50 border-blue-200/60",
   "Chief Strategist": "text-amber-600 bg-amber-50 border-amber-200/60",
   "Moderator": "text-zinc-500 bg-zinc-100 border-zinc-200/60",
-};
-
-const roleNames: Record<AgentRole, string> = {
-  "Technical Analyst": "技术分析师",
-  "Fundamental Analyst": "基本面分析师",
-  "Sentiment Analyst": "情绪分析师",
-  "Risk Manager": "风险合规官",
-  "Contrarian Strategist": "反向策略师",
-  "Deep Research Specialist": "深度研究专家",
-  "Professional Reviewer": "高级评审专家",
-  "Chief Strategist": "首席策略师",
-  "Moderator": "研讨主持人",
 };
 
 interface DiscussionPanelProps {
@@ -77,6 +66,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
   onToggleFullscreen,
   onPointerDownDrag
 }) => {
+  const { t } = useTranslation();
   const { analysis } = useAnalysisStore();
   const { 
     discussionMessages: messages, 
@@ -130,11 +120,11 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
 
     const content = messages.map(msg => {
       const time = new Date(msg.timestamp).toLocaleString();
-      const roleName = roleNames[msg.role] || msg.role;
+      const roleName = t(`analysis.roles.${msg.role}`);
       return `### [${roleName}] - ${time}\n\n${msg.content}\n\n---\n\n`;
     }).join('\n');
 
-    const header = `# AI 专家组联席会议记录 - ${stockSymbol || '未知股票'}\n生成时间: ${new Date().toLocaleString()}\n\n---\n\n`;
+    const header = `# ${t('analysis.expert_discussion')} - ${stockSymbol || '未知股票'}\n${t('analysis.info.lastUpdated')}: ${new Date().toLocaleString()}\n\n---\n\n`;
     const fullContent = header + content;
 
     const blob = new Blob([fullContent], { type: 'text/markdown' });
@@ -204,10 +194,10 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-tight text-zinc-950 uppercase flex items-center gap-2">
-              AI 专家组联席会议中心
+              {t('analysis.expert_discussion')}
               <span className="text-[9px] font-bold text-zinc-400 border border-zinc-200 px-1.5 py-0.5 rounded-md">LIVE</span>
             </h3>
-            <p className="text-[10px] font-medium text-zinc-400 mt-0.5 tracking-wider">Multi-Agent Strategic Intelligence Center</p>
+            <p className="text-[10px] font-medium text-zinc-400 mt-0.5 tracking-wider">{t('app.subtitle')}</p>
           </div>
           
           <div className="ml-6 hidden md:flex items-center gap-3">
@@ -227,7 +217,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                 className="btn-secondary h-10 px-4 rounded-xl text-[10px] tracking-wider uppercase border-zinc-100 shadow-sm"
               >
                 <Download size={14} />
-                导出记录
+                {t('analysis.actions.download_discussion')}
               </button>
             )}
 
@@ -244,7 +234,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                 {shareStatus === "loading" ? <Loader2 size={14} className="animate-spin" /> : 
                 shareStatus === "success" ? <CheckCircle2 size={14} /> : 
                 shareStatus === "error" ? <AlertTriangle size={14} /> : <Share2 size={14} />}
-                {shareStatus === "loading" ? "SENDING" : shareStatus === "success" ? "DONE" : "飞书同步"}
+                {shareStatus === "loading" ? t('analysis.actions.sending_to_feishu') : shareStatus === "success" ? t('analysis.actions.sent') : t('analysis.actions.feishu_discussion')}
               </button>
             )}
           </div>
@@ -252,7 +242,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
           {isDiscussing && (
             <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-zinc-200 text-xs font-medium text-zinc-400 uppercase tracking-widest">
               <Loader2 size={14} className="animate-spin text-indigo-600" />
-              {totalRounds > 1 ? `第 ${currentRound}/${totalRounds} 轮推演中` : '全网推演中'}
+              {totalRounds > 1 ? `${t('analysis.conference.status_in_progress')} (${currentRound}/${totalRounds})` : t('analysis.conference.status_entering')}
             </div>
           )}
 
@@ -434,12 +424,12 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-xl border shadow-sm ${roleColors[msg.role] || "text-zinc-500 bg-white border-zinc-200/60"}`}>
-                          {roleNames[msg.role] || msg.role}
+                          {t(`analysis.roles.${msg.role}`)}
                         </span>
                         {getWeightInfo(msg.role)?.isExpert && (
                           <span className="text-xs font-medium text-indigo-600 bg-indigo-600/8 px-3 py-1 rounded-xl border border-indigo-600/15 flex items-center gap-1.5 animate-pulse">
                             <Award size={14} />
-                            行业专家 ({getWeightInfo(msg.role)?.expertiseArea})
+                            {t('analysis.expert_discussion')} ({getWeightInfo(msg.role)?.expertiseArea})
                           </span>
                         )}
                       </div>
@@ -501,8 +491,8 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
           <div className="flex-1 flex flex-col items-center justify-center text-zinc-200 py-32 space-y-6">
             <Activity size={64} strokeWidth={1} className="text-zinc-100" />
             <div className="text-center space-y-2">
-              <p className="text-sm font-bold uppercase tracking-[0.3em] text-zinc-300">等待智库指令</p>
-              <p className="text-[10px] uppercase font-bold tracking-[0.1em] text-zinc-400">Intelligence engine idle - Initiate analysis to begin</p>
+              <p className="text-sm font-bold uppercase tracking-[0.3em] text-zinc-300">{t('analysis.conference.status_entering')}</p>
+              <p className="text-[10px] uppercase font-bold tracking-[0.1em] text-zinc-400">{t('app.description')}</p>
             </div>
           </div>
         )}
@@ -516,9 +506,9 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600">
                   <Cpu size={14} className="animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-wider">智能专家组 (Automated Routing)</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{t('analysis.expert_discussion')} (Automated Routing)</span>
                 </div>
-                <span className="text-[10px] text-zinc-400 font-medium">系统将根据提问内容自动指派最合适的专家进行深度解答</span>
+                <span className="text-[10px] text-zinc-400 font-medium">{t('analysis.actions.ask_analyst')}</span>
               </div>
               {onGenerateNewConclusion && (
                 <button
@@ -527,7 +517,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                   className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white text-zinc-600 hover:bg-zinc-50 border border-zinc-200 text-sm font-medium transition-all disabled:opacity-50"
                 >
                   <Award size={16} />
-                  生成最新结论
+                  {t('analysis.conference.final_consensus')}
                 </button>
               )}
             </div>
@@ -536,7 +526,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="请在此输入针对个股的深度提问，专家组将集体研判并为您答疑..."
+                placeholder={t('header.searchPlaceholder')}
                 className="w-full input-premium px-6 py-4 pr-16 text-base h-[60px] resize-none rounded-2xl"
                 rows={1}
                 disabled={isReviewing}
@@ -558,7 +548,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
           </div>
           <p className="mt-3 text-[10px] text-zinc-400 px-2 flex items-center gap-1.5 font-bold uppercase tracking-wider max-w-4xl mx-auto">
             <Zap size={14} className="text-indigo-600" />
-            提问后将触发核心变量复核逻辑，为您提供穿透式的专业分析建议
+            {t('analysis.conference.alpha_hint')}
           </p>
         </div>
       )}

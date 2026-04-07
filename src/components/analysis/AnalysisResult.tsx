@@ -144,7 +144,7 @@ export function AnalysisResult({
                     <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100">
                       <Zap size={24} className="text-emerald-500" />
                     </div>
-                    {t('conference.header')}
+                    {t('analysis.conference.header')}
                   </div>
                 {dataFreshnessStatus && (
                   <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export function AnalysisResult({
                         "bg-white/5 border-zinc-200/60"
                       )}>
                         <Database size={10} />
-                        Data Health: {analysis.dataQuality.score}% - {getQualityLabel(analysis.dataQuality.score).label}
+                        {t('app.data_health')}: {analysis.dataQuality.score}% - {t(`app.quality_labels.${getQualityLabel(analysis.dataQuality.score).label}`)}
                       </div>
                     )}
                     <div className={clsx(
@@ -167,12 +167,12 @@ export function AnalysisResult({
                       {dataFreshnessStatus === "Stale" ? (
                         <span className="flex items-center gap-1">
                           <AlertCircle size={10} />
-                          STALE DATA detected
+                          {t('app.stale_data')}
                         </span>
                       ) : (
                         <span className="flex items-center gap-1">
                           <ShieldCheck size={10} />
-                          {dataFreshnessStatus} Data
+                          {t('app.fresh_data')}
                         </span>
                       )}
                     </div>
@@ -185,7 +185,7 @@ export function AnalysisResult({
                     <Loader2 size={32} className="animate-spin text-emerald-500" />
                     <div className="absolute inset-0 blur-xl bg-indigo-100 animate-pulse" />
                   </div>
-                  <p className="text-sm font-medium tracking-wide">{t('conference.status_entering')}</p>
+                  <p className="text-sm font-medium tracking-wide">{t('analysis.conference.status_entering')}</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -193,7 +193,7 @@ export function AnalysisResult({
                   {isDiscussing && discussionMessages.length > 0 && (
                     <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200/40 flex items-center gap-3">
                       <Loader2 size={16} className="animate-spin text-indigo-500" />
-                      <p className="text-xs font-medium text-indigo-600">{t('conference.status_in_progress')}</p>
+                      <p className="text-xs font-medium text-indigo-600">{t('analysis.conference.status_in_progress')}</p>
                     </div>
                   )}
 
@@ -209,8 +209,8 @@ export function AnalysisResult({
                             <Award size={20} />
                           </div>
                           <div>
-                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">{t('conference.final_consensus')}</h4>
-                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Final Consensus & Strategic Directive</p>
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">{t('analysis.conference.final_consensus')}</h4>
+                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">{t('app.subtitle')}</p>
                           </div>
                         </div>
                         <div className="prose prose-zinc max-w-none prose-p:text-zinc-700 prose-p:text-lg prose-p:font-medium prose-p:leading-relaxed prose-p:tracking-tight">
@@ -223,10 +223,10 @@ export function AnalysisResult({
                             <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center overflow-hidden">
                               <User size={16} className="text-zinc-400" />
                             </div>
-                            <span className="text-xs font-bold text-zinc-900 uppercase tracking-widest">{t('conference.signed_off')}</span>
+                            <span className="text-xs font-bold text-zinc-900 uppercase tracking-widest">{t('analysis.conference.signed_off')}</span>
                           </div>
                           <div className="text-[10px] font-mono text-zinc-400">
-                            VERIFIED BY MULTI-AGENT CONSENSUS
+                            {t('app.title')}
                           </div>
                         </div>
                       </div>
@@ -264,7 +264,7 @@ export function AnalysisResult({
                           </div>
                           <div>
                             <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">{t('analysis.conference.execution_plan')}</h4>
-                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Tactical Execution & Risk Management</p>
+                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">{t('app.subtitle')}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-600/20">
@@ -318,15 +318,15 @@ export function AnalysisResult({
                                 </p>
                                 <div className="grid grid-cols-3 gap-2 py-2 border-t border-zinc-200">
                                   <div className="flex flex-col">
-                                    <span className="text-[8px] text-zinc-400 uppercase font-semibold">入场</span>
+                                    <span className="text-[8px] text-zinc-400 uppercase font-semibold">{t('analysis.conference.entry_price')}</span>
                                     <span className="text-emerald-500/80 font-semibold">{v.plan.entryPrice}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                    <span className="text-[8px] text-zinc-400 uppercase font-semibold">目标</span>
+                                    <span className="text-[8px] text-zinc-400 uppercase font-semibold">{t('analysis.conference.target_price')}</span>
                                     <span className="text-blue-500/80 font-semibold">{v.plan.targetPrice}</span>
                                   </div>
                                   <div className="flex flex-col">
-                                    <span className="text-[8px] text-zinc-400 uppercase font-semibold">止损</span>
+                                    <span className="text-[8px] text-zinc-400 uppercase font-semibold">{t('analysis.conference.stop_loss')}</span>
                                     <span className="text-rose-500/80 font-semibold">{v.plan.stopLoss}</span>
                                   </div>
                                 </div>
@@ -354,7 +354,7 @@ export function AnalysisResult({
                               </div>
                               <div>
                                 <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">{t('analysis.scenarios.expectation_gap')}</h4>
-                                <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Market Consensus vs. AI Insight</p>
+                                <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">{t('app.subtitle')}</p>
                               </div>
                             </div>
                             {expectationGap.confidenceScore && (
@@ -742,9 +742,9 @@ export function AnalysisResult({
                     onClick={() => {
                       const content = discussionMessages.map(msg => {
                         const time = new Date(msg.timestamp).toLocaleString();
-                        return `### [${msg.role}] - ${time}\n\n${msg.content}\n\n---\n\n`;
+                        return `### [${t(`analysis.roles.${msg.role}`)}] - ${time}\n\n${msg.content}\n\n---\n\n`;
                       }).join('\n');
-                      const header = `# AI 专家组研讨记录 - ${analysis.stockInfo?.name} (${analysis.stockInfo?.symbol})\n生成时间: ${new Date().toLocaleString()}\n\n---\n\n`;
+                      const header = `# ${t('analysis.expert_discussion')} - ${analysis.stockInfo?.name} (${analysis.stockInfo?.symbol})\n${t('analysis.info.lastUpdated')}: ${new Date().toLocaleString()}\n\n---\n\n`;
                       const fullContent = header + content;
                       const blob = new Blob([fullContent], { type: 'text/markdown' });
                       const url = URL.createObjectURL(blob);
@@ -1005,15 +1005,15 @@ export function AnalysisResult({
             <div className="mt-6 p-6 rounded-2xl bg-indigo-600/5 border border-indigo-50">
               <h4 className="text-sm font-medium text-indigo-600 mb-4 flex items-center gap-2">
                 <ShieldCheck size={18} />
-                市场估值分析 (安全边际评估)
+                {t('analysis.tools.valuation_analysis')} ({t('analysis.tools.margin_of_safety_eval')})
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">历史均值对比</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.historical_comparison')}</p>
                   <p className="text-sm text-zinc-500 leading-relaxed">{analysis.valuationAnalysis.comparison}</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">安全边际总结</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.safety_margin_summary')}</p>
                   <p className="text-sm text-zinc-500 leading-relaxed font-medium">{analysis.valuationAnalysis.marginOfSafetySummary}</p>
                 </div>
               </div>
@@ -1024,11 +1024,11 @@ export function AnalysisResult({
             <div className="mt-6 p-6 rounded-2xl bg-indigo-50/30 border border-blue-500/10">
               <h4 className="text-sm font-medium text-indigo-600 mb-4 flex items-center gap-2">
                 <RefreshCcw size={18} />
-                周期性分析 (Cycle Analysis)
+                {t('analysis.tools.cycle_analysis')}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">当前阶段 (Stage)</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.current_stage')}</p>
                   <div className={cn(
                     "inline-flex px-3 py-1 rounded-xl text-sm font-medium",
                     analysis.cycleAnalysis.stage === "Bottom" ? "bg-indigo-100 text-indigo-600" :
@@ -1039,11 +1039,11 @@ export function AnalysisResult({
                   </div>
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">周期逻辑与波动风险</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.cycle_logic')}</p>
                   <p className="text-sm text-zinc-500 leading-relaxed">{analysis.cycleAnalysis.logic}</p>
                   <p className="text-xs text-rose-400 mt-2 italic flex items-center gap-1">
                     <AlertTriangle size={12} />
-                    波动风险: {analysis.cycleAnalysis.volatilityRisk}
+                    {t('analysis.tools.volatility_risk_hint')}: {analysis.cycleAnalysis.volatilityRisk}
                   </p>
                 </div>
               </div>
@@ -1056,24 +1056,23 @@ export function AnalysisResult({
                 <div className="h-8 w-8 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
                   <LayoutGrid size={18} className="text-indigo-600" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight text-zinc-950">基本面数据透视与分析</h3>
+                <h3 className="text-xl font-semibold tracking-tight text-zinc-950">{t('analysis.tools.fundamental_insight')}</h3>
               </div>
 
               {analysis.fundamentalTable && analysis.fundamentalTable.length > 0 && (
                 <div className="space-y-4">
                   <h4 className="text-xs font-medium uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                    <Target size={14} className="text-emerald-500" />
-                    核心指标与预期偏差 (2026E)
+                    {t('analysis.tools.core_indicators')}
                   </h4>
                   <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-zinc-200 bg-zinc-50/30">
-                          <th className="px-4 py-3 font-medium text-zinc-500">指标</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">实时数值</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">市场共识</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">偏离度</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500">备注</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500">{t('analysis.tools.indicator_item')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">{t('analysis.tools.realtime_value')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">{t('analysis.tools.market_consensus')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">{t('analysis.tools.deviation_degree')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500">{t('analysis.tools.remark_note')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
@@ -1100,18 +1099,17 @@ export function AnalysisResult({
               {analysis.industryAnchors && analysis.industryAnchors.length > 0 && (
                 <div className="space-y-4">
                   <h4 className="text-xs font-medium uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                    <Layers size={14} className="text-blue-500" />
-                    行业核心变量与宏观锚点
+                    {t('analysis.tools.macro_anchors')}
                   </h4>
                   <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-zinc-200 bg-zinc-50/30">
-                          <th className="px-4 py-3 font-medium text-zinc-500">关键变量</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">当前数值</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500 text-center">权重</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">30日涨跌</th>
-                          <th className="px-4 py-3 font-medium text-zinc-500">传导逻辑</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500">{t('analysis.tools.variable_name')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">{t('analysis.tools.realtime_value')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500 text-center">{t('analysis.tools.weight_level')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500 text-right">{t('analysis.tools.monthly_change')}</th>
+                          <th className="px-4 py-3 font-medium text-zinc-500">{t('analysis.tools.transmission_logic')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-100">
@@ -1148,7 +1146,7 @@ export function AnalysisResult({
             <div className="mt-6 p-6 rounded-2xl bg-indigo-600/5 border border-indigo-50">
               <h4 className="text-sm font-medium text-indigo-600 mb-4 flex items-center gap-2">
                 <CheckCircle2 size={18} />
-                可跟踪验证指标体系 (Verification Metrics)
+                {t('analysis.tools.verification_metrics')}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {analysis.verificationMetrics?.map((m, i) => (
@@ -1159,11 +1157,11 @@ export function AnalysisResult({
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-[10px] text-zinc-400">
                       <div className="flex flex-col">
-                        <span className="uppercase font-medium text-zinc-400">验证周期</span>
+                        <span className="uppercase font-medium text-zinc-400">{t('analysis.tools.expected_duration')}</span>
                         <span>{m.timeframe}</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="uppercase font-medium text-zinc-400">验证逻辑</span>
+                        <span className="uppercase font-medium text-zinc-400">{t('analysis.tools.transmission_logic')}</span>
                         <span className="italic">{m.logic}</span>
                       </div>
                     </div>
@@ -1177,25 +1175,25 @@ export function AnalysisResult({
             <div className="mt-6 p-6 rounded-2xl bg-amber-500/5 border border-amber-500/10">
               <h4 className="text-sm font-medium text-amber-500 mb-4 flex items-center gap-2">
                 <Coins size={18} />
-                资金行为验证 (Capital Flow)
+                {t('analysis.tools.capital_flow')}
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">北向资金</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.northbound')}</p>
                   <p className="text-sm text-zinc-500 font-medium">{analysis.capitalFlow.northboundFlow}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">机构持仓</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.institutional')}</p>
                   <p className="text-sm text-zinc-500 font-medium">{analysis.capitalFlow.institutionalHoldings}</p>
                 </div>
                 {analysis.capitalFlow.ahPremium && (
                   <div className="space-y-1">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">AH 溢价</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.tools.ah_premium')}</p>
                     <p className="text-sm text-zinc-500 font-medium">{analysis.capitalFlow.ahPremium}</p>
                   </div>
                 )}
                 <div className="space-y-1">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">市场情绪</p>
+                  <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400">{t('analysis.scenarios.safety_margin')}</p>
                   <p className="text-sm text-zinc-500 font-medium">{analysis.capitalFlow.marketSentiment}</p>
                 </div>
               </div>
@@ -1206,8 +1204,7 @@ export function AnalysisResult({
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <div className="space-y-4 premium-card p-8">
             <h3 className="flex items-center gap-2 text-lg font-medium text-zinc-950">
-              <Info size={18} className="text-emerald-500" />
-              核心摘要
+              {t('analysis.info.summary')}
             </h3>
             <p className="text-sm leading-relaxed text-zinc-500 font-medium">{analysis.summary}</p>
           </div>
@@ -1223,21 +1220,20 @@ export function AnalysisResult({
                 "flex items-center gap-2 text-xl font-semibold tracking-tight",
                 analysis.tradingPlan.entryPrice === '不推荐' ? "text-rose-400" : "text-indigo-600"
               )}>
-                <Zap size={20} />
-                交易计划 {analysis.tradingPlan.entryPrice === '不推荐' && '(基于安全边际不推荐)'}
+                {t('analysis.conference.execution_plan')} {analysis.tradingPlan.entryPrice === '不推荐' && `(${t('analysis.scenarios.low')})`}
               </h3>
               {analysis.tradingPlan.entryPrice !== '不推荐' ? (
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="p-3 rounded-2xl bg-white border border-zinc-200">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">建议买入</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">{t('analysis.conference.entry_price')}</p>
                     <p className="text-sm font-medium text-indigo-600">{analysis.tradingPlan.entryPrice}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-white border border-zinc-200">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">目标价位</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">{t('analysis.conference.target_price')}</p>
                     <p className="text-sm font-medium text-indigo-600">{analysis.tradingPlan.targetPrice}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-white border border-zinc-200">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">止损价位</p>
+                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">{t('analysis.conference.stop_loss')}</p>
                     <p className="text-sm font-medium text-rose-400">{analysis.tradingPlan.stopLoss}</p>
                   </div>
                 </div>
@@ -1247,14 +1243,13 @@ export function AnalysisResult({
                 </div>
               )}
               <div className="p-4 rounded-2xl bg-white border border-zinc-200">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-2">操作策略</p>
+                <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-2">{t('analysis.conference.tactical_strategy')}</p>
                 <p className="text-sm leading-relaxed text-zinc-500 italic">{analysis.tradingPlan.strategy}</p>
               </div>
               {analysis.tradingPlan.strategyRisks && (
                 <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
                   <p className="text-[10px] font-medium uppercase tracking-widest text-rose-400 mb-2 flex items-center gap-2">
-                    <ShieldAlert size={12} />
-                    交易策略风险提示
+                    {t('analysis.conference.risk_warning')}
                   </p>
                   <p className="text-xs text-rose-200/80 leading-relaxed italic">
                     {analysis.tradingPlan.strategyRisks}
@@ -1266,8 +1261,7 @@ export function AnalysisResult({
 
           <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6">
             <h3 className="flex items-center gap-2 text-lg font-semibold">
-              <Newspaper size={18} className="text-zinc-400" />
-              相关新闻
+              {t('analysis.info.related_news')}
             </h3>
             <div className="space-y-4">
               {analysis.news?.map((item, i) => (
@@ -1298,17 +1292,17 @@ export function AnalysisResult({
               className={cn('h-full', analysis.score >= 70 ? 'bg-indigo-500' : analysis.score >= 40 ? 'bg-amber-500' : 'bg-rose-500')}
             />
           </div>
-          <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">AI 信心评分</p>
+          <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-zinc-400">{t('analysis.info.ai_confidence')}</p>
           <div className="relative inline-block">
             <span className="text-8xl font-semibold tracking-tighter text-zinc-950">{analysis.score}</span>
             <span className="absolute -right-4 -top-2 font-medium text-zinc-400">/100</span>
           </div>
           <div className="mt-8 space-y-2">
             <div className={cn('inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium uppercase tracking-widest', analysis.sentiment === 'Bullish' ? 'border-indigo-100 bg-indigo-50 text-indigo-500' : analysis.sentiment === 'Bearish' ? 'border-rose-500/20 bg-rose-500/10 text-rose-400' : 'border-zinc-200 bg-zinc-100 text-zinc-500')}>
-              {analysis.sentiment === 'Bullish' ? '看涨' : analysis.sentiment === 'Bearish' ? '看跌' : '中性'} 情绪
+              {t(`analysis.sentiment.${analysis.sentiment.toLowerCase()}`)} {t('analysis.info.sentiment')}
             </div>
             <div className="mt-4 text-2xl font-medium text-zinc-950">
-              {analysis.recommendation === 'Strong Buy' ? '强烈买入' : analysis.recommendation === 'Buy' ? '买入' : analysis.recommendation === 'Hold' ? '持有' : analysis.recommendation === 'Sell' ? '卖出' : '强烈卖出'}
+              {t(`analysis.recommendation.${analysis.recommendation.toLowerCase().replace(' ', '_')}`)}
             </div>
           </div>
         </div>
@@ -1316,8 +1310,7 @@ export function AnalysisResult({
         <div className="space-y-4">
           <div className="rounded-2xl border border-zinc-200 bg-white p-6">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-indigo-600">
-              <Zap size={16} />
-              潜在机会
+              {t('analysis.info.opportunities')}
             </h3>
             <ul className="space-y-3">
               {analysis.keyOpportunities?.map((opp, i) => (
@@ -1331,8 +1324,7 @@ export function AnalysisResult({
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-6">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-rose-400">
-              <ShieldAlert size={16} />
-              核心风险
+              {t('analysis.info.risks')}
             </h3>
             <ul className="space-y-3">
               {analysis.keyRisks?.map((risk, i) => (
@@ -1350,7 +1342,7 @@ export function AnalysisResult({
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-indigo-600">
               <MessageSquare size={20} />
-              <h2 className="text-xl font-semibold">AI 深度追问</h2>
+              <h2 className="text-xl font-semibold">{t('analysis.tools.chat_title')}</h2>
             </div>
             <button
               onClick={onSendChatReport}
@@ -1367,27 +1359,27 @@ export function AnalysisResult({
               {isGeneratingReport ? (
                 <>
                   <Loader2 className="animate-spin" size={12} />
-                  生成中...
+                  {t('analysis.actions.generating_report')}
                 </>
               ) : isSendingReport ? (
                 <>
                   <Loader2 className="animate-spin" size={12} />
-                  发送中...
+                  {t('analysis.actions.sending_to_feishu')}
                 </>
               ) : reportStatus === 'success' ? (
                 <>
                   <CheckCircle2 size={12} />
-                  已发送
+                  {t('analysis.actions.sent')}
                 </>
               ) : (
                 <>
                   <Share2 size={12} />
-                  整理发送飞书
+                  {t('analysis.actions.feishu_discussion')}
                 </>
               )}
             </button>
           </div>
-          <p className="mb-4 text-sm leading-relaxed text-zinc-400">继续追问买点、仓位、风险、估值或交易计划。</p>
+          <p className="mb-4 text-sm leading-relaxed text-zinc-400">{t('analysis.tools.chat_description')}</p>
 
           <div className="mb-4 flex flex-wrap gap-2">
             {chatPrompts.map((p, i) => (
@@ -1407,7 +1399,7 @@ export function AnalysisResult({
             ))}
             {isChatting && (
               <div className="flex justify-start">
-                <div className="animate-pulse rounded-2xl rounded-tl-none bg-zinc-50 px-4 py-2 text-sm text-zinc-400">AI 正在整理分析...</div>
+                <div className="animate-pulse rounded-2xl rounded-tl-none bg-zinc-50 px-4 py-2 text-sm text-zinc-400">{t('analysis.tools.ai_thinking')}</div>
               </div>
             )}
           </div>
@@ -1418,7 +1410,7 @@ export function AnalysisResult({
               value={chatMessage}
               onChange={(e) => setChatMessage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void onChat()}
-              placeholder="继续追问 AI..."
+              placeholder={t('analysis.tools.ask_ai_placeholder')}
               className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2 text-zinc-950 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-600/50"
             />
             <button onClick={() => void onChat()} disabled={isChatting || !chatMessage.trim()} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-zinc-950 transition-all hover:bg-indigo-700 disabled:opacity-50">

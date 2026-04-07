@@ -360,6 +360,9 @@ export function getExpertPrompt(
   // Response format
   sections.push(`\n【重要】请以 JSON 格式返回你的分析结果。你必须在 "content" 字段中提供详细的文字分析（不少于 200 字），不能仅返回结构化数据。`);
 
+  // Final Language Enforcement (Trailing instructions often have higher weight)
+  sections.push(`\n**CRITICAL LANGUAGE REQUIREMENT**: Your entire response, especially the "content" field, **MUST** be written in ${isChinese ? "Simplified Chinese (简体中文)" : "English (English)"}. Even if the input context or previous messages are in a different language, you MUST respond in ${isChinese ? "Chinese" : "English"}.`);
+
   return sections.join('\n');
 }
 

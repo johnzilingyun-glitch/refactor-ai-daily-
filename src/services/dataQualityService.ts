@@ -47,8 +47,8 @@ export function calculateQualityScore(info: StockInfo): DataQuality {
 }
 
 export function getQualityLabel(score: number): { label: string; color: string } {
-  if (score >= 90) return { label: "High Precision", color: "text-[#34C759]" };
-  if (score >= 70) return { label: "Reliable", color: "text-blue-400" };
-  if (score >= 50) return { label: "Moderate", color: "text-amber-400" };
-  return { label: "Low Confidence", color: "text-rose-400" };
+  if (score >= 90) return { label: "high", color: "text-[#34C759]" };
+  if (score >= 70) return { label: "reliable", color: "text-blue-400" };
+  if (score >= 50) return { label: "moderate", color: "text-amber-400" };
+  return { label: "low", color: "text-rose-400" };
 }
