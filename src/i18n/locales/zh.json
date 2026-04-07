@@ -23,7 +23,7 @@
     "brand": "AI 市场情报",
     "title": "每日股票智能分析",
     "subtitle": "基于深度学习的市场研判引擎，为专业投资者提供极简、直观且具备深度的交易决策支持。",
-    "searchPlaceholder": "搜索股票代码或简拼 (例如: 600938)...",
+    "searchPlaceholder": "搜索股票代码、名称或港美股简拼 (例如: 700, 腾讯, BABA)...",
     "downloadReport": "下载每日报告",
     "triggerBrief": "触发简报",
     "history": "查看历史研判",

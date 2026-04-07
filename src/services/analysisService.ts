@@ -16,25 +16,19 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
   const beijingDate = getBeijingDate(now);
   const beijingShortDate = beijingDate.split(/[-/]/).slice(1).join('/');
 
-  let realtimeData: any = null;
   const isDebug = useConfigStore.getState().debugMode;
   const res = await fetch(`/api/stock/realtime?symbol=${encodeURIComponent(symbol)}&market=${market}${isDebug ? '&debug=true' : ''}`);
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.error || `无法获取股票信息，请检查代码或拼写。`);
   }
-  realtimeData = await res.json();
-  const symMatch = (realtimeData.symbol || '').toUpperCase();
-  if (market === 'A-Share' && !(symMatch.endsWith('.SS') || symMatch.endsWith('.SZ') || symMatch.endsWith('.BJ'))) {
-    throw new Error(`请核实查询代码及范围：无法在 A 股 中找到 "${symbol}"。你可能输入了非A股代码。`);
-  }
-  if (market === 'HK-Share' && !symMatch.endsWith('.HK')) {
-    throw new Error(`请核实查询代码及范围：无法在 港股 中找到 "${symbol}"。你可能输入了非港股代码。`);
-  }
+  const data = await res.json();
+  const realtimeData = data.resolvedMarket ? data : data;
+  const resolvedMarket = data.resolvedMarket || market;
 
   const language = useConfigStore.getState().language;
   const commoditiesData = await getCommoditiesData();
-  const prompt = getAnalyzeStockPrompt(symbol, market, realtimeData, commoditiesData, history, beijingDate, beijingShortDate, now, language);
+  const prompt = getAnalyzeStockPrompt(symbol, resolvedMarket, realtimeData, commoditiesData, history, beijingDate, beijingShortDate, now, language);
 
   const raw = await generateAndParseJsonWithRetry<StockAnalysis>(
     ai,

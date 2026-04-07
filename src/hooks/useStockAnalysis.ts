@@ -52,6 +52,12 @@ export function useStockAnalysis() {
 
     try {
       const result = await analyzeStock(symbol, market, geminiConfig);
+      
+      // Update global market state if backend resolved to a different market
+      if ((result as any).resolvedMarket && (result as any).resolvedMarket !== market) {
+        setMarket((result as any).resolvedMarket);
+      }
+      
       setAnalysis(result);
 
       setShowDiscussion(false);

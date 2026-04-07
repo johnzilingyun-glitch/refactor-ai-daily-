@@ -44,6 +44,10 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
 
   const isComposing = useRef(false);
   const [localSymbol, setLocalSymbol] = useState(symbol);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const searchContainerRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     setLocalSymbol(symbol);
@@ -53,6 +57,70 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
     const newLang = language === 'en' ? 'zh-CN' : 'en';
     setLanguage(newLang);
     i18n.changeLanguage(newLang);
+  };
+
+  // Fetch suggestions
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!localSymbol || localSymbol.trim().length < 1 || isComposing.current) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/stock/suggest?input=${encodeURIComponent(localSymbol)}&market=${market}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSuggestions(data);
+          setShowSuggestions(data.length > 0);
+          setSelectedIndex(-1);
+        }
+      } catch (e) {
+        console.error('Failed to fetch suggestions:', e);
+      }
+    };
+
+    const timeout = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timeout);
+  }, [localSymbol, market]);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectSuggestion = (s: any) => {
+    const finalSym = s.symbol || s.fullSymbol;
+    setSymbol(finalSym);
+    setLocalSymbol(finalSym);
+    if (s.market) {
+      setMarket(s.market as Market);
+    }
+    setShowSuggestions(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault();
+      handleSelectSuggestion(suggestions[selectedIndex]);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
   };
 
   return (
@@ -145,8 +213,8 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
         </div>
       </div>
 
-      {/* Search Bar */}
-      <form onSubmit={onSearch} className="mt-12 flex flex-col gap-4 sm:flex-row items-stretch">
+      {/* Search Bar Container */}
+      <form onSubmit={onSearch} className="mt-12 flex flex-col gap-4 sm:flex-row items-stretch relative" ref={searchContainerRef}>
         <div className="relative group flex-shrink-0">
           <select
             value={market}
@@ -173,19 +241,51 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
             onCompositionStart={() => { isComposing.current = true; }}
             onCompositionEnd={(e) => {
               isComposing.current = false;
-              const val = e.currentTarget.value.toUpperCase();
+              const val = e.currentTarget.value;
               setLocalSymbol(val);
-              setSymbol(val);
+              // Store as is for suggestions, will uppercase on submit
             }}
             onChange={(e) => {
               const val = e.target.value;
               setLocalSymbol(val);
               if (!isComposing.current) {
-                setSymbol(val.toUpperCase());
+                setSymbol(val);
               }
             }}
+            onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+            onKeyDown={handleKeyDown}
             className="h-14 w-full font-medium text-base rounded-xl border border-zinc-200 bg-white pl-14 pr-6 text-zinc-950 transition-all placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600/40 shadow-sm shadow-zinc-900/5 group-hover:border-zinc-300"
           />
+
+          {/* Suggestions Dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 z-[60] overflow-hidden rounded-2xl border border-zinc-100 bg-white/95 backdrop-blur-xl shadow-2xl shadow-indigo-600/10 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-1.5">
+                {suggestions.map((s, idx) => (
+                  <button
+                    key={s.symbol + idx}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(s)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`flex w-full items-center justify-between px-4 py-3 rounded-xl transition-all ${
+                      idx === selectedIndex ? 'bg-indigo-50 text-indigo-700' : 'text-zinc-700 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${idx === selectedIndex ? 'bg-indigo-100 text-indigo-600' : 'bg-zinc-100 text-zinc-500'}`}>
+                        {s.symbol}
+                      </span>
+                      <span className="font-bold text-sm">{s.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       {s.exchange && <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{s.exchange}</span>}
+                       {idx === selectedIndex && <Zap size={12} className="text-indigo-400 animate-pulse" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Analysis Level Selector */}

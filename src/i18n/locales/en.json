@@ -23,7 +23,7 @@
     "brand": "AI Market Intelligence",
     "title": "Daily AI Stock Analysis",
     "subtitle": "A deep learning-based market judgment engine providing professional investors with minimalist, intuitive, and deep transaction decision support.",
-    "searchPlaceholder": "Search stock symbol or pinyin (e.g., AAPL, 600938)...",
+    "searchPlaceholder": "Search symbol, name or alias (e.g., 700, Tencent, BABA)...",
     "downloadReport": "Download Daily Report",
     "triggerBrief": "Trigger Brief",
     "history": "View History",
