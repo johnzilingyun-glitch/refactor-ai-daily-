@@ -124,6 +124,22 @@
       "ashare_fallback": "A-share real-time fallback",
       "ai_analysis": "AI analysis & scenario modeling"
     },
+    "prediction": {
+      "track_record": "AI Prediction Track Record",
+      "based_on": "Based on {{count}} historical analyses",
+      "overall_accuracy": "Overall Accuracy",
+      "accuracy_formula": "Direction 60% + Target Hit 40%",
+      "direction": "Direction",
+      "profit_factor": "Profit Factor",
+      "sharpe_ratio": "Sharpe Ratio",
+      "streaks": "Streaks",
+      "sentiment_shift": "Sentiment Shift",
+      "current": "current",
+      "bias_detected": "Systematic Bias",
+      "bullish_drift": "Persistent bullish bias, actual trend bearish",
+      "bearish_drift": "Persistent bearish bias, actual trend bullish",
+      "consecutive": "consecutive"
+    },
     "conference": {
       "header": "Expert Conference Conclusions & Scenario Analysis",
       "status_entering": "Experts are entering the meeting room...",

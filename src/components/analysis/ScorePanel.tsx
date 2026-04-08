@@ -3,13 +3,16 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { cn } from './utils';
+import { PredictionAccuracy } from './PredictionAccuracy';
 import type { StockAnalysis } from '../../types';
+import type { PredictionTrackRecord } from '../../hooks/usePredictionTrackRecord';
 
 interface ScorePanelProps {
   analysis: StockAnalysis;
+  trackRecord?: PredictionTrackRecord;
 }
 
-export function ScorePanel({ analysis }: ScorePanelProps) {
+export function ScorePanel({ analysis, trackRecord }: ScorePanelProps) {
   const { t } = useTranslation();
 
   return (
@@ -69,6 +72,16 @@ export function ScorePanel({ analysis }: ScorePanelProps) {
           </ul>
         </div>
       </div>
+
+      {/* Prediction Track Record (FinGPT-inspired) */}
+      {trackRecord?.timeSeries && trackRecord.timeSeries.entries.length > 0 && (
+        <PredictionAccuracy
+          timeSeries={trackRecord.timeSeries}
+          bias={trackRecord.bias}
+          previousAnalysis={trackRecord.previousAnalysis}
+          currentSentiment={analysis.sentiment}
+        />
+      )}
     </div>
   );
 }

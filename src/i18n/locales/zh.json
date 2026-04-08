@@ -124,6 +124,22 @@
       "ashare_fallback": "A股实时行情备用源",
       "ai_analysis": "智能研判与场景分析"
     },
+    "prediction": {
+      "track_record": "AI 预测追踪",
+      "based_on": "基于 {{count}} 次历史分析",
+      "overall_accuracy": "综合准确率",
+      "accuracy_formula": "方向准确度 60% + 目标命中率 40%",
+      "direction": "方向准确",
+      "profit_factor": "盈亏比",
+      "sharpe_ratio": "夏普比率",
+      "streaks": "连胜/连败",
+      "sentiment_shift": "情绪转变",
+      "current": "本次",
+      "bias_detected": "系统性偏差",
+      "bullish_drift": "持续看多偏差，实际走势偏空",
+      "bearish_drift": "持续看空偏差，实际走势偏多",
+      "consecutive": "次连续"
+    },
     "conference": {
       "header": "研讨会核心结论与场景分析",
       "status_entering": "专家组正在进入会议室...",

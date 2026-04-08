@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useUIStore, selectIsDiscussing } from '../../stores/useUIStore';
 import { useAnalysisStore } from '../../stores/useAnalysisStore';
 import { useDiscussionStore } from '../../stores/useDiscussionStore';
+import { usePredictionTrackRecord } from '../../hooks/usePredictionTrackRecord';
 import { DiscussionPanel } from '../DiscussionPanel';
 import { AnalysisActionBar } from './AnalysisActionBar';
 import { ConferenceResults } from './ConferenceResults';
@@ -42,6 +43,7 @@ export function AnalysisResult({
   const { showDiscussion, setShowDiscussion } = useUIStore();
   const { analysis } = useAnalysisStore();
   const { discussionMessages } = useDiscussionStore();
+  const trackRecord = usePredictionTrackRecord(analysis);
 
   if (!analysis) return null;
 
@@ -139,7 +141,7 @@ export function AnalysisResult({
         </div>
 
         <div className="space-y-8">
-          <ScorePanel analysis={analysis} />
+          <ScorePanel analysis={analysis} trackRecord={trackRecord} />
           <ChatSection onSendChatReport={onSendChatReport} onChat={onChat} />
         </div>
       </div>
