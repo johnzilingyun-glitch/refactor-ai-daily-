@@ -1,3 +1,5 @@
+import type { MarketOverview } from '../types';
+
 export async function getHistoryContext(): Promise<any[]> {
   try {
     // Add cache-buster to avoid getting cached HTML fallback pages
@@ -24,6 +26,32 @@ export async function getHistoryContext(): Promise<any[]> {
     console.error('Failed to fetch history context:', err);
   }
   return [];
+}
+
+export async function getMarketHistoryByDate(date: string, market: string): Promise<MarketOverview | null> {
+  try {
+    const response = await fetch(`/api/history/market?date=${encodeURIComponent(date)}&market=${encodeURIComponent(market)}`);
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch market history by date:', err);
+    return null;
+  }
+}
+
+export async function getAvailableMarketDates(market: string): Promise<string[]> {
+  try {
+    const response = await fetch(`/api/history/dates?market=${encodeURIComponent(market)}`);
+    if (response.ok) {
+      return await response.json();
+    }
+    return [];
+  } catch (err) {
+    console.error('Failed to fetch available market dates:', err);
+    return [];
+  }
 }
 
 export async function getPreviousStockAnalysis(symbol: string): Promise<any | null> {

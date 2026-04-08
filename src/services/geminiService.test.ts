@@ -4,6 +4,14 @@ import { useConfigStore } from '../stores/useConfigStore';
 import { GoogleGenAI } from '@google/genai';
 import { requestScheduler } from './requestScheduler';
 
+// Mock requestScheduler to execute tasks immediately without delays
+vi.mock('./requestScheduler', () => ({
+  requestScheduler: {
+    schedule: vi.fn().mockImplementation(async (task: () => Promise<any>) => task()),
+    reset: vi.fn(),
+  },
+}));
+
 // Mock zustand store
 vi.mock('../stores/useConfigStore', () => ({
   useConfigStore: {
@@ -34,7 +42,6 @@ vi.mock('@google/genai', () => {
 describe('geminiService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    requestScheduler.reset(0);
     (useConfigStore.getState as any).mockReturnValue({
       serviceStatus: 'available',
       setServiceStatus: vi.fn(),

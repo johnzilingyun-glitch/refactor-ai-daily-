@@ -5,6 +5,8 @@ import path from 'path';
 const HISTORY_DIR = path.join(process.cwd(), 'data', 'history');
 const LOG_FILE = path.join(process.cwd(), 'data', 'optimization_log.json');
 
+const RETENTION_DAYS = 30;
+
 // Ensure directories exist
 if (!fs.existsSync(path.join(process.cwd(), 'data'))) {
   fs.mkdirSync(path.join(process.cwd(), 'data'));
@@ -15,6 +17,33 @@ if (!fs.existsSync(HISTORY_DIR)) {
 if (!fs.existsSync(LOG_FILE)) {
   fs.writeFileSync(LOG_FILE, JSON.stringify([], null, 2));
 }
+
+// Cleanup history files older than RETENTION_DAYS on startup
+function cleanupOldHistory() {
+  try {
+    const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const files = fs.readdirSync(HISTORY_DIR);
+    let deleted = 0;
+    for (const f of files) {
+      // Extract ISO timestamp from filename: type_YYYY-MM-DDTHH-MM-SS-mmmZ_id.json
+      const match = f.match(/^\w+_(\d{4}-\d{2}-\d{2}T[\d-]+Z)/);
+      if (match) {
+        const fileDate = new Date(match[1].replace(/-(?=\d{2}[T-])/g, '-').replace(/(\d{2})-(\d{2})-(\d{3})Z/, '$1:$2:$3Z').replace(/T(\d{2})-(\d{2})-(\d{2})/, 'T$1:$2:$3'));
+        if (!isNaN(fileDate.getTime()) && fileDate.getTime() < cutoff) {
+          fs.unlinkSync(path.join(HISTORY_DIR, f));
+          deleted++;
+        }
+      }
+    }
+    if (deleted > 0) {
+      console.log(`[History Cleanup] Deleted ${deleted} files older than ${RETENTION_DAYS} days.`);
+    }
+  } catch (err) {
+    console.error('[History Cleanup] Error:', err);
+  }
+}
+
+cleanupOldHistory();
 
 export function addLogEntry(field: string, oldValue: any, newValue: any, description: string) {
   try {
@@ -60,6 +89,83 @@ router.get('/history/context', (req, res) => {
   } catch (err) {
     console.error('Failed to read history:', err);
     res.status(500).json({ error: 'Failed to read history' });
+  }
+});
+
+// Helper: extract Beijing date from a history file's data or filename
+function extractBeijingDate(data: any, filename: string): string | null {
+  if (data.generatedAt) {
+    const genDate = new Date(data.generatedAt);
+    if (!isNaN(genDate.getTime())) {
+      return genDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+    }
+  }
+  // Fallback: parse ISO timestamp from filename (e.g. market_2026-04-07T09-02-29-582Z_xxx.json)
+  const match = filename.match(/^\w+_(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/);
+  if (match) {
+    const isoStr = `${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`;
+    const d = new Date(isoStr);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+    }
+  }
+  return null;
+}
+
+// Helper: check if market matches (skip filter when data has no market field)
+function marketMatches(data: any, targetMarket: string): boolean {
+  if (!data.market) return true; // no market tag → include (legacy data)
+  return data.market.toLowerCase() === targetMarket.toLowerCase();
+}
+
+// Query market data by date: GET /api/history/market?date=2026-04-07&market=A-Share
+router.get('/history/market', (req, res) => {
+  const { date, market } = req.query;
+  if (!date || typeof date !== 'string') {
+    return res.status(400).json({ error: 'date parameter is required (YYYY-MM-DD)' });
+  }
+  const targetMarket = (market as string) || 'A-Share';
+
+  try {
+    const files = fs.readdirSync(HISTORY_DIR).sort().reverse();
+    for (const f of files) {
+      if (!f.startsWith('market_')) continue;
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(HISTORY_DIR, f), 'utf-8'));
+        if (!marketMatches(data, targetMarket)) continue;
+        const beijingDate = extractBeijingDate(data, f);
+        if (beijingDate === date) {
+          return res.json(data);
+        }
+      } catch {}
+    }
+    res.status(404).json({ error: `No market data found for ${targetMarket} on ${date}` });
+  } catch (err) {
+    console.error('Failed to query market history:', err);
+    res.status(500).json({ error: 'Failed to query market history' });
+  }
+});
+
+// List available dates: GET /api/history/dates?market=A-Share
+router.get('/history/dates', (req, res) => {
+  const targetMarket = ((req.query.market as string) || 'A-Share').toLowerCase();
+
+  try {
+    const files = fs.readdirSync(HISTORY_DIR).sort().reverse();
+    const dates = new Set<string>();
+    for (const f of files) {
+      if (!f.startsWith('market_')) continue;
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(HISTORY_DIR, f), 'utf-8'));
+        if (!marketMatches(data, targetMarket)) continue;
+        const beijingDate = extractBeijingDate(data, f);
+        if (beijingDate) dates.add(beijingDate);
+      } catch {}
+    }
+    res.json([...dates].sort().reverse());
+  } catch (err) {
+    console.error('Failed to list history dates:', err);
+    res.status(500).json({ error: 'Failed to list history dates' });
   }
 });
 

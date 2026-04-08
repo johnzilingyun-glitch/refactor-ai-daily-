@@ -1,11 +1,45 @@
 import { GoogleGenAI } from "@google/genai";
 import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, generateAndParseJsonWithRetry } from "./geminiService";
 import { getMarketOverviewPrompt, getDailyReportPrompt } from "./prompts";
-import { MarketOverview, GeminiConfig, Market } from "../types";
+import { MarketOverview, GeminiConfig, Market, IndexInfo, CommodityAnalysis } from "../types";
 import { useConfigStore } from "../stores/useConfigStore";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
 import { getBeijingDate } from "./dateUtils";
 import { MarketOverviewSchema, validateResponse } from "./schemas";
+
+/**
+ * Fetches real-time market data (indices + commodities) directly from financial APIs.
+ * No AI call required — always fast, no quota usage.
+ */
+export async function getMarketSnapshot(market: Market = "A-Share"): Promise<Partial<MarketOverview>> {
+  const [indicesData, commoditiesData] = await Promise.all([
+    fetch(`/api/stock/indices?market=${market}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    getCommoditiesData(),
+  ]);
+
+  const indices: IndexInfo[] = (indicesData || []).map((d: any) => ({
+    name: d.name,
+    symbol: d.symbol,
+    price: d.price ?? 0,
+    change: d.change ?? 0,
+    changePercent: d.changePercent ?? 0,
+    previousClose: d.previousClose ?? 0,
+  }));
+
+  // Convert raw commodity data into CommodityAnalysis shape for display
+  const commodityAnalysis: CommodityAnalysis[] = (commoditiesData || []).map((d: any) => ({
+    name: d.name,
+    trend: d.changePercent > 0 ? '上涨' : d.changePercent < 0 ? '下跌' : '持平',
+    expectation: `${d.price} ${d.unit || ''} (${d.changePercent > 0 ? '+' : ''}${d.changePercent}%)`,
+  }));
+
+  return {
+    indices,
+    commodityAnalysis,
+    generatedAt: Date.now(),
+    market,
+  };
+}
 
 export async function getMarketOverview(config?: GeminiConfig, market: Market = "A-Share", forceRefresh: boolean = false, priority: number = 0): Promise<MarketOverview> {
   const now = new Date();

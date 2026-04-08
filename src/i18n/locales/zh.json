@@ -59,7 +59,12 @@
       "expectation": "预期"
     },
     "news_source": "来源",
-    "news_time": "时间"
+    "news_time": "时间",
+    "history_date": "历史日期",
+    "today": "今天",
+    "viewing_history": "正在查看历史数据",
+    "no_history": "该日期暂无数据",
+    "loading_ai": "AI 分析加载中…"
   },
   "analysis": {
     "score": "综合评分",

@@ -95,10 +95,10 @@ describe('Decision Engine: Data Quality Service', () => {
   });
 
   it('should provide correct quality labels', () => {
-    expect(getQualityLabel(95).label).toBe('High Precision');
-    expect(getQualityLabel(75).label).toBe('Reliable');
-    expect(getQualityLabel(55).label).toBe('Moderate');
-    expect(getQualityLabel(30).label).toBe('Low Confidence');
+    expect(getQualityLabel(95).label).toBe('high');
+    expect(getQualityLabel(75).label).toBe('reliable');
+    expect(getQualityLabel(55).label).toBe('moderate');
+    expect(getQualityLabel(30).label).toBe('low');
   });
 });
 

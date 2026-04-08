@@ -113,7 +113,7 @@ class RequestScheduler {
           
           if (isQuota) {
             const tier = useConfigStore.getState().config?.tier || 'free';
-            const cooldownDuration = tier === 'paid' ? 5000 : 20000; // Reduced from 60s to 20s
+            const cooldownDuration = tier === 'paid' ? 3000 : 8000;
             const newCooldown = Date.now() + cooldownDuration;
             
             // Only update if the new cooldown is significantly further in the future
@@ -140,6 +140,7 @@ class RequestScheduler {
     this.isProcessing = false;
     this.lastRequestTime = 0;
     this.minIntervalMs = minInterval;
+    this.cooldownUntil = 0;
   }
 }
 

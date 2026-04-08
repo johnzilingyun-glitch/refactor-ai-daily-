@@ -10,19 +10,20 @@ describe('dateUtils', () => {
       expect(typeof formatted).toBe('string');
     });
 
-    it('should fall back to local date if toLocaleDateString fails', () => {
+    it('should fall back to ISO date if Intl.DateTimeFormat fails', () => {
       const date = new Date('2026-03-30T08:00:00Z');
-      const spy = vi.spyOn(date, 'toLocaleDateString').mockImplementation((locales, options) => {
-        if (options?.timeZone === 'Asia/Shanghai') {
+      const origDTF = Intl.DateTimeFormat;
+      vi.stubGlobal('Intl', {
+        ...Intl,
+        DateTimeFormat: vi.fn().mockImplementation(() => {
           throw new Error('Invalid timezone');
-        }
-        return 'fallback-date';
+        }),
       });
 
       const formatted = getBeijingDate(date);
-      expect(formatted).toBe('fallback-date');
-      expect(spy).toHaveBeenCalledTimes(2);
-      spy.mockRestore();
+      expect(formatted).toBe('2026-03-30');
+
+      vi.stubGlobal('Intl', { ...Intl, DateTimeFormat: origDTF });
     });
   });
 

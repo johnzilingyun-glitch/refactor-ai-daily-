@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useConfigStore } from '../stores/useConfigStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useMarketStore } from '../stores/useMarketStore';
-import { getMarketOverview, getHistoryContext } from '../services/aiService';
+import { getMarketOverview, getMarketSnapshot, getHistoryContext } from '../services/aiService';
 import { getBeijingDate } from '../services/dateUtils';
 
 export function useMarketData(fetchAdminData: () => Promise<void>) {
@@ -22,7 +22,6 @@ export function useMarketData(fetchAdminData: () => Promise<void>) {
     const now = new Date();
     const todayStr = getBeijingDate(now);
     
-    // Improved date check: Compare year-month-day specifically
     const lastUpdateDate = lastUpdate ? getBeijingDate(new Date(lastUpdate)) : null;
     const isToday = lastUpdateDate === todayStr;
 
@@ -32,18 +31,45 @@ export function useMarketData(fetchAdminData: () => Promise<void>) {
       return;
     }
 
-    console.log(`[Market] Fetching fresh data for ${overviewMarket}`);
+    console.log(`[Market] Fetching data for ${overviewMarket}`);
     setOverviewLoading(true);
     setOverviewError(null);
+
+    // Phase 1: Instant financial API snapshot (no AI, no quota)
     try {
-      // Pass high priority (1) to the scheduler via getMarketOverview
+      const snapshot = await getMarketSnapshot(overviewMarket);
+      if (snapshot.indices && snapshot.indices.length > 0) {
+        // Merge snapshot into existing data (preserve AI fields if present)
+        const merged = {
+          ...(currentCache || {}),
+          ...snapshot,
+          // Preserve AI-generated fields from cache if available
+          topNews: currentCache?.topNews || [],
+          sectorAnalysis: currentCache?.sectorAnalysis || [],
+          recommendations: currentCache?.recommendations || [],
+          marketSummary: currentCache?.marketSummary || '',
+        } as any;
+        setMarketOverview(overviewMarket, merged);
+        setMarketLastUpdated(overviewMarket, snapshot.generatedAt || Date.now());
+        console.log(`[Market] Snapshot loaded for ${overviewMarket}: ${snapshot.indices.length} indices`);
+      }
+    } catch (err) {
+      console.warn('[Market] Snapshot fetch failed, falling back to AI:', err);
+    }
+
+    // Phase 2: AI enrichment (news, sectors, recommendations, summary)
+    try {
       const data = await getMarketOverview(geminiConfig, overviewMarket, forceRefresh, 1);
       setMarketOverview(overviewMarket, data);
       setMarketLastUpdated(overviewMarket, data.generatedAt || Date.now());
       void fetchAdminData();
     } catch (err) {
-      console.error('Failed to fetch market overview:', err);
-      setOverviewError(err instanceof Error ? err.message : '无法加载市场概览。');
+      console.warn('[Market] AI enrichment failed (snapshot data still available):', err);
+      // Don't show error if we already have snapshot data
+      const currentData = useMarketStore.getState().marketOverviews[overviewMarket];
+      if (!currentData?.indices?.length) {
+        setOverviewError(err instanceof Error ? err.message : '无法加载市场概览。');
+      }
     } finally {
       setOverviewLoading(false);
     }

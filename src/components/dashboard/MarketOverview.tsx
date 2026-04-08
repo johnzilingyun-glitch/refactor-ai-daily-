@@ -1,16 +1,18 @@
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Globe, Settings, Loader2, ExternalLink, TrendingUp, Share2, CheckCircle2,
-  LayoutGrid, Coins, Star, Newspaper, Search, RefreshCw
+  LayoutGrid, Coins, Star, Newspaper, Search, RefreshCw, Calendar
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Market } from '../../types';
+import { Market, MarketOverview as MarketOverviewType } from '../../types';
 import { useUIStore } from '../../stores/useUIStore';
 import { useMarketStore } from '../../stores/useMarketStore';
 import { useAnalysisStore } from '../../stores/useAnalysisStore';
 import { ErrorNotice } from '../ErrorNotice';
+import { getMarketHistoryByDate, getAvailableMarketDates } from '../../services/adminService';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -32,8 +34,51 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
   } = useMarketStore();
   const { setSymbol, setMarket } = useAnalysisStore();
 
-  const marketOverview = marketOverviews[overviewMarket];
-  const marketLastUpdated = marketLastUpdatedTimes[overviewMarket];
+  // History date picker state
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [historyData, setHistoryData] = useState<MarketOverviewType | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const isHistoryMode = selectedDate !== '';
+
+  // Fetch available dates when market changes
+  useEffect(() => {
+    let cancelled = false;
+    getAvailableMarketDates(overviewMarket).then(dates => {
+      if (!cancelled) setAvailableDates(dates);
+    });
+    return () => { cancelled = true; };
+  }, [overviewMarket]);
+
+  // Fetch history data when a date is selected
+  const handleDateChange = useCallback(async (date: string) => {
+    setSelectedDate(date);
+    if (!date) {
+      setHistoryData(null);
+      return;
+    }
+    setHistoryLoading(true);
+    try {
+      const data = await getMarketHistoryByDate(date, overviewMarket);
+      setHistoryData(data);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [overviewMarket]);
+
+  // Reset history mode when market tab changes
+  useEffect(() => {
+    setSelectedDate('');
+    setHistoryData(null);
+  }, [overviewMarket]);
+
+  // Use history data or live data
+  const displayOverview = isHistoryMode ? historyData : marketOverviews[overviewMarket];
+  const displayLoading = isHistoryMode ? historyLoading : overviewLoading;
+
+  const marketOverview = displayOverview;
+  const marketLastUpdated = isHistoryMode ? undefined : marketLastUpdatedTimes[overviewMarket];
 
   const getSentimentText = (summary?: string) => {
     if (!summary) return t('common.neutral');
@@ -60,10 +105,29 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
                   {t('analysis.info.lastUpdated')}: {new Date(marketLastUpdated).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
+              {isHistoryMode && (
+                <span className="text-amber-500 text-xs font-medium hidden sm:inline-block">
+                  {t('market.viewing_history')}
+                </span>
+              )}
+              <div className="relative flex items-center">
+                <Calendar size={14} className="absolute left-2 text-zinc-400 pointer-events-none" />
+                <select
+                  value={selectedDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="bg-zinc-50 text-zinc-500 border border-zinc-200/80 rounded-xl pl-7 pr-2 py-1.5 text-xs focus:ring-1 focus:ring-indigo-600/50 outline-none hover:bg-zinc-100 transition-colors cursor-pointer"
+                >
+                  <option value="">{t('market.today')}</option>
+                  {availableDates.map(date => (
+                    <option key={date} value={date}>{date}</option>
+                  ))}
+                </select>
+              </div>
               <select
                 value={autoRefreshInterval}
                 onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
-                className="bg-zinc-50 text-zinc-500 border border-zinc-200/80 rounded-xl px-2 py-1.5 text-xs focus:ring-1 focus:ring-indigo-600/50 outline-none hover:bg-zinc-100 transition-colors cursor-pointer"
+                disabled={isHistoryMode}
+                className="bg-zinc-50 text-zinc-500 border border-zinc-200/80 rounded-xl px-2 py-1.5 text-xs focus:ring-1 focus:ring-indigo-600/50 outline-none hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <option value={0}>{t('common.no_auto_refresh')}</option>
                 {[5, 15, 30, 60].map(n => (
@@ -72,10 +136,10 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
               </select>
               <button
                 onClick={() => onFetchMarketOverview(true)}
-                disabled={overviewLoading}
+                disabled={overviewLoading || isHistoryMode}
                 className="p-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-500 hover:text-zinc-950 ring-1 ring-zinc-200 transition-colors disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 ${overviewLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${displayLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
@@ -105,7 +169,7 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
             {overviewLoading && <Loader2 className="animate-spin text-emerald-500" size={20} />}
             <button
               onClick={onTriggerDailyReport}
-              disabled={overviewLoading || isGeneratingReport || isSendingReport || !marketOverview}
+              disabled={overviewLoading || isGeneratingReport || isSendingReport || !marketOverview || isHistoryMode}
               className={cn(
                 "flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-medium transition-all shadow-sm",
                 reportStatus === 'success' 
@@ -140,7 +204,7 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
           </div>
         </div>
 
-        {overviewError && (
+        {overviewError && !isHistoryMode && (
           <div className="flex flex-col gap-4">
             <ErrorNotice title={t('common.error')} message={overviewError} />
             <button 
@@ -153,8 +217,14 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
           </div>
         )}
 
+        {isHistoryMode && !historyLoading && !historyData && (
+          <div className="text-center py-8 text-zinc-400 text-sm">
+            {t('market.no_history')}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          {overviewLoading ? Array(5).fill(0).map((_, i) => (
+          {(!marketOverview?.indices?.length && displayLoading) ? Array(5).fill(0).map((_, i) => (
             <div key={`skeleton-index-${i}`} className="h-24 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
           )) : marketOverview?.indices?.map((index, i) => (
             <div key={`index-${index.symbol || index.name}-${i}`} className="rounded-2xl border border-zinc-200 bg-white p-4">
@@ -167,8 +237,11 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
           ))}
         </div>
 
-        {!overviewLoading && marketOverview && (
+        {marketOverview && (
           <>
+            {/* AI-enriched sections: summary, sectors, commodities, recommendations */}
+            {marketOverview.marketSummary ? (
+            <>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <div className="premium-card p-8 md:col-span-2">
                 <p className="text-base italic leading-relaxed text-zinc-500 font-medium">"{marketOverview.marketSummary}"</p>
@@ -244,6 +317,13 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
                 ))}
               </div>
             </div>
+            </>
+            ) : displayLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-zinc-400 text-sm">
+                <Loader2 className="animate-spin" size={16} />
+                {t('market.loading_ai')}
+              </div>
+            ) : null}
           </>
         )}
       </section>
@@ -255,7 +335,7 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
             {t('market.news')}
           </h2>
           <div className="space-y-4">
-            {overviewLoading ? Array(3).fill(0).map((_, i) => (
+            {(!marketOverview?.topNews?.length && displayLoading) ? Array(3).fill(0).map((_, i) => (
               <div key={`news-skeleton-${i}`} className="h-32 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
             )) : marketOverview?.topNews?.map((news, i) => (
               <a key={`news-${i}-${news.url || news.title}`} href={news.url} target="_blank" rel="noopener noreferrer" className="group block rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:border-indigo-600/30 shadow-sm">

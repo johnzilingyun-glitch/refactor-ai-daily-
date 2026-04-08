@@ -85,34 +85,34 @@ describe('dataQualityService', () => {
   describe('getQualityLabel', () => {
     it('should return High Precision for score >= 90', () => {
       const result = getQualityLabel(95);
-      expect(result.label).toBe('High Precision');
+      expect(result.label).toBe('high');
     });
 
     it('should return Reliable for score >= 70', () => {
       const result = getQualityLabel(75);
-      expect(result.label).toBe('Reliable');
+      expect(result.label).toBe('reliable');
     });
 
     it('should return Moderate for score >= 50', () => {
       const result = getQualityLabel(55);
-      expect(result.label).toBe('Moderate');
+      expect(result.label).toBe('moderate');
     });
 
     it('should return Low Confidence for score < 50', () => {
       const result = getQualityLabel(30);
-      expect(result.label).toBe('Low Confidence');
+      expect(result.label).toBe('low');
     });
 
     it('should return boundary value for exactly 90', () => {
-      expect(getQualityLabel(90).label).toBe('High Precision');
+      expect(getQualityLabel(90).label).toBe('high');
     });
 
     it('should return boundary value for exactly 70', () => {
-      expect(getQualityLabel(70).label).toBe('Reliable');
+      expect(getQualityLabel(70).label).toBe('reliable');
     });
 
     it('should return boundary value for exactly 50', () => {
-      expect(getQualityLabel(50).label).toBe('Moderate');
+      expect(getQualityLabel(50).label).toBe('moderate');
     });
   });
 });

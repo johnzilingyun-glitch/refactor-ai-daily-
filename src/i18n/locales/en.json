@@ -59,7 +59,12 @@
       "expectation": "Expectation"
     },
     "news_source": "Source",
-    "news_time": "Time"
+    "news_time": "Time",
+    "history_date": "History Date",
+    "today": "Today",
+    "viewing_history": "Viewing historical data",
+    "no_history": "No data for this date",
+    "loading_ai": "Loading AI analysis..."
   },
   "analysis": {
     "score": "Overall Score",

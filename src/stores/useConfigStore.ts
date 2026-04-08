@@ -32,10 +32,10 @@ export const useConfigStore = create<ConfigState>((set) => {
   const initialConfig = (() => {
     try {
       const saved = localStorage.getItem('gemini_config');
-      return saved ? JSON.parse(saved) : { model: 'gemini-3-flash-preview' };
+      return saved ? JSON.parse(saved) : { model: 'gemini-3.1-flash-lite-preview' };
     } catch (e) {
       console.error('Failed to parse gemini_config from localStorage:', e);
-      return { model: 'gemini-3-flash-preview' };
+      return { model: 'gemini-3.1-flash-lite-preview' };
     }
   })();
 
