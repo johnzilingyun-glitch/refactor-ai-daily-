@@ -314,13 +314,22 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
 
         <button
           type="submit"
-          disabled={loading || cooldownRemaining > 0}
+          disabled={loading}
           className="btn-primary h-14 px-10 rounded-xl shadow-indigo-600/10 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {loading ? (
             <Loader2 className="animate-spin" size={20} />
           ) : (
-            <span>{t('header.startAnalysis')}</span>
+            <div className="flex flex-col items-center">
+              <span className={cooldownRemaining > 0 ? "text-xs mb-0.5" : "text-sm font-semibold"}>
+                {t('header.startAnalysis')}
+              </span>
+              {cooldownRemaining > 0 && (
+                <span className="text-[9px] font-mono opacity-80 decoration-amber-400 decoration-wavy underline decoration-1">
+                  Wait {Math.ceil(cooldownRemaining / 1000)}s
+                </span>
+              )}
+            </div>
           )}
         </button>
       </form>

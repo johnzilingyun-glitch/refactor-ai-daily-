@@ -7,7 +7,7 @@ import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
 import { getBeijingDate } from "./dateUtils";
 import { MarketOverviewSchema, validateResponse } from "./schemas";
 
-export async function getMarketOverview(config?: GeminiConfig, market: Market = "A-Share", forceRefresh: boolean = false): Promise<MarketOverview> {
+export async function getMarketOverview(config?: GeminiConfig, market: Market = "A-Share", forceRefresh: boolean = false, priority: number = 0): Promise<MarketOverview> {
   const now = new Date();
   const today = getBeijingDate(now);
   const language = useConfigStore.getState().language;
@@ -15,6 +15,35 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
   const ai = createAI(config);
   const history = await getHistoryContext();
   const beijingDate = today;
+
+  // 1. Check history for existing overview from today
+  if (!forceRefresh) {
+    const todayStr = beijingDate; // YYYY/MM/DD or YYYY-MM-DD
+    const existing = history.find(h => {
+      // Robust identification:
+      // A. Check type field (now added by server)
+      // B. Fallback to checking for "indices" field if it looks like a market overview
+      const isMarketType = h.type === 'market' || (h.indices && !h.stockInfo);
+      if (!isMarketType) return false;
+
+      // Handle market names (e.g. A-Share). Fallback to case-insensitive comparison.
+      const hMarket = h.market || '';
+      if (hMarket.toLowerCase() !== market.toLowerCase()) return false;
+
+      const hDate = h.generatedAt ? getBeijingDate(new Date(h.generatedAt)) : null;
+      
+      const isMatch = hDate === todayStr;
+      if (isMatch) console.log(`[Market] Robust match found in history for ${market} on ${todayStr}`);
+      return isMatch;
+    });
+
+    if (existing) {
+      console.log(`[Market] Recovered ${market} overview from history:`, existing.id);
+      return existing as MarketOverview;
+    } else {
+      console.log(`[Market] No matching today (${todayStr}) overview found in history for ${market}. Found ${history.length} items.`);
+    }
+  }
 
   let indicesData = [];
   try {
@@ -36,10 +65,12 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
       responseMimeType: "application/json",
       tools: [{ googleSearch: {} }]
     }
-  });
+  }, undefined, priority);
 
   const overview = validateResponse(MarketOverviewSchema, raw, 'MarketOverview') as MarketOverview;
   overview.id = `market-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  overview.generatedAt = Date.now();
+  overview.market = market; // Tag market type for history recovery
   
   if (overview.indices && overview.indices.length > 0) {
     await saveAnalysisToHistory('market', overview);

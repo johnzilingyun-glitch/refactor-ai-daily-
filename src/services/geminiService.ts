@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { useConfigStore } from "../stores/useConfigStore";
 import { requestScheduler } from "./requestScheduler";
 
-export const GEMINI_MODEL = "gemini-3-flash-preview";
+export const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -36,7 +36,8 @@ export async function generateAndParseJsonWithRetry<T>(
     responseMimeType?: string;
     tools?: any[];
     role?: string;
-  }
+  },
+  priority: number = 0
 ): Promise<T> {
   const transportRetries = options?.transportRetries ?? 3;
   const baseDelayMs = options?.baseDelayMs ?? 2000;
@@ -63,7 +64,7 @@ export async function generateAndParseJsonWithRetry<T>(
           }
         };
 
-        const result = await generateContentWithUsage(ai, mergedParams);
+        const result = await generateContentWithUsage(ai, mergedParams, priority);
         return result.text;
       }, transportRetries, baseDelayMs);
     } catch (transportErr) {
@@ -329,7 +330,7 @@ export function parseJsonResponse<T>(raw: string): T {
 }
 
 
-export async function generateContentWithUsage(ai: any, params: any) {
+export async function generateContentWithUsage(ai: any, params: any, priority: number = 0) {
   const isDebug = useConfigStore.getState().debugMode;
   if (isDebug) {
     await remoteLog('ai_request_params', params);
@@ -342,7 +343,7 @@ export async function generateContentWithUsage(ai: any, params: any) {
 
   const result = await requestScheduler.schedule(async () => {
     return await ai.models.generateContent(params);
-  });
+  }, priority);
   
   if (isDebug) {
     await remoteLog('ai_response_raw', {
@@ -379,12 +380,10 @@ export async function fetchAvailableModelsList(config?: any): Promise<ModelInfo[
   const ai = createAI(config);
   
   const modelsToCheck = [
-    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast & Balanced)', description: 'Best for general analysis and quick summaries.' },
-    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Advanced Reasoning)', description: 'Best for complex financial logic and deep analysis.' },
+    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Unlimited)', description: 'Paid 层级无限制 RPD，4000 RPM 的顶级高频模型。' },
     { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Ultra Fast)', description: 'Optimized for speed and low-latency tasks.' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Stable fast model.' },
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Stable reasoning model.' },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Legacy fast model.' }
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast & Balanced)', description: 'Best for general analysis and quick summaries.' },
+    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Advanced Reasoning)', description: 'Best for complex financial logic and deep analysis.' }
   ];
 
   const results: ModelInfo[] = [];

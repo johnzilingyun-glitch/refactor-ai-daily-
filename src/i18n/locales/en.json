@@ -30,7 +30,7 @@
     "sysLogs": "System Logs",
     "settings": "Settings",
     "startAnalysis": "Start Analysis",
-    "quotaCooldown": "Quota resetting"
+    "quotaCooldown": "Cooldown"
   },
   "markets": {
     "aShare": "A-Share Markets",

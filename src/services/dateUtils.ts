@@ -4,10 +4,18 @@
  */
 export function getBeijingDate(date: Date): string {
   try {
-    return date.toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' });
+    // Standardize to YYYY-MM-DD for reliable comparison across environments
+    const formatter = new Intl.DateTimeFormat('en-CA', { // en-CA gives YYYY-MM-DD
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const [{ value: year }, , { value: month }, , { value: day }] = formatter.formatToParts(date);
+    return `${year}-${month}-${day}`;
   } catch (e) {
-    console.warn('Failed to get Beijing date, falling back to local date:', e);
-    return date.toLocaleDateString();
+    console.warn('Failed to get Beijing date, falling back to local ISO date:', e);
+    return date.toISOString().split('T')[0];
   }
 }
 

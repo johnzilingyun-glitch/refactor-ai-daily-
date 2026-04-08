@@ -9,6 +9,7 @@ interface QueuedTask<T> {
   resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: any) => void;
   priority: number;
+  timestamp: number;
 }
 
 class RequestScheduler {
@@ -19,6 +20,7 @@ class RequestScheduler {
   // Gemini Free Tier: ~15 RPM is safe. Let's target 12 RPM (5s interval).
   private minIntervalMs: number = 4500; 
   private lastRequestTime: number = 0;
+  private cooldownUntil: number = 0;
 
   private constructor() {}
 
@@ -31,9 +33,12 @@ class RequestScheduler {
 
   public async schedule<T>(task: Task<T>, priority: number = 0): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      this.queue.push({ task, resolve, reject, priority });
-      // Sort by priority (higher first)
-      this.queue.sort((a, b) => b.priority - a.priority);
+      this.queue.push({ task, resolve, reject, priority, timestamp: Date.now() });
+      // Sort by priority (higher first), then by timestamp (earlier first)
+      this.queue.sort((a, b) => {
+        if (b.priority !== a.priority) return b.priority - a.priority;
+        return a.timestamp - b.timestamp;
+      });
       
       this.processQueue();
     });
@@ -48,17 +53,41 @@ class RequestScheduler {
       const now = Date.now();
       
       // Check if we are in a cooldown period (e.g. after a 429 error)
-      const cooldownUntil = useConfigStore.getState().cooldownUntil || 0;
-      if (now < cooldownUntil) {
-        const waitTime = cooldownUntil - now;
+      const storeCooldown = useConfigStore.getState().cooldownUntil || 0;
+      const effectiveCooldown = Math.max(this.cooldownUntil, storeCooldown);
+      
+      if (now < effectiveCooldown) {
+        const waitTime = effectiveCooldown - now;
         console.warn(`System is in cooldown. Waiting ${Math.round(waitTime/1000)}s...`);
-        await delay(Math.min(waitTime, 5000)); // Wait in small chunks to check length/abort
+        await delay(Math.min(waitTime, 2000));
         continue;
       }
 
-      // Determine interval based on tier
-      const tier = useConfigStore.getState().config?.tier || 'free';
-      const dynamicInterval = tier === 'paid' ? 400 : 4500;
+      // Determine interval based on tier and model
+      const config = useConfigStore.getState().config;
+      const tier = config?.tier || 'free';
+      const model = config?.model || 'gemini-3.1-flash-lite-preview';
+      
+      let dynamicInterval = 4500;
+      if (tier === 'paid') {
+        // Paid tier is much faster but still has limits for Pro (25 RPM)
+        if (model.includes('pro')) {
+          dynamicInterval = 2500; // 25 RPM safety
+        } else {
+          dynamicInterval = 300;  // 1000-4000 RPM safety
+        }
+      } else {
+        // Free tier model-specific RPM logic
+        if (model.includes('pro')) {
+          dynamicInterval = 31000; // 2 RPM safety
+        } else if (model.includes('flash-lite')) {
+          dynamicInterval = 4200;  // 15 RPM safety
+        } else if (model.includes('flash')) {
+          dynamicInterval = 12500; // 5 RPM safety
+        } else {
+          dynamicInterval = 5000;  // Default safety
+        }
+      }
       
       const timeSinceLast = now - this.lastRequestTime;
       
@@ -73,6 +102,7 @@ class RequestScheduler {
         try {
           const result = await item.task();
           // Reset cooldown on successful request
+          this.cooldownUntil = 0;
           if (useConfigStore.getState().cooldownUntil) {
             useConfigStore.getState().setCooldownUntil(0);
           }
@@ -83,19 +113,14 @@ class RequestScheduler {
           
           if (isQuota) {
             const tier = useConfigStore.getState().config?.tier || 'free';
-            const cooldownDuration = tier === 'paid' ? 5000 : 60000;
+            const cooldownDuration = tier === 'paid' ? 5000 : 20000; // Reduced from 60s to 20s
             const newCooldown = Date.now() + cooldownDuration;
             
             // Only update if the new cooldown is significantly further in the future
-            const currentCooldown = useConfigStore.getState().cooldownUntil || 0;
-            if (newCooldown > currentCooldown + 1000) {
+            if (newCooldown > effectiveCooldown + 1000) {
+              this.cooldownUntil = newCooldown;
               useConfigStore.getState().setCooldownUntil(newCooldown);
               console.error(`Quota reached (${tier} tier), entering ${cooldownDuration/1000}s cooldown...`);
-              
-              if (useConfigStore.getState().debugMode) {
-                const taskName = item.task.toString().substring(0, 100);
-                console.warn(`429 triggered by task: ${taskName}`);
-              }
             }
           }
           item.reject(error);

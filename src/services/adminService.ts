@@ -29,15 +29,18 @@ export async function getHistoryContext(): Promise<any[]> {
 export async function getPreviousStockAnalysis(symbol: string): Promise<any | null> {
   try {
     const history = await getHistoryContext();
-    // history is expected to be an array of analytical records { type: 'stock', data: { ... } }
+    // history is expected to be an array of analytical records 
+    // Could be wrapped { type, data } or unwrapped (but with type inside)
     const previous = history
-      .filter((item: any) => 
-        item.type === 'stock' && 
-        item.data?.stockInfo?.symbol === symbol
-      )
+      .filter((item: any) => {
+        const isStock = item.type === 'stock' || (item.stockInfo && !item.indices);
+        if (!isStock) return false;
+        const sym = item.stockInfo?.symbol;
+        return sym === symbol;
+      })
       .sort((a: any, b: any) => {
-        const timeA = new Date(a.data?.stockInfo?.lastUpdated || 0).getTime();
-        const timeB = new Date(b.data?.stockInfo?.lastUpdated || 0).getTime();
+        const timeA = new Date(a.generatedAt || a.stockInfo?.lastUpdated || 0).getTime();
+        const timeB = new Date(b.generatedAt || b.stockInfo?.lastUpdated || 0).getTime();
         return timeB - timeA;
       });
 

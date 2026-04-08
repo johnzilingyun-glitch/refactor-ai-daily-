@@ -7,9 +7,10 @@ import { fetchAvailableModelsList, type ModelInfo } from '../services/geminiServ
 import { useState } from 'react';
 
 const AVAILABLE_MODELS = [
-  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast & Balanced)', description: '兼顾速度与深度的平衡模型，适合绝大多数个股分析场景。' },
-  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Advanced Reasoning)', description: '具备顶级推理能力的进阶模型，适合处理极端复杂的研报逻辑。' },
-  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Ultra Fast)', description: '极速响应模型，适合快速概览和实时市场总结。' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Unlimited)', description: '旗舰级速率，Paid 层级无限制 RPD，4000 RPM，适合极高频自动化分析。' },
+  { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Ultra Fast)', description: '极速响应模型，Free 配额最高 (15 RPM, 500 RPD)，适合高频实时分析。' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast & Balanced)', description: '平衡型模型，Free 配额受限 (5 RPM, 20 RPD)，适合一般概览场景。' },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Advanced Reasoning)', description: '顶级推理模型，具备最高逻辑深度 (Paid 25 RPM, 250 RPD)，适合复杂多轮研讨。' },
 ];
 
 export function SettingsModal() {

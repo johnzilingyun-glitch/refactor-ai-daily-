@@ -64,6 +64,8 @@ export interface Recommendation {
 
 export interface MarketOverview {
   id?: string;
+  generatedAt?: number;
+  market?: string;
   indices: IndexInfo[];
   topNews: NewsItem[];
   sectorAnalysis: SectorAnalysis[];

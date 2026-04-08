@@ -21,8 +21,10 @@ export function useMarketData(fetchAdminData: () => Promise<void>) {
 
     const now = new Date();
     const todayStr = getBeijingDate(now);
-    const lastUpdateStr = lastUpdate ? getBeijingDate(new Date(lastUpdate)) : null;
-    const isToday = lastUpdateStr === todayStr;
+    
+    // Improved date check: Compare year-month-day specifically
+    const lastUpdateDate = lastUpdate ? getBeijingDate(new Date(lastUpdate)) : null;
+    const isToday = lastUpdateDate === todayStr;
 
     if (!forceRefresh && currentCache && isToday) {
       console.log(`[Market] Using cached data for ${overviewMarket}`);
@@ -34,9 +36,10 @@ export function useMarketData(fetchAdminData: () => Promise<void>) {
     setOverviewLoading(true);
     setOverviewError(null);
     try {
-      const data = await getMarketOverview(geminiConfig, overviewMarket, forceRefresh);
+      // Pass high priority (1) to the scheduler via getMarketOverview
+      const data = await getMarketOverview(geminiConfig, overviewMarket, forceRefresh, 1);
       setMarketOverview(overviewMarket, data);
-      setMarketLastUpdated(overviewMarket, Date.now());
+      setMarketLastUpdated(overviewMarket, data.generatedAt || Date.now());
       void fetchAdminData();
     } catch (err) {
       console.error('Failed to fetch market overview:', err);
