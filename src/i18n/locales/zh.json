@@ -211,5 +211,12 @@
     "neutral": "中性",
     "every_n_min": "每 {{n}} 分钟",
     "no_auto_refresh": "不自动刷新"
+  },
+  "errors": {
+    "feishu_webhook_missing": "请先在设置中配置飞书 Webhook 链接",
+    "invalid_feishu_webhook": "请输入有效的飞书 Webhook 链接",
+    "api_key_env_only": "API Key 选择仅在 AI Studio 环境中可用",
+    "logs_cleared": "日志已清除",
+    "confirm_clear_logs": "确定要清除所有调试日志吗？"
   }
 }

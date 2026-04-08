@@ -168,7 +168,8 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
 
   const saveFeishuWebhook = () => {
     if (!tempWebhook.trim() || !tempWebhook.includes('feishu.cn')) {
-      alert("请输入有效的飞书 Webhook 链接");
+      setShareStatus('error');
+      setTimeout(() => setShareStatus('idle'), 3000);
       return;
     }
     setFeishuWebhookUrl(tempWebhook.trim());

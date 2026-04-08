@@ -211,5 +211,12 @@
     "neutral": "Neutral",
     "every_n_min": "Every {{n}} mins",
     "no_auto_refresh": "No Auto Refresh"
+  },
+  "errors": {
+    "feishu_webhook_missing": "Please configure the Feishu Webhook URL in Settings first",
+    "invalid_feishu_webhook": "Please enter a valid Feishu Webhook URL",
+    "api_key_env_only": "API Key selection is only available in the AI Studio environment",
+    "logs_cleared": "Logs cleared",
+    "confirm_clear_logs": "Are you sure you want to clear all debug logs?"
   }
 }

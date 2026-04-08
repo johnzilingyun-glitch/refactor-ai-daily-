@@ -35,7 +35,8 @@ router.get('/stock/indices', async (req, res) => {
   };
 
   const marketKey = (market as string) || 'A-Share';
-  const symbols = indexSymbols[marketKey] || indexSymbols['A-Share'];
+  const validMarkets = ['A-Share', 'HK-Share', 'US-Share'];
+  const symbols = indexSymbols[validMarkets.includes(marketKey) ? marketKey : 'A-Share'];
 
   try {
     const startTime = Date.now();
@@ -302,7 +303,7 @@ router.get('/stock/realtime', async (req, res) => {
   // Batch logic
   if (symbols && typeof symbols === 'string' && symbols.trim()) {
     try {
-      const rawSymbolList = symbols.split(',').map(s => s.trim()).filter(s => !!s);
+      const rawSymbolList = symbols.split(',').map(s => s.trim()).filter(s => !!s).slice(0, 20); // Limit batch size
       const symbolList = rawSymbolList.map(s => {
         let sym = s.toUpperCase();
         if (sym.endsWith('.SH')) sym = sym.replace('.SH', '.SS');
@@ -324,8 +325,14 @@ router.get('/stock/realtime', async (req, res) => {
     return res.status(400).json({ error: 'Symbol is required' });
   }
 
+  // Validate symbol format: alphanumeric, dots, hyphens, carets, slashes, equals (for Yahoo Finance symbols)
+  const symbolStr = (symbol as string).trim();
+  if (!/^[A-Za-z0-9.\-^/=]{1,20}$/.test(symbolStr)) {
+    return res.status(400).json({ error: 'Invalid symbol format' });
+  }
+
   try {
-    const input = (symbol as string).trim();
+    const input = symbolStr;
     // Step 1: Broad Resolution
     const resolution = await resolveSymbolEx(input, market as string, isDebug);
     // Step 2: Quote

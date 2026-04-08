@@ -84,7 +84,14 @@ router.get('/history/context', (req, res) => {
   console.log('GET /api/history/context called');
   try {
     const files = fs.readdirSync(HISTORY_DIR).sort().reverse().slice(0, 100);
-    const history = files.map(f => JSON.parse(fs.readFileSync(path.join(HISTORY_DIR, f), 'utf-8')));
+    const history = files.map(f => {
+      try {
+        return JSON.parse(fs.readFileSync(path.join(HISTORY_DIR, f), 'utf-8'));
+      } catch (err) {
+        console.error(`Failed to parse history file ${f}:`, err);
+        return null;
+      }
+    }).filter(h => h !== null);
     res.json(history);
   } catch (err) {
     console.error('Failed to read history:', err);

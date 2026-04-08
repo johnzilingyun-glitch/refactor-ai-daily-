@@ -47,7 +47,7 @@ export function SettingsModal() {
     if (aiStudio?.openSelectKey) {
       await aiStudio.openSelectKey();
     } else {
-      alert('API Key selection is only available in the AI Studio environment.');
+      console.warn('API Key selection is only available in the AI Studio environment.');
     }
   };
 
@@ -260,7 +260,6 @@ export function SettingsModal() {
                         onClick={async () => {
                           if (confirm('确定要清除所有调试日志吗？')) {
                             await fetch('/api/logs/debug', { method: 'DELETE' });
-                            alert('日志已清除');
                           }
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200 text-[10px] font-bold text-rose-500 hover:bg-rose-50"
