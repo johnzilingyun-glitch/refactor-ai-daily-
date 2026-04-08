@@ -53,21 +53,23 @@ Requirements:
    - **SOURCE NAMING**: In the "marketSummary" field, mention the tool data source (Yahoo Finance) and any additional search sources used for context.
    - **BEIJING TIME (CRITICAL)**: All times in the summary MUST be in Beijing Time (CST). The "lastUpdated" field for news MUST be in "YYYY-MM-DD HH:mm:ss CST" format.
    - **DATA INTEGRITY CHECK**: If the "change" or "changePercent" is exactly 0, verify if the market was closed.
-4. **SECTOR ANALYSIS (NEW)**: Analyze current hot sectors (板块) in the ${market} market and provide a conclusion for each.
+4. **SECTOR DEDUCTION (ENHANCED)**: Identify currently hot sectors. For each, you MUST perform **Industrial Chain Deduction**:
+    - Identify the **Upstream** (supply, raw materials) and **Downstream** (application, consumption) effects.
+    - Assign a **Rotation Stage**: Is the sector Leading (领涨), Weakening (转弱), Lagging (补涨), or Improving (筑底)?
 5. **COMMODITY ANALYSIS (NEW)**: Analyze major commodity trends. **RELEVANCE (CRITICAL)**: Only analyze commodities that are currently driving the market.
 6. **RECOMMENDATIONS**: Provide recommended stocks or sectors in the ${market} market based on the above analysis.
 7. Include exactly 5 major financial news items from the latest market day for the ${market} market.
 8. Each news item must have title, source, time, url, and summary.
 9. **LANGUAGE (MANDATORY)**: All user-facing text fields MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
 10. **ANTI-HALLUCINATION (CRITICAL)**: If you cannot find relevant news, state it clearly. Do NOT invent numbers or news.
-11. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
+11. **NEWS IMPACT MATRIX (NEW)**: Each news item MUST include a parenthetical assessment of:
+    - **Velocity**: (Instant / Medium / Slow)
+    - **Certainty**: (High / Moderate / Rumor)
+    - **Sentiment Divergence**: Is there a major difference between official media and retail sentiment?
+12. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
     - Each "url" MUST be the exact, direct, and publicly accessible link to the SPECIFIC article.
-    - **STRICTLY PROHIBITED**: Do NOT use homepages (e.g., finance.sina.com.cn), search result pages, or login-required/paywalled content.
-    - **VERIFICATION**: You MUST verify that the URL actually points to the specific article described by the title.
-    - **SOURCES**: Prioritize authoritative and highly accessible sources: Sina Finance (新浪财经), East Money (东方财富), Xueqiu (雪球), and Phoenix Finance (凤凰财经).
-    - **AVOID**: Avoid sources that frequently have broken links or paywalls like Economic Observer (经济观察网 - eeo.com.cn) unless you are certain the link is public.
-    - If a specific article URL is not available, do NOT include that news item.
-    - **LATEST DATA**: Use Google Search to ensure all news and data are from the most recent trading session or the current day.
+    - **SOURCES**: Prioritize authoritative sources: Sina Finance, East Money, Xueqiu.
+    - **LATEST DATA**: Use Google Search to ensure all news and data are for TODAY.
 11. Use real source URLs, never placeholder/example URLs.
 12. Continuity: Based on previous analysis, identify if trends are continuing or reversing.
 
@@ -96,6 +98,9 @@ JSON schema:
     {
       "name": "string",
       "trend": "string",
+      "rotationStage": "Leading | Weakening | Lagging | Improving",
+      "upstreamImpact": "Brief impact on raw materials/supply",
+      "downstreamImpact": "Brief impact on end users/apps",
       "conclusion": "string"
     }
   ],
@@ -618,6 +623,12 @@ export const getDiscussionPrompt = (
        - Output MUST include 3 distinct scenarios: Bull Case, Base Case, and Bear Case.
        - Assign probabilities (Σ = 100%) and target prices for each.
        - Calculate the **Risk-Adjusted Expected Value (EV)**.
+    9. **Quantitative Evidence Scoring (NEW)**:
+       - For every major claim, include a **Confidence Score (1-10)**. 
+       - Score 10: Official audit report/Live tape. Score 1: Third-party rumor.
+    10. **Kelly Criterion Position Sizing (NEW)**:
+        - The Chief Strategist MUST use a simplified Kelly Criterion [f* = (bp - q) / b] to suggest position size.
+        - b = odds, p = probability of win, q = probability of loss.
 
     Return JSON ONLY. No markdown code blocks, no extraneous text.
 

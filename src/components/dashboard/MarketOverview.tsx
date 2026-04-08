@@ -266,14 +266,47 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
                 </h3>
                 <div className="space-y-3">
                   {marketOverview.sectorAnalysis?.map((sector, i) => (
-                    <div key={`sector-${sector.name}-${i}`} className="rounded-xl bg-zinc-50/30 p-3 border border-zinc-200/30">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-zinc-950">{sector.name}</span>
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase", 
-                          sector.trend?.includes('涨') || sector.trend?.includes('强') || sector.trend?.includes('Up') || sector.trend?.includes('Strong') ? "bg-indigo-100 text-indigo-600" : "bg-rose-500/20 text-rose-400"
+                    <div key={`sector-${sector.name}-${i}`} className="rounded-xl bg-zinc-50/50 p-4 border border-zinc-200/60 shadow-sm hover:shadow-md transition-all group">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="space-y-1">
+                          <span className="font-bold text-zinc-950 block">{sector.name}</span>
+                          {sector.rotationStage && (
+                            <span className={cn(
+                              "text-[8px] px-1.5 py-0.5 rounded border font-bold uppercase tracking-widest",
+                              sector.rotationStage.toLowerCase().includes('leading') ? "bg-indigo-600 text-white border-indigo-600" :
+                              sector.rotationStage.toLowerCase().includes('improving') ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                              sector.rotationStage.toLowerCase().includes('weakening') ? "bg-rose-500/10 text-rose-500 border-rose-500/20" :
+                              "bg-zinc-100 text-zinc-500 border-zinc-200"
+                            )}>
+                              {sector.rotationStage}
+                            </span>
+                          )}
+                        </div>
+                        <span className={cn("text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shadow-sm", 
+                          sector.trend?.includes('涨') || sector.trend?.includes('强') || sector.trend?.includes('Up') || sector.trend?.includes('Strong') ? "bg-indigo-600 text-white" : "bg-rose-500 text-white"
                         )}>{sector.trend}</span>
                       </div>
-                      <p className="text-xs text-zinc-500 leading-relaxed">{sector.conclusion}</p>
+                      
+                      <div className="space-y-3">
+                        <p className="text-xs text-zinc-600 leading-relaxed font-medium">{sector.conclusion}</p>
+                        
+                        {(sector.upstreamImpact || sector.downstreamImpact) && (
+                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-100">
+                            {sector.upstreamImpact && (
+                              <div>
+                                <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Upstream</p>
+                                <p className="text-[10px] text-zinc-500 leading-tight italic">{sector.upstreamImpact}</p>
+                              </div>
+                            )}
+                            {sector.downstreamImpact && (
+                              <div>
+                                <p className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Downstream</p>
+                                <p className="text-[10px] text-zinc-500 leading-tight italic">{sector.downstreamImpact}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

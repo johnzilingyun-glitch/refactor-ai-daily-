@@ -47,6 +47,9 @@ export interface IndexInfo {
 export interface SectorAnalysis {
   name: string;
   trend: string;
+  rotationStage?: string;
+  upstreamImpact?: string;
+  downstreamImpact?: string;
   conclusion: string;
 }
 

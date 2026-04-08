@@ -450,11 +450,29 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                         "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300 hover:shadow-md"
                       )}>
                         <div className="prose prose-sm md:prose-base max-w-none prose-zinc prose-p:leading-relaxed prose-p:mb-4 prose-p:text-zinc-700 prose-headings:mt-6 prose-headings:mb-3 prose-strong:text-zinc-950 prose-table:my-6 prose-table:border-collapse prose-th:bg-zinc-50 prose-th:text-zinc-900 prose-th:font-extrabold prose-th:border prose-th:border-zinc-200 prose-td:border prose-td:border-zinc-100 prose-td:p-3 prose-img:rounded-2xl">
+                          {/* Confidence Score Badge Integration */}
+                          {(() => {
+                            const confidenceMatch = msg.content.match(/Confidence Score:\s*(\d+)\/10/i);
+                            if (confidenceMatch) {
+                              const score = parseInt(confidenceMatch[1]);
+                              const badgeColor = score >= 8 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                               score >= 5 ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                                               "bg-rose-500/10 text-rose-500 border-rose-500/20";
+                              return (
+                                <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-widest mb-4 shadow-sm", badgeColor)}>
+                                  <ShieldCheck size={12} />
+                                  Evidence Level: {score}/10
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                          
                           <ReactMarkdown 
                             remarkPlugins={[remarkGfm]} 
                             rehypePlugins={[rehypeRaw]}
                           >
-                            {msg.content}
+                            {msg.content.replace(/Confidence Score:\s*(\d+)\/10/i, '')}
                           </ReactMarkdown>
                         </div>
 
