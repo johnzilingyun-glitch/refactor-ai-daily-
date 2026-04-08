@@ -55,6 +55,9 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
             exit={{ opacity: 0, scale: 0.98, y: 10 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10 flex flex-col max-h-[85vh]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-modal-title"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-zinc-100 p-8">
@@ -63,7 +66,7 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                   <HistoryIcon size={24} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-950 tracking-tight">历史研判回顾</h2>
+                  <h2 id="history-modal-title" className="text-xl font-bold text-zinc-950 tracking-tight">历史研判回顾</h2>
                   <p className="text-xs font-medium text-zinc-400 mt-0.5">Review your previous market analysis</p>
                 </div>
               </div>
@@ -97,9 +100,25 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                   <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">正在检索历史库...</p>
                 </div>
               ) : filteredHistory.length === 0 ? (
-                <div className="text-center py-20 text-zinc-400">
-                  <BarChart3 size={40} className="mx-auto mb-4 opacity-10" />
-                  <p className="text-sm font-medium">未找到相关的研判记录</p>
+                <div className="text-center py-20 text-zinc-400 space-y-4">
+                  <BarChart3 size={40} className="mx-auto opacity-10" />
+                  <div>
+                    <p className="text-sm font-bold text-zinc-500 mb-1">
+                      {searchTerm ? '未找到相关的研判记录' : '暂无分析记录'}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      {searchTerm ? '请尝试其他关键词' : '搜索并分析股票后，历史记录将保存在这里'}
+                    </p>
+                  </div>
+                  {!searchTerm && (
+                    <button
+                      onClick={onClose}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      <Search size={12} />
+                      返回搜索第一只股票 →
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredHistory.map((item, idx) => {

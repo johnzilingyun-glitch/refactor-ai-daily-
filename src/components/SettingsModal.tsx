@@ -70,6 +70,9 @@ export function SettingsModal() {
             exit={{ opacity: 0, scale: 0.98, y: 10 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/10"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-modal-title"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-zinc-100 p-8">
@@ -78,7 +81,7 @@ export function SettingsModal() {
                   <Settings size={24} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-950 tracking-tight">系统配置</h2>
+                  <h2 id="settings-modal-title" className="text-xl font-bold text-zinc-950 tracking-tight">系统配置</h2>
                   <p className="text-xs font-medium text-zinc-400 mt-0.5">Customizing your analytical engine</p>
                 </div>
               </div>
@@ -258,9 +261,7 @@ export function SettingsModal() {
                       </a>
                       <button 
                         onClick={async () => {
-                          if (confirm('确定要清除所有调试日志吗？')) {
-                            await fetch('/api/logs/debug', { method: 'DELETE' });
-                          }
+                          await fetch('/api/logs/debug', { method: 'DELETE' });
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200 text-[10px] font-bold text-rose-500 hover:bg-rose-50"
                       >

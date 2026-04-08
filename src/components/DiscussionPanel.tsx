@@ -242,9 +242,25 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
           </div>
 
           {isDiscussing && (
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-zinc-200 text-xs font-medium text-zinc-400 uppercase tracking-widest">
-              <Loader2 size={14} className="animate-spin text-indigo-600" />
-              {totalRounds > 1 ? `${t('analysis.conference.status_in_progress')} (${currentRound}/${totalRounds})` : t('analysis.conference.status_entering')}
+            <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white border border-zinc-200">
+              <Loader2 size={14} className="animate-spin text-indigo-600 shrink-0" />
+              {totalRounds > 1 ? (
+                <div className="flex items-center gap-2 min-w-[140px]">
+                  <div className="flex-1 h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.round((currentRound / totalRounds) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-indigo-600 whitespace-nowrap">
+                    {currentRound}/{totalRounds}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs font-medium text-zinc-400 uppercase tracking-widest">
+                  {t('analysis.conference.status_entering')}
+                </span>
+              )}
             </div>
           )}
 
@@ -273,6 +289,9 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-8 md:px-12 py-10 space-y-12 bg-white relative custom-scrollbar"
+        role="log"
+        aria-live="polite"
+        aria-label="Expert discussion messages"
       >
         {/* Performance Review (Backtest) */}
         {analysis?.backtestResult && (

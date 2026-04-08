@@ -64,7 +64,8 @@
     "today": "今天",
     "viewing_history": "正在查看历史数据",
     "no_history": "该日期暂无数据",
-    "loading_ai": "AI 分析加载中…"
+    "loading_ai": "AI 分析加载中…",
+    "quick_analyze": "快速分析"
   },
   "analysis": {
     "score": "综合评分",
@@ -110,7 +111,18 @@
       "lastUpdated": "最后更新",
       "previousClose": "昨收",
       "dailyHigh": "最高",
-      "dailyLow": "最低"
+      "dailyLow": "最低",
+      "ai_confidence": "AI 置信度",
+      "sentiment": "情绪",
+      "summary": "摘要",
+      "opportunities": "核心机会",
+      "risks": "关键风险",
+      "related_news": "相关资讯",
+      "data_sources": "数据来源",
+      "data_pipeline": "数据管线",
+      "price_fundamentals": "价格 / 基本面数据",
+      "ashare_fallback": "A股实时行情备用源",
+      "ai_analysis": "智能研判与场景分析"
     },
     "conference": {
       "header": "研讨会核心结论与场景分析",

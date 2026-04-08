@@ -144,10 +144,12 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 rounded-2xl bg-zinc-50 p-1 border border-zinc-200">
+            <div className="flex items-center gap-1 rounded-2xl bg-zinc-50 p-1 border border-zinc-200" role="tablist" aria-label="Market selection">
               {(['A-Share', 'HK-Share', 'US-Share'] as Market[]).map((m) => (
                 <button
                   key={m}
+                  role="tab"
+                  aria-selected={overviewMarket === m}
                   onClick={() => setOverviewMarket(m)}
                   className={cn(
                     "px-4 py-1.5 rounded-xl text-xs font-medium transition-all",
@@ -206,20 +208,52 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
 
         {overviewError && !isHistoryMode && (
           <div className="flex flex-col gap-4">
-            <ErrorNotice title={t('common.error')} message={overviewError} />
-            <button 
-              onClick={() => void onFetchMarketOverview(true)}
-              className="flex w-fit items-center gap-2 rounded-xl bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 transition-colors"
-            >
-              <TrendingUp size={16} className="text-amber-500" />
-              {t('common.retry')}
-            </button>
+            <ErrorNotice
+              title={t('common.error')}
+              message={overviewError}
+              onRetry={() => void onFetchMarketOverview(true)}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+            />
           </div>
         )}
 
         {isHistoryMode && !historyLoading && !historyData && (
           <div className="text-center py-8 text-zinc-400 text-sm">
             {t('market.no_history')}
+          </div>
+        )}
+
+        {/* Quick-start: Popular stocks for new users */}
+        {!isHistoryMode && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-zinc-400 mr-1">{t('market.quick_analyze')}:</span>
+            {(overviewMarket === 'A-Share' ? [
+              { symbol: '600519', name: '茅台' },
+              { symbol: '000858', name: '五粮液' },
+              { symbol: '000001', name: '平安银行' },
+              { symbol: '601318', name: '中国平安' },
+              { symbol: '300750', name: '宁德时代' },
+            ] : overviewMarket === 'HK-Share' ? [
+              { symbol: '00700', name: '腾讯' },
+              { symbol: '09988', name: '阿里巴巴' },
+              { symbol: '01810', name: '小米' },
+              { symbol: '09888', name: '百度' },
+              { symbol: '03690', name: '美团' },
+            ] : [
+              { symbol: 'AAPL', name: 'Apple' },
+              { symbol: 'NVDA', name: 'NVIDIA' },
+              { symbol: 'TSLA', name: 'Tesla' },
+              { symbol: 'MSFT', name: 'Microsoft' },
+              { symbol: 'GOOGL', name: 'Google' },
+            ]).map(stock => (
+              <button
+                key={stock.symbol}
+                onClick={() => { setSymbol(stock.symbol); setMarket(overviewMarket); }}
+                className="px-3 py-1.5 rounded-xl bg-white border border-zinc-200 text-xs font-medium text-zinc-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all"
+              >
+                {stock.symbol} <span className="text-zinc-400">{stock.name}</span>
+              </button>
+            ))}
           </div>
         )}
 

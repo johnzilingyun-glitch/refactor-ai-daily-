@@ -64,7 +64,8 @@
     "today": "Today",
     "viewing_history": "Viewing historical data",
     "no_history": "No data for this date",
-    "loading_ai": "Loading AI analysis..."
+    "loading_ai": "Loading AI analysis...",
+    "quick_analyze": "Quick analyze"
   },
   "analysis": {
     "score": "Overall Score",
@@ -110,7 +111,18 @@
       "lastUpdated": "Last Updated",
       "previousClose": "Prev Close",
       "dailyHigh": "Day High",
-      "dailyLow": "Day Low"
+      "dailyLow": "Day Low",
+      "ai_confidence": "AI Confidence",
+      "sentiment": "Sentiment",
+      "summary": "Summary",
+      "opportunities": "Key Opportunities",
+      "risks": "Key Risks",
+      "related_news": "Related News",
+      "data_sources": "Data Sources",
+      "data_pipeline": "Data Pipeline",
+      "price_fundamentals": "Price / fundamental data",
+      "ashare_fallback": "A-share real-time fallback",
+      "ai_analysis": "AI analysis & scenario modeling"
     },
     "conference": {
       "header": "Expert Conference Conclusions & Scenario Analysis",

@@ -1,7 +1,7 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { useStockAnalysis, useDiscussion, useChat, useReporting, useMarketData } from './hooks';
+import { useStockAnalysis, useDiscussion, useChat, useReporting, useMarketData, useUrlState } from './hooks';
 import { useUIStore } from './stores/useUIStore';
 import { useMarketStore } from './stores/useMarketStore';
 import { useAnalysisStore } from './stores/useAnalysisStore';
@@ -34,6 +34,7 @@ export default function App() {
   const analysisError = useUIStore(s => s.analysisError);
   const showAdminPanel = useUIStore(s => s.showAdminPanel);
   const setShowDiscussion = useUIStore(s => s.setShowDiscussion);
+  const setIsSettingsOpen = useUIStore(s => s.setIsSettingsOpen);
   const analysis = useAnalysisStore(s => s.analysis);
   const setAnalysis = useAnalysisStore(s => s.setAnalysis);
   const setSymbol = useAnalysisStore(s => s.setSymbol);
@@ -58,6 +59,28 @@ export default function App() {
     handleSendHistoryToFeishu,
     handleExportFullReport,
   } = useReporting(fetchAdminData);
+
+  // URL state sync: auto-search from ?symbol=&market= on first load
+  const { initialUrlParams } = useUrlState();
+  const [urlSearchPending, setUrlSearchPending] = useState(!!initialUrlParams.symbol);
+  const hasAutoSearched = useRef(false);
+
+  // Step 1: Set symbol/market from URL params into the store
+  useEffect(() => {
+    if (hasAutoSearched.current || !initialUrlParams.symbol) return;
+    setSymbol(initialUrlParams.symbol);
+    setMarket(initialUrlParams.market || 'US-Share');
+  }, [initialUrlParams, setSymbol, setMarket]);
+
+  // Step 2: Once store is updated with URL params, trigger search
+  useEffect(() => {
+    if (!urlSearchPending || hasAutoSearched.current) return;
+    if (initialUrlParams.symbol) {
+      hasAutoSearched.current = true;
+      setUrlSearchPending(false);
+      handleSearch({ preventDefault: () => {} } as React.FormEvent);
+    }
+  }, [urlSearchPending, initialUrlParams.symbol, handleSearch]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-600 font-sans selection:bg-indigo-600/10 transition-colors duration-500">
@@ -120,13 +143,28 @@ export default function App() {
         <AnimatePresence mode="wait">
           {analysisError && (
             <div className="mb-8">
-              <ErrorNotice title="个股 analysis 加载失败" message={analysisError} />
+              <ErrorNotice
+                title="个股 analysis 加载失败"
+                message={analysisError}
+                onRetry={() => handleSearch({ preventDefault: () => {} } as React.FormEvent)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+              />
             </div>
           )}
 
           {analysis ? (
             <ErrorBoundary fallback="Analysis component encountered an error">
-            <Suspense fallback={<div className="text-center py-12 text-zinc-400">Loading...</div>}>
+            <Suspense fallback={
+              <div className="space-y-6 animate-pulse">
+                <div className="h-16 bg-zinc-200/60 rounded-2xl" />
+                <div className="h-64 bg-zinc-200/40 rounded-2xl" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="h-32 bg-zinc-200/40 rounded-2xl" />
+                  <div className="h-32 bg-zinc-200/40 rounded-2xl" />
+                  <div className="h-32 bg-zinc-200/40 rounded-2xl" />
+                </div>
+              </div>
+            }>
             <AnalysisResult
               onResetToHome={resetToHome}
               onExportFullReport={handleExportFullReport}

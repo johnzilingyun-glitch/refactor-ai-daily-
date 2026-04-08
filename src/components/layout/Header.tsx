@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp, Zap, BarChart3, Microscope, Languages } from 'lucide-react';
+import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp, Zap, BarChart3, Microscope, Languages, Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Market, AnalysisLevel } from '../../types';
 import { useUIStore, selectLoading } from '../../stores/useUIStore';
@@ -47,6 +47,7 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const searchContainerRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -144,68 +145,108 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
-          <button
-            onClick={toggleLanguage}
-            className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl overflow-hidden relative group"
-            title={language === 'en' ? 'Switch to Chinese' : '切换为英文'}
-          >
-            <Languages size={20} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
-            <span className="absolute bottom-1 right-1 text-[8px] font-bold opacity-70">
-              {language === 'en' ? 'EN' : 'ZH'}
-            </span>
-          </button>
+          {/* Desktop: show all buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={toggleLanguage}
+              className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl overflow-hidden relative group"
+              aria-label={language === 'en' ? 'Switch to Chinese' : '切换为英文'}
+              title={language === 'en' ? 'Switch to Chinese' : '切换为英文'}
+            >
+              <Languages size={20} strokeWidth={1.5} className="group-hover:scale-110 transition-transform" />
+              <span className="absolute bottom-1 right-1 text-[8px] font-bold opacity-70">
+                {language === 'en' ? 'EN' : 'ZH'}
+              </span>
+            </button>
           
-          {dailyReport && (
+            {dailyReport && (
+              <button
+                onClick={() => {
+                  const blob = new Blob([dailyReport], { type: 'text/markdown' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `Daily_Market_Report_${new Date().toISOString().split('T')[0]}.md`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
+                aria-label={t('header.downloadReport')}
+                title={t('header.downloadReport')}
+              >
+                <Download size={20} strokeWidth={1.5} />
+              </button>
+            )}
+            <button
+              onClick={onTriggerDailyReport}
+              disabled={isTriggeringReport}
+              className="btn-secondary h-12 px-5 rounded-xl disabled:opacity-50"
+              aria-label={t('header.triggerBrief')}
+            >
+              {isTriggeringReport ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} strokeWidth={1.5} />}
+              <span className="text-sm">{t('header.triggerBrief')}</span>
+            </button>
+            <button
+              onClick={onOpenHistory}
+              className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
+              aria-label={t('header.history')}
+              title={t('header.history')}
+            >
+              <History size={20} strokeWidth={1.5} />
+            </button>
             <button
               onClick={() => {
-                const blob = new Blob([dailyReport], { type: 'text/markdown' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Daily_Market_Report_${new Date().toISOString().split('T')[0]}.md`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                setShowAdminPanel(!showAdminPanel);
+                if (!showAdminPanel) onFetchAdminData();
               }}
               className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-              title={t('header.downloadReport')}
+              aria-label={t('header.sysLogs')}
+              title={t('header.sysLogs')}
             >
-              <Download size={20} strokeWidth={1.5} />
+              <Clock size={20} strokeWidth={1.5} />
             </button>
-          )}
-          <button
-            onClick={onTriggerDailyReport}
-            disabled={isTriggeringReport}
-            className="btn-secondary h-12 px-5 rounded-xl disabled:opacity-50"
-          >
-            {isTriggeringReport ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} strokeWidth={1.5} />}
-            <span className="text-sm">{t('header.triggerBrief')}</span>
-          </button>
-          <button
-            onClick={onOpenHistory}
-            className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-            title={t('header.history')}
-          >
-            <History size={20} strokeWidth={1.5} />
-          </button>
-          <button
-            onClick={() => {
-              setShowAdminPanel(!showAdminPanel);
-              if (!showAdminPanel) onFetchAdminData();
-            }}
-            className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-            title={t('header.sysLogs')}
-          >
-            <Clock size={20} strokeWidth={1.5} />
-          </button>
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
-            title={t('header.settings')}
-          >
-            <Settings size={20} strokeWidth={1.5} />
-          </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
+              aria-label={t('header.settings')}
+              title={t('header.settings')}
+            >
+              <Settings size={20} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Mobile: hamburger menu */}
+          <div className="md:hidden relative">
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="btn-secondary w-12 h-12 p-0 flex items-center justify-center rounded-xl"
+              aria-label="Menu"
+              aria-expanded={showMobileMenu}
+            >
+              {showMobileMenu ? <X size={20} strokeWidth={1.5} /> : <Menu size={20} strokeWidth={1.5} />}
+            </button>
+            {showMobileMenu && (
+              <div className="absolute top-14 right-0 z-50 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-3 min-w-[200px] space-y-1 animate-in fade-in slide-in-from-top-2">
+                <button onClick={() => { toggleLanguage(); setShowMobileMenu(false); }} className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
+                  <Languages size={18} /> {language === 'en' ? '切换中文' : 'English'}
+                </button>
+                <button onClick={() => { onTriggerDailyReport(); setShowMobileMenu(false); }} disabled={isTriggeringReport} className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors disabled:opacity-50">
+                  <Bell size={18} /> {t('header.triggerBrief')}
+                </button>
+                <button onClick={() => { onOpenHistory(); setShowMobileMenu(false); }} className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
+                  <History size={18} /> {t('header.history')}
+                </button>
+                <button onClick={() => { setShowAdminPanel(!showAdminPanel); if (!showAdminPanel) onFetchAdminData(); setShowMobileMenu(false); }} className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
+                  <Clock size={18} /> {t('header.sysLogs')}
+                </button>
+                <button onClick={() => { setIsSettingsOpen(true); setShowMobileMenu(false); }} className="flex w-full items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-50 transition-colors">
+                  <Settings size={18} /> {t('header.settings')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -241,6 +282,11 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
             type="text"
             placeholder={t('header.searchPlaceholder')}
             value={localSymbol}
+            aria-label={t('header.searchPlaceholder')}
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions && suggestions.length > 0}
+            aria-controls="search-suggestions"
+            role="combobox"
             onCompositionStart={() => { isComposing.current = true; }}
             onCompositionEnd={(e) => {
               isComposing.current = false;
@@ -263,11 +309,13 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
           {/* Suggestions Dropdown */}
           {showSuggestions && suggestions.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 z-[60] overflow-hidden rounded-2xl border border-zinc-100 bg-white/95 backdrop-blur-xl shadow-2xl shadow-indigo-600/10 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-1.5">
+              <div className="p-1.5" id="search-suggestions" role="listbox" aria-label="Search suggestions">
                 {suggestions.map((s, idx) => (
                   <button
                     key={s.symbol + idx}
                     type="button"
+                    role="option"
+                    aria-selected={idx === selectedIndex}
                     onClick={() => handleSelectSuggestion(s)}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`flex w-full items-center justify-between px-4 py-3 rounded-xl transition-all ${
