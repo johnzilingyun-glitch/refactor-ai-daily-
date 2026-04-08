@@ -10,6 +10,7 @@ import { useScenarioStore } from './stores/useScenarioStore';
 import { useConfigStore } from './stores/useConfigStore';
 import { SettingsModal } from './components/SettingsModal';
 import { HistoryModal } from './components/HistoryModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ErrorNotice } from './components/ErrorNotice';
 import { TokenUsage } from './components/dashboard/TokenUsage';
 import { Header } from './components/layout/Header';
@@ -21,19 +22,26 @@ import { DetailModal } from './components/shared/DetailModal';
 export default function App() {
   console.log('App is rendering');
   const { i18n } = useTranslation();
-  const { language } = useConfigStore();
+  const language = useConfigStore(s => s.language);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
     i18n.changeLanguage(language);
   }, [language, i18n]);
 
-  const { analysisError, showAdminPanel } = useUIStore();
-  const { analysis, setAnalysis, setSymbol, setMarket, setChatHistory } = useAnalysisStore();
-  const { setDiscussionResults, resetDiscussion } = useDiscussionStore();
-  const { setScenarioResults, resetScenario } = useScenarioStore();
-  const { setShowDiscussion } = useUIStore();
-  const { resetAnalysis } = useAnalysisStore();
+  const analysisError = useUIStore(s => s.analysisError);
+  const showAdminPanel = useUIStore(s => s.showAdminPanel);
+  const setShowDiscussion = useUIStore(s => s.setShowDiscussion);
+  const analysis = useAnalysisStore(s => s.analysis);
+  const setAnalysis = useAnalysisStore(s => s.setAnalysis);
+  const setSymbol = useAnalysisStore(s => s.setSymbol);
+  const setMarket = useAnalysisStore(s => s.setMarket);
+  const setChatHistory = useAnalysisStore(s => s.setChatHistory);
+  const resetAnalysis = useAnalysisStore(s => s.resetAnalysis);
+  const setDiscussionResults = useDiscussionStore(s => s.setDiscussionResults);
+  const resetDiscussion = useDiscussionStore(s => s.resetDiscussion);
+  const setScenarioResults = useScenarioStore(s => s.setScenarioResults);
+  const resetScenario = useScenarioStore(s => s.resetScenario);
 
   // Custom hooks for business logic
   const { handleSearch, resetToHome, fetchAdminData } = useStockAnalysis();
@@ -113,6 +121,7 @@ export default function App() {
           )}
 
           {analysis ? (
+            <ErrorBoundary fallback="Analysis component encountered an error">
             <AnalysisResult
               onResetToHome={resetToHome}
               onExportFullReport={handleExportFullReport}
@@ -123,17 +132,20 @@ export default function App() {
               onGenerateNewConclusion={handleGenerateNewConclusion}
               onChat={handleChat}
             />
+            </ErrorBoundary>
           ) : (
+            <ErrorBoundary fallback="Market overview encountered an error">
             <MarketOverview
               onFetchMarketOverview={fetchMarketOverview}
               onTriggerDailyReport={handleTriggerDailyReport}
             />
+            </ErrorBoundary>
           )}
         </AnimatePresence>
 
         <SettingsModal />
 
-        {showAdminPanel && <AdminPanel />}
+        {showAdminPanel && <ErrorBoundary fallback="Admin panel encountered an error"><AdminPanel /></ErrorBoundary>}
       </div>
 
       <DetailModal onSendHistoryToFeishu={handleSendHistoryToFeishu} />

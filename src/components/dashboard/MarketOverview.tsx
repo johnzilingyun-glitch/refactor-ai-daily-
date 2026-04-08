@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { 
   Globe, Settings, Loader2, ExternalLink, TrendingUp, Share2, CheckCircle2,
   LayoutGrid, Coins, Star, Newspaper, Search, RefreshCw, Calendar
@@ -23,7 +23,7 @@ interface MarketOverviewProps {
   onTriggerDailyReport: () => void;
 }
 
-export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: MarketOverviewProps) {
+export const MarketOverview = memo(function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: MarketOverviewProps) {
   const { t, i18n } = useTranslation();
   const { 
     overviewLoading, overviewError, isGeneratingReport, isSendingReport, reportStatus,
@@ -381,4 +381,4 @@ export function MarketOverview({ onFetchMarketOverview, onTriggerDailyReport }: 
       </section>
     </motion.div>
   );
-}
+});

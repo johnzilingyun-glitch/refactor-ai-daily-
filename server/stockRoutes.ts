@@ -188,36 +188,39 @@ router.get('/stock/suggest', async (req, res) => {
 
   try {
     // 1. Try EastMoney Suggest API
+    // Response format: var cb = "code,symbol,marketType,pinyin,name,category,flag;..."
     try {
       const emUrl = `https://suggest.eastmoney.com/suggest/default.aspx?name=cb&input=${encodedInput}`;
       const emResponse = await fetch(emUrl);
       const emText = await emResponse.text();
-      const emMatch = emText.match(/^var cb = (\[.*\]);?$/);
+      const emMatch = emText.match(/var cb\s*=\s*"(.*)"/);
       if (emMatch?.[1]) {
-        const data = JSON.parse(emMatch[1]);
-        if (Array.isArray(data)) {
-          for (const item of data) {
-            const parts = item.split(',');
-            if (parts.length >= 7) {
-              const code = parts[1];
-              const name = parts[2];
-              const pinyin = parts[3];
-              const emMarketName = parts[6];
-              let marketId = '';
-              if (['SH', 'SZ', 'BJ'].includes(emMarketName)) marketId = 'A-Share';
-              else if (emMarketName === 'HK') marketId = 'HK-Share';
-              else if (emMarketName === 'US') marketId = 'US-Share';
-              
-              if (marketId) {
-                suggestions.push({
-                  symbol: code,
-                  name: name,
-                  pinyin: pinyin,
-                  exchange: emMarketName,
-                  market: marketId,
-                  source: 'EastMoney'
-                });
-              }
+        const items = emMatch[1].split(';').filter(Boolean);
+        for (const item of items) {
+          const parts = item.split(',');
+          if (parts.length >= 5) {
+            const code = parts[1];
+            const emMarketType = parts[2];
+            const pinyin = parts[3];
+            const name = parts[4];
+            let marketId = '';
+            let exchange = '';
+            // Market type mapping: 1=SZ, 2=SH, 21=HK, 31=US
+            if (emMarketType === '1') { marketId = 'A-Share'; exchange = 'SZ'; }
+            else if (emMarketType === '2') { marketId = 'A-Share'; exchange = 'SH'; }
+            else if (emMarketType === '21') { marketId = 'HK-Share'; exchange = 'HK'; }
+            else if (emMarketType === '31') { marketId = 'US-Share'; exchange = 'US'; }
+            // Skip funds (11), indices (40), etc.
+            
+            if (marketId) {
+              suggestions.push({
+                symbol: code,
+                name: name,
+                pinyin: pinyin,
+                exchange: exchange,
+                market: marketId,
+                source: 'EastMoney'
+              });
             }
           }
         }
@@ -229,21 +232,26 @@ router.get('/stock/suggest', async (req, res) => {
       try {
         const sinaUrl = `https://suggest3.sinajs.cn/suggest/type=&key=${encodedInput}`;
         const sinaRes = await fetch(sinaUrl);
-        const sinaText = await sinaRes.text();
+        // Sina returns GBK-encoded text, decode properly
+        const sinaBuffer = await sinaRes.arrayBuffer();
+        const sinaText = new TextDecoder('gbk').decode(sinaBuffer);
         const sinaMatch = sinaText.match(/="([^"]+)"/);
         if (sinaMatch?.[1]) {
-          const parts = sinaMatch[1].split(';');
+          const parts = sinaMatch[1].split(';').filter(Boolean);
           for (const part of parts) {
             const details = part.split(',');
-            if (details.length >= 4) {
-              const name = details[0];
-              const sinaMarketId = details[1];
+            if (details.length >= 5) {
+              const compositeCode = details[0]; // e.g. "sh000001", "sz000001"
               const code = details[2];
+              const name = details[4]; // actual stock name
               let marketId = '';
               let exchange = '';
-              if (sinaMarketId === '11' || sinaMarketId === '12') { marketId = 'A-Share'; exchange = sinaMarketId === '11' ? 'SH' : 'SZ'; }
-              else if (sinaMarketId === '31') { marketId = 'HK-Share'; exchange = 'HK'; }
-              else if (sinaMarketId === '41') { marketId = 'US-Share'; exchange = 'US'; }
+              // Derive market from composite code prefix
+              const prefix = compositeCode.substring(0, 2).toLowerCase();
+              if (prefix === 'sh') { marketId = 'A-Share'; exchange = 'SH'; }
+              else if (prefix === 'sz') { marketId = 'A-Share'; exchange = 'SZ'; }
+              else if (prefix === 'hk') { marketId = 'HK-Share'; exchange = 'HK'; }
+              else if (prefix === 'us') { marketId = 'US-Share'; exchange = 'US'; }
               if (marketId && !suggestions.find(s => s.symbol === code)) {
                 suggestions.push({ symbol: code, name, exchange, market: marketId, source: 'Sina' });
               }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Download, Bell, History, Clock, Settings, Loader2, Search, TrendingUp, Zap, BarChart3, Microscope, Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Market, AnalysisLevel } from '../../types';
@@ -15,7 +15,7 @@ interface HeaderProps {
   onFetchAdminData: () => void;
 }
 
-export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHistory, onFetchAdminData }: HeaderProps) {
+export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHistory, onFetchAdminData }: HeaderProps) {
   const { t, i18n } = useTranslation();
   const loading = useUIStore(selectLoading);
   const { isTriggeringReport, showAdminPanel, setShowAdminPanel, setIsSettingsOpen, analysisLevel, setAnalysisLevel } = useUIStore();
@@ -336,4 +336,4 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
       </div>
     </header>
   );
-}
+});
