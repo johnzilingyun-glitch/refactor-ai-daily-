@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AgentRole } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -96,7 +96,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
     return analystWeights?.find(w => w.role === role);
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
@@ -399,7 +399,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
         {/* Messages */}
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => {
-            const msgKey = msg.id ? `msg-id-${msg.id}-${i}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}-${Math.random().toString(36).slice(2, 7)}`;
+            const msgKey = msg.id ? `msg-id-${msg.id}-${i}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}`;
             const showRoundDivider = msg.round != null && (i === 0 || messages[i - 1]?.round !== msg.round);
             return (
               <React.Fragment key={`frag-${msgKey}`}>
@@ -467,7 +467,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
                             <div className="flex flex-wrap gap-2">
                               {msg.references.map((ref, idx) => (
                                 <a
-                                  key={`ref-${idx}-${ref.url}-${Math.random().toString(36).slice(2, 7)}`}
+                                  key={`ref-${idx}-${ref.url}`}
                                   href={ref.url}
                                   target="_blank"
                                   rel="noopener noreferrer"

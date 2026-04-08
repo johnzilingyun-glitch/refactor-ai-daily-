@@ -17,11 +17,19 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
 
   useEffect(() => {
     if (isOpen) {
+      const controller = new AbortController();
       setLoading(true);
-      getHistoryContext().then(data => {
-        setHistory(data);
-        setLoading(false);
-      });
+      getHistoryContext()
+        .then(data => {
+          if (!controller.signal.aborted) setHistory(data);
+        })
+        .catch(err => {
+          if (!controller.signal.aborted) console.error('Failed to load history:', err);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
+        });
+      return () => controller.abort();
     }
   }, [isOpen]);
 

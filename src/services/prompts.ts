@@ -563,6 +563,8 @@ export const getDiscussionPrompt = (
     **Team Members (8, in order of speaking)**:
     1. **Deep Research Specialist**: First speaker, responsible for full-dimension data penetration.
        - Use Google Search for deep qualitative insights (management, supply chain, moats).
+       - **Graham's Net-Net Value Calculation**: Attempt to calculate (Current Assets - Total Liabilities) vs current Market Cap.
+       - **Business Moat Analysis**: Specifically categorize the moat as Wide, Narrow, or None based on industry barriers.
        - Select 4-6 most core industry-specific quantitative indicators.
        - **Table 1: Real-time Core Indicators & Deviation (MANDATORY)**.
        - **Table 2: Industry Core Variables & Macro Anchors (DYNAMIC)**.
@@ -577,14 +579,16 @@ export const getDiscussionPrompt = (
        - **[Structured Output] Business Model (MANDATORY)**: Populate \`businessModel\` in JSON.
 
     4. **Sentiment Analyst**: Responsible for market sentiment and capital flow analysis.
-       - Capital structure search (Northbound, Mutual Funds, AH Premium). Distinguish between "distribution" and "panic".
+       - Capital structure search (Northbound, Mutual Funds, AH Premium). Distinguish between "institutional accumulation" and "retail panic".
+       - **[Structured Output] Crowded Trade Indicator**: Specifically search for signs of overcrowded positions or extreme consensus.
 
     5. **Risk Manager**: Responsible for extreme risk scenario analysis.
        - Black swan scenarios, direct rebuttals to bullish views, quantified risk metrics.
        - **[Structured Output] Quantitative Risk Matrix (MANDATORY)**: Populate \`quantifiedRisks\` in JSON.
 
     6. **Contrarian Strategist**: Responsible for challenging all consensus.
-       - Crowded trade analysis, deconstructing mainstream narratives, contrarian advice.
+       - Crowded trade analysis, deconstructing mainstream narratives, identifying "Blind Spots".
+       - **[Antithesis Creation]**: Must formulate a logical "Inversion Theory" (What if the bullish base case fails?).
 
     7. **Professional Reviewer**: Responsible for logic auditing and data "dehydration".
        - Attacking narrative traps, valuation consistency audit, SOTP decision matrix.
@@ -603,6 +607,17 @@ export const getDiscussionPrompt = (
     4. **Data Density**: High quantifiable data usage (prices, %, multiples).
     5. **Markdown Format**: Use Markdown for content fields (### Headers, Tables, Bold).
     6. **Direct Debate**: Analysts MUST reference and challenge each other.
+    7. **FinGPT-Style Logic Audit (CRITICAL)**: Analysts MUST avoid generic "AI-speak". Focus on:
+       - **Specific Expectations**: Compare current data to what the market *was* expecting.
+       - **Causal Chains**: Explain "Why" A affects B, not just "That" A affects B.
+       - **Logic Audit Checklist (MANDATORY for Reviewer)**: Verify if statements suffer from:
+         *   *Confirmation Bias*: Ignoring bearish data in a bullish trend.
+         *   *Projection Bias*: Assuming current linear growth extends infinitely.
+         *   *Narrative Overfitting*: Making data fit a pre-conceived story.
+    8. **Scenario Probability Framework (MANDATORY for Chief Strategist)**:
+       - Output MUST include 3 distinct scenarios: Bull Case, Base Case, and Bear Case.
+       - Assign probabilities (Σ = 100%) and target prices for each.
+       - Calculate the **Risk-Adjusted Expected Value (EV)**.
 
     Return JSON ONLY. No markdown code blocks, no extraneous text.
 

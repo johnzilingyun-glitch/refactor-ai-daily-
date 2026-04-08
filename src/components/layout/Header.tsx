@@ -61,6 +61,8 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
 
   // Fetch suggestions
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchSuggestions = async () => {
       if (!localSymbol || localSymbol.trim().length < 1 || isComposing.current) {
         setSuggestions([]);
@@ -69,20 +71,20 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
       }
 
       try {
-        const res = await fetch(`/api/stock/suggest?input=${encodeURIComponent(localSymbol)}&market=${market}`);
+        const res = await fetch(`/api/stock/suggest?input=${encodeURIComponent(localSymbol)}&market=${market}`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
           setSuggestions(data);
           setShowSuggestions(data.length > 0);
           setSelectedIndex(-1);
         }
-      } catch (e) {
-        console.error('Failed to fetch suggestions:', e);
+      } catch (e: any) {
+        if (e.name !== 'AbortError') console.error('Failed to fetch suggestions:', e);
       }
     };
 
     const timeout = setTimeout(fetchSuggestions, 300);
-    return () => clearTimeout(timeout);
+    return () => { clearTimeout(timeout); controller.abort(); };
   }, [localSymbol, market]);
 
   // Click outside to close

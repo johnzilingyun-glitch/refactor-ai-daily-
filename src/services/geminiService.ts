@@ -4,6 +4,13 @@ import { requestScheduler } from "./requestScheduler";
 
 export const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
+// Fallback chain: when a model hits quota, try the next one
+export const MODEL_FALLBACK_CHAIN: string[] = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-2.5-flash-lite",
+  "gemini-3-flash-preview",
+];
+
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export function getApiKey(config?: { apiKey?: string }): string {
@@ -44,50 +51,82 @@ export async function generateAndParseJsonWithRetry<T>(
   const parseRetries = options?.parseRetries ?? 2;
   const parseDelayMs = options?.parseDelayMs ?? 1200;
 
-  let lastParseError: unknown;
+  // Build fallback model list: start with the requested model, then add alternatives
+  const requestedModel = params.model || GEMINI_MODEL;
+  const modelsToTry = [requestedModel, ...MODEL_FALLBACK_CHAIN.filter(m => m !== requestedModel)];
 
-  for (let attempt = 1; attempt <= parseRetries; attempt++) {
-    let responseText: string;
-    try {
-      responseText = await withRetry(async () => {
-        const generationConfig = {
-          responseMimeType: options?.responseMimeType || params.config?.responseMimeType || (options?.responseSchema ? 'application/json' : undefined),
-          responseSchema: options?.responseSchema || params.config?.responseSchema,
-        };
+  let lastError: unknown;
 
-        const mergedParams = {
-          ...params,
-          tools: options?.tools || params.config?.tools || params.tools,
-          generationConfig: {
-            ...params.generationConfig,
-            ...generationConfig
-          }
-        };
+  for (const model of modelsToTry) {
+    let lastParseError: unknown;
 
-        const result = await generateContentWithUsage(ai, mergedParams, priority);
-        return result.text;
-      }, transportRetries, baseDelayMs);
-    } catch (transportErr) {
-      throw transportErr;
+    for (let attempt = 1; attempt <= parseRetries; attempt++) {
+      let responseText: string;
+      try {
+        responseText = await withRetry(async () => {
+          const tools = options?.tools || params.config?.tools || params.tools;
+          const hasTools = !!tools;
+
+          // When tools (e.g. googleSearch) are present, some models reject
+          // responseMimeType: "application/json" — so omit it and rely on
+          // parseJsonResponse to extract JSON from freeform text.
+          const responseMimeType = hasTools ? undefined : (options?.responseMimeType || params.config?.responseMimeType || (options?.responseSchema ? 'application/json' : undefined));
+          const responseSchema = hasTools ? undefined : (options?.responseSchema || params.config?.responseSchema);
+
+          // Build clean config for the SDK (params.config is what the SDK reads)
+          const mergedConfig = {
+            ...(params.config || {}),
+            responseMimeType,
+            responseSchema,
+            tools,
+          };
+
+          const mergedParams = {
+            ...params,
+            model,
+            config: mergedConfig,
+          };
+          // Remove stale top-level tools/generationConfig to avoid confusion
+          delete mergedParams.tools;
+          delete mergedParams.generationConfig;
+
+          const result = await generateContentWithUsage(ai, mergedParams, priority);
+          return result.text;
+        }, transportRetries, baseDelayMs);
+      } catch (transportErr) {
+        // On quota error, try the next fallback model
+        if (transportErr instanceof QuotaError) {
+          console.warn(`[ModelFallback] ${model} quota exhausted, trying next model...`);
+          lastError = transportErr;
+          break; // break parse retry loop, continue to next model
+        }
+        throw transportErr;
+      }
+
+      try {
+        return parseJsonResponse<T>(responseText);
+      } catch (error) {
+        lastParseError = error;
+        if (attempt >= parseRetries) break;
+
+        const msg = error instanceof Error ? error.message : String(error);
+        console.warn(`Gemini JSON parse failed, retrying generation (${attempt}/${parseRetries}): ${msg}`);
+        await delay(parseDelayMs * attempt);
+      }
     }
 
-    try {
-      return parseJsonResponse<T>(responseText);
-    } catch (error) {
-      lastParseError = error;
-      if (attempt >= parseRetries) break;
-
-      const msg = error instanceof Error ? error.message : String(error);
-      console.warn(`Gemini JSON parse failed, retrying generation (${attempt}/${parseRetries}): ${msg}`);
-      await delay(parseDelayMs * attempt);
+    // If we got here from a parse error (not quota), throw it
+    if (lastParseError && !(lastError instanceof QuotaError)) {
+      throw new Error(
+        lastParseError instanceof Error
+          ? lastParseError.message
+          : 'Failed to parse Gemini JSON response after retries.'
+      );
     }
   }
 
-  throw new Error(
-    lastParseError instanceof Error
-      ? lastParseError.message
-      : 'Failed to parse Gemini JSON response after retries.'
-  );
+  // All models exhausted
+  throw new Error('API 配额已耗尽 (Free tier limits hit)。所有备选模型均不可用，请等待几分钟后重试。');
 }
 
 export async function remoteLog(type: string, data: any) {
@@ -117,46 +156,59 @@ export async function withRetry<T>(
     } catch (error: any) {
       lastError = error;
       const errorStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
-      const isRetryable = errorStr.includes('429') || 
-                          errorStr.includes('503') ||
+
+      // Distinguish quota errors (non-retryable) from transient errors (retryable)
+      const isQuota = errorStr.includes('429') || 
+                      errorStr.includes('RESOURCE_EXHAUSTED') || 
+                      errorStr.toLowerCase().includes('quota') ||
+                      error?.status === 429;
+      
+      const isTransient = errorStr.includes('503') ||
                           errorStr.includes('500') ||
-                          errorStr.toLowerCase().includes('quota') || 
-                          errorStr.includes('RESOURCE_EXHAUSTED') ||
                           errorStr.toLowerCase().includes('unavailable') ||
-                          error?.status === 429 ||
                           error?.status === 503 ||
                           error?.status === 500;
-      
-      if (isRetryable && attempt < maxRetries) {
-        const waitTime = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+
+      // Quota errors: fail fast — retrying wastes more quota
+      if (isQuota) {
+        if (useConfigStore.getState().debugMode) {
+          remoteLog('quota_exhausted_failure', { error: errorStr, attempt });
+        }
+        useConfigStore.getState().setServiceStatus('quota_exhausted');
+        const tier = useConfigStore.getState().config?.tier || 'free';
+        const cooldownDuration = tier === 'paid' ? 3000 : 8000;
+        useConfigStore.getState().setCooldownUntil(Date.now() + cooldownDuration);
+        throw new QuotaError(errorStr);
+      }
+
+      // Transient errors: retry with exponential backoff
+      if (isTransient && attempt < maxRetries) {
+        const waitTime = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
         console.warn(`Retryable error hit (${error?.status || 'AI Error'}). Retrying in ${Math.round(waitTime)}ms... (Attempt ${attempt}/${maxRetries})`);
         await delay(waitTime);
         continue;
       }
       
       if (attempt >= maxRetries) {
-        // Wrap quota/rate-limit errors with a user-friendly message
-        const errStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
-        const isQuota = errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota');
-        
-        if (isQuota) {
-          if (useConfigStore.getState().debugMode) {
-            remoteLog('quota_exhausted_failure', { error: errStr, attempt });
-          }
-          useConfigStore.getState().setServiceStatus('quota_exhausted');
-          throw new Error('API 配额已耗尽 (Free tier limits hit)。请等待几分钟后重试，或切换到其他模型。');
-        }
-        
         useConfigStore.getState().setServiceStatus('error');
-        if (errStr.includes('503') || errStr.toLowerCase().includes('unavailable')) {
+        if (isTransient) {
           throw new Error('AI 模型当前负载过高，请稍后重试。建议使用「标准」模式减少 API 调用次数。');
         }
         throw error;
       }
-      await delay(1000);
+      // Non-retryable, non-quota error — throw immediately
+      throw error;
     }
   }
   throw lastError;
+}
+
+// Custom error class to distinguish quota errors for fallback logic
+export class QuotaError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'QuotaError';
+  }
 }
 
 export function extractJsonBlock(raw: string): string {

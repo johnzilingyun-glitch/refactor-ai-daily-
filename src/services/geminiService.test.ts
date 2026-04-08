@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { generateContentWithUsage, fetchAvailableModelsList } from './geminiService';
+import { generateContentWithUsage, fetchAvailableModelsList, generateAndParseJsonWithRetry, QuotaError } from './geminiService';
 import { useConfigStore } from '../stores/useConfigStore';
 import { GoogleGenAI } from '@google/genai';
 import { requestScheduler } from './requestScheduler';
@@ -134,6 +134,120 @@ describe('geminiService', () => {
       } as any);
 
       await expect(fetchAvailableModelsList({ apiKey: 'test_key' })).rejects.toThrow('无可用模型');
+    });
+  });
+
+  describe('generateAndParseJsonWithRetry', () => {
+    it('should strip responseMimeType when tools are present in params.config', async () => {
+      const capturedParams: any[] = [];
+      const mockAi = {
+        models: {
+          generateContent: vi.fn().mockImplementation(async (p: any) => {
+            capturedParams.push(JSON.parse(JSON.stringify(p)));
+            return { text: '{"result": "ok"}' };
+          })
+        }
+      };
+
+      await generateAndParseJsonWithRetry(mockAi, {
+        model: 'gemini-3.1-flash-lite-preview',
+        contents: 'test prompt',
+        config: {
+          responseMimeType: 'application/json',
+          tools: [{ googleSearch: {} }]
+        }
+      });
+
+      expect(capturedParams.length).toBe(1);
+      const sentConfig = capturedParams[0].config;
+      // responseMimeType must be stripped when tools are present
+      expect(sentConfig.responseMimeType).toBeUndefined();
+      expect(sentConfig.responseSchema).toBeUndefined();
+      // tools must still be present
+      expect(sentConfig.tools).toEqual([{ googleSearch: {} }]);
+    });
+
+    it('should keep responseMimeType when no tools are present', async () => {
+      const capturedParams: any[] = [];
+      const mockAi = {
+        models: {
+          generateContent: vi.fn().mockImplementation(async (p: any) => {
+            capturedParams.push(JSON.parse(JSON.stringify(p)));
+            return { text: '{"result": "ok"}' };
+          })
+        }
+      };
+
+      await generateAndParseJsonWithRetry(mockAi, {
+        model: 'gemini-3.1-flash-lite-preview',
+        contents: 'test prompt',
+        config: {
+          responseMimeType: 'application/json',
+        }
+      });
+
+      expect(capturedParams.length).toBe(1);
+      const sentConfig = capturedParams[0].config;
+      expect(sentConfig.responseMimeType).toBe('application/json');
+    });
+
+    it('should strip responseMimeType when tools come via options', async () => {
+      const capturedParams: any[] = [];
+      const mockAi = {
+        models: {
+          generateContent: vi.fn().mockImplementation(async (p: any) => {
+            capturedParams.push(JSON.parse(JSON.stringify(p)));
+            return { text: '{"result": "ok"}' };
+          })
+        }
+      };
+
+      await generateAndParseJsonWithRetry(mockAi, {
+        model: 'gemini-3.1-flash-lite-preview',
+        contents: 'test prompt',
+      }, {
+        responseMimeType: 'application/json',
+        tools: [{ googleSearch: {} }],
+      });
+
+      expect(capturedParams.length).toBe(1);
+      const sentConfig = capturedParams[0].config;
+      expect(sentConfig.responseMimeType).toBeUndefined();
+      expect(sentConfig.tools).toEqual([{ googleSearch: {} }]);
+    });
+
+    it('should fallback to next model on QuotaError', async () => {
+      const modelsUsed: string[] = [];
+      const mockAi = {
+        models: {
+          generateContent: vi.fn().mockImplementation(async (p: any) => {
+            modelsUsed.push(p.model);
+            if (p.model === 'gemini-3.1-flash-lite-preview') {
+              throw { message: '429 RESOURCE_EXHAUSTED', status: 429 };
+            }
+            return { text: '{"result": "fallback_ok"}' };
+          })
+        }
+      };
+
+      (useConfigStore.getState as any).mockReturnValue({
+        serviceStatus: 'available',
+        setServiceStatus: vi.fn(),
+        cooldownUntil: 0,
+        setCooldownUntil: vi.fn(),
+        debugMode: false,
+        config: { tier: 'free' },
+      });
+
+      const result = await generateAndParseJsonWithRetry(mockAi, {
+        model: 'gemini-3.1-flash-lite-preview',
+        contents: 'test',
+      });
+
+      expect(result).toEqual({ result: 'fallback_ok' });
+      // First model was tried, then fallback
+      expect(modelsUsed[0]).toBe('gemini-3.1-flash-lite-preview');
+      expect(modelsUsed.length).toBeGreaterThan(1);
     });
   });
 });

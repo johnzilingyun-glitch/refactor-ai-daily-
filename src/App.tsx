@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useStockAnalysis, useDiscussion, useChat, useReporting, useMarketData } from './hooks';
@@ -8,16 +8,18 @@ import { useAnalysisStore } from './stores/useAnalysisStore';
 import { useDiscussionStore } from './stores/useDiscussionStore';
 import { useScenarioStore } from './stores/useScenarioStore';
 import { useConfigStore } from './stores/useConfigStore';
-import { SettingsModal } from './components/SettingsModal';
-import { HistoryModal } from './components/HistoryModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ErrorNotice } from './components/ErrorNotice';
 import { TokenUsage } from './components/dashboard/TokenUsage';
 import { Header } from './components/layout/Header';
 import { MarketOverview } from './components/dashboard/MarketOverview';
-import { AnalysisResult } from './components/analysis/AnalysisResult';
-import { AdminPanel } from './components/admin/AdminPanel';
 import { DetailModal } from './components/shared/DetailModal';
+
+// Lazy-load conditionally rendered large components
+const SettingsModal = lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const HistoryModal = lazy(() => import('./components/HistoryModal').then(m => ({ default: m.HistoryModal })));
+const AnalysisResult = lazy(() => import('./components/analysis/AnalysisResult').then(m => ({ default: m.AnalysisResult })));
+const AdminPanel = lazy(() => import('./components/admin/AdminPanel').then(m => ({ default: m.AdminPanel })));
 
 export default function App() {
   console.log('App is rendering');
@@ -66,6 +68,7 @@ export default function App() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-12 md:px-12">
+        <Suspense fallback={null}>
         <HistoryModal 
           isOpen={isHistoryOpen} 
           onClose={() => setIsHistoryOpen(false)} 
@@ -102,6 +105,7 @@ export default function App() {
             setIsHistoryOpen(false);
           }}
         />
+        </Suspense>
 
         <Header
           onSearch={handleSearch}
@@ -122,6 +126,7 @@ export default function App() {
 
           {analysis ? (
             <ErrorBoundary fallback="Analysis component encountered an error">
+            <Suspense fallback={<div className="text-center py-12 text-zinc-400">Loading...</div>}>
             <AnalysisResult
               onResetToHome={resetToHome}
               onExportFullReport={handleExportFullReport}
@@ -132,6 +137,7 @@ export default function App() {
               onGenerateNewConclusion={handleGenerateNewConclusion}
               onChat={handleChat}
             />
+            </Suspense>
             </ErrorBoundary>
           ) : (
             <ErrorBoundary fallback="Market overview encountered an error">
@@ -143,9 +149,9 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        <SettingsModal />
+        <Suspense fallback={null}><SettingsModal /></Suspense>
 
-        {showAdminPanel && <ErrorBoundary fallback="Admin panel encountered an error"><AdminPanel /></ErrorBoundary>}
+        {showAdminPanel && <ErrorBoundary fallback="Admin panel encountered an error"><Suspense fallback={null}><AdminPanel /></Suspense></ErrorBoundary>}
       </div>
 
       <DetailModal onSendHistoryToFeishu={handleSendHistoryToFeishu} />
