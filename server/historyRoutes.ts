@@ -54,7 +54,7 @@ const router = Router();
 router.get('/history/context', (req, res) => {
   console.log('GET /api/history/context called');
   try {
-    const files = fs.readdirSync(HISTORY_DIR).sort().reverse().slice(0, 10);
+    const files = fs.readdirSync(HISTORY_DIR).sort().reverse().slice(0, 100);
     const history = files.map(f => JSON.parse(fs.readFileSync(path.join(HISTORY_DIR, f), 'utf-8')));
     res.json(history);
   } catch (err) {

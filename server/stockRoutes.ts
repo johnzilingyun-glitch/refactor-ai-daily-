@@ -38,8 +38,9 @@ router.get('/stock/indices', async (req, res) => {
   const symbols = indexSymbols[marketKey] || indexSymbols['A-Share'];
 
   try {
-    const results: any[] = [];
-    for (const idx of symbols) {
+    const startTime = Date.now();
+    // Use parallel fetching to avoid long sequential waits
+    const results = await Promise.all(symbols.map(async (idx) => {
       try {
         const quote = await yahooFinance.quote(idx.symbol as any) as any;
         if (quote) {
@@ -62,7 +63,7 @@ router.get('/stock/indices', async (req, res) => {
             hour: '2-digit', minute: '2-digit', second: '2-digit'
           });
 
-          results.push({
+          return {
             name: idx.name,
             symbol: idx.symbol,
             price,
@@ -72,14 +73,66 @@ router.get('/stock/indices', async (req, res) => {
             lastUpdated: formattedTime + ' CST',
             source: 'Yahoo Finance API',
             marketState: quote.marketState,
-          });
+          };
         }
       } catch (e) {
-        console.warn(`Failed to fetch index ${idx.symbol}:`, e instanceof Error ? e.message : String(e));
+        logDebug(`Yahoo Index Fetch`, `Failed for ${idx.symbol}: ${e instanceof Error ? e.message : String(e)}`);
+      }
+      return null;
+    }));
+
+    let filteredResults = results.filter(r => r !== null);
+
+    // Fallback for A-Share if Yahoo returned too few results
+    if (marketKey === 'A-Share' && filteredResults.length < 3) {
+      logDebug(`A-Share Fallback`, `Yahoo results too low (${filteredResults.length}), triggering Sina fallback...`);
+      try {
+        const sinaIndices = [
+          { s: 's_sh000001', name: '上证综指', sym: '000001.SS' },
+          { s: 's_sz399001', name: '深证成指', sym: '399001.SZ' },
+          { s: 's_sz399006', name: '创业板指', sym: '399006.SZ' },
+          { s: 's_sh000300', name: '沪深300', sym: '000300.SS' }
+        ];
+        
+        const sinaUrl = `https://hq.sinajs.cn/list=${sinaIndices.map(i => i.s).join(',')}`;
+        const response = await fetch(sinaUrl, { headers: { 'Referer': 'https://finance.sina.com.cn' } });
+        const text = await response.text();
+        
+        sinaIndices.forEach(idx => {
+          const match = text.match(new RegExp(`hq_str_${idx.s}="([^"]+)"`));
+          if (match?.[1]) {
+            const parts = match[1].split(',');
+            if (parts.length >= 4) {
+              const price = parseFloat(parts[1]);
+              const change = parseFloat(parts[2]);
+              const changePercent = parseFloat(parts[3]);
+              
+              // Only add if not already present from Yahoo
+              if (!filteredResults.find(r => r.symbol === idx.sym)) {
+                filteredResults.push({
+                  name: idx.name,
+                  symbol: idx.sym,
+                  price,
+                  change: parseFloat(change.toFixed(2)),
+                  changePercent: parseFloat(changePercent.toFixed(2)),
+                  previousClose: parseFloat((price - change).toFixed(2)),
+                  lastUpdated: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) + ' CST',
+                  source: 'Sina Finance (Fallback)',
+                  marketState: 'REGULAR'
+                });
+              }
+            }
+          }
+        });
+      } catch (sinaErr) {
+        logError(`Sina Fallback failed`, sinaErr);
       }
     }
-    res.json(results);
+
+    monitor.recordSuccess('yahoo', Date.now() - startTime);
+    res.json(filteredResults);
   } catch (error) {
+    monitor.recordFailure('yahoo');
     console.error('Indices fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch indices data' });
   }
