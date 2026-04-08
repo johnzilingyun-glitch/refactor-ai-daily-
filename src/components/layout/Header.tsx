@@ -125,12 +125,6 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
 
   return (
     <header className="mb-12 animate-premium text-zinc-950 dark:text-white relative">
-      {cooldownRemaining > 0 && (
-        <div className="absolute -top-6 left-0 right-0 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-1.5 rounded-full text-xs font-bold text-center flex items-center justify-center gap-2 animate-pulse z-50">
-          <Clock size={12} strokeWidth={2.5} />
-          <span>System cooling down to reset AI quota... ({cooldownRemaining}s remaining)</span>
-        </div>
-      )}
       <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div className="cursor-pointer" onClick={onResetToHome}>
           <div className="flex items-center gap-2 mb-3">
@@ -214,7 +208,14 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
       </div>
 
       {/* Search Bar Container */}
-      <form onSubmit={onSearch} className="mt-12 flex flex-col gap-4 sm:flex-row items-stretch relative" ref={searchContainerRef}>
+      <div className="mt-12 flex flex-col gap-3">
+        {cooldownRemaining > 0 && (
+          <div className="flex items-center gap-2 text-rose-500 text-[11px] font-bold uppercase tracking-wider animate-pulse ml-1">
+            <Clock size={12} strokeWidth={2.5} />
+            <span>{t('header.quotaCooldown')}: {cooldownRemaining}s</span>
+          </div>
+        )}
+        <form onSubmit={onSearch} className="flex flex-col gap-4 sm:flex-row items-stretch relative" ref={searchContainerRef}>
         <div className="relative group flex-shrink-0">
           <select
             value={market}
@@ -313,8 +314,8 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
 
         <button
           type="submit"
-          disabled={loading}
-          className="btn-primary h-14 px-10 rounded-xl shadow-indigo-600/10 shadow-xl"
+          disabled={loading || cooldownRemaining > 0}
+          className="btn-primary h-14 px-10 rounded-xl shadow-indigo-600/10 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {loading ? (
             <Loader2 className="animate-spin" size={20} />
@@ -323,6 +324,7 @@ export function Header({ onSearch, onResetToHome, onTriggerDailyReport, onOpenHi
           )}
         </button>
       </form>
+      </div>
     </header>
   );
 }

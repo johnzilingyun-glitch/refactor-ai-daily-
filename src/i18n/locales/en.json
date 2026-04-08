@@ -29,7 +29,8 @@
     "history": "View History",
     "sysLogs": "System Logs",
     "settings": "Settings",
-    "startAnalysis": "Start Analysis"
+    "startAnalysis": "Start Analysis",
+    "quotaCooldown": "Quota resetting"
   },
   "markets": {
     "aShare": "A-Share Markets",

@@ -82,10 +82,21 @@ class RequestScheduler {
           const isQuota = errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota');
           
           if (isQuota) {
-            // Set a 60-second cooldown on 429
-            const newCooldown = Date.now() + 60000;
-            useConfigStore.getState().setCooldownUntil(newCooldown);
-            console.error("Quota reached, entering 60s cooldown...");
+            const tier = useConfigStore.getState().config?.tier || 'free';
+            const cooldownDuration = tier === 'paid' ? 5000 : 60000;
+            const newCooldown = Date.now() + cooldownDuration;
+            
+            // Only update if the new cooldown is significantly further in the future
+            const currentCooldown = useConfigStore.getState().cooldownUntil || 0;
+            if (newCooldown > currentCooldown + 1000) {
+              useConfigStore.getState().setCooldownUntil(newCooldown);
+              console.error(`Quota reached (${tier} tier), entering ${cooldownDuration/1000}s cooldown...`);
+              
+              if (useConfigStore.getState().debugMode) {
+                const taskName = item.task.toString().substring(0, 100);
+                console.warn(`429 triggered by task: ${taskName}`);
+              }
+            }
           }
           item.reject(error);
         }
