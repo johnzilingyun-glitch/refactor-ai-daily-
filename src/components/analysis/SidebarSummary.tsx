@@ -70,26 +70,6 @@ export function SidebarSummary({ analysis }: SidebarSummaryProps) {
         </div>
       )}
 
-      <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-6">
-        <h3 className="flex items-center gap-2 text-lg font-semibold">
-          {t('analysis.info.related_news')}
-        </h3>
-        <div className="space-y-4">
-          {analysis.news?.map((item, i) => (
-            <a key={`news-${item.title.substring(0, 20)}-${i}`} href={item.url} target="_blank" rel="noopener noreferrer" className="block group">
-              <div className="mb-1 flex items-start justify-between gap-2">
-                <h4 className="line-clamp-1 text-sm font-medium transition-colors group-hover:text-indigo-600">{item.title}</h4>
-                <ExternalLink size={12} className="shrink-0 text-zinc-400 transition-colors group-hover:text-indigo-600" />
-              </div>
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-wider text-zinc-400">
-                <span>{item.source}</span>
-                <span>•</span>
-                <span>{item.time}</span>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

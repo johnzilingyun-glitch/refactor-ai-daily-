@@ -40,7 +40,58 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
   const [historyData, setHistoryData] = useState<MarketOverviewType | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Deterministic News & Sectors State
+  const [hotNews, setHotNews] = useState<any[]>([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [sectorFlow, setSectorFlow] = useState<any>(null);
+  const [northboundFlow, setNorthboundFlow] = useState<any>(null);
+  const [flowsLoading, setFlowsLoading] = useState(false);
+
   const isHistoryMode = selectedDate !== '';
+
+  // Fetch deterministic hot news independently
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchNews() {
+      if (isHistoryMode) return;
+      setNewsLoading(true);
+      try {
+        const res = await fetch(`/api/stock/news?market=${overviewMarket}`);
+        if (!res.ok) throw new Error('News fetch failed');
+        const data = await res.json();
+        if (!cancelled) setHotNews(data);
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        if (!cancelled) setNewsLoading(false);
+      }
+    }
+    fetchNews();
+    return () => { cancelled = true; };
+  }, [overviewMarket, isHistoryMode]);
+
+  // Fetch deterministic capital flows independently
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchFlows() {
+      if (isHistoryMode || overviewMarket === 'US-Share') return;
+      setFlowsLoading(true);
+      try {
+        const [sectorsRes, northboundRes] = await Promise.all([
+          fetch(`/api/stock/sectors`),
+          overviewMarket === 'A-Share' ? fetch(`/api/stock/northbound`) : Promise.resolve(null)
+        ]);
+        if (sectorsRes.ok && !cancelled) setSectorFlow(await sectorsRes.json());
+        if (northboundRes && northboundRes.ok && !cancelled) setNorthboundFlow(await northboundRes.json());
+      } catch (e) {
+        console.warn("Quantitative Data Fetch failed", e);
+      } finally {
+        if (!cancelled) setFlowsLoading(false);
+      }
+    }
+    fetchFlows();
+    return () => { cancelled = true; };
+  }, [overviewMarket, isHistoryMode]);
 
   // Fetch available dates when market changes
   useEffect(() => {
@@ -400,20 +451,20 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
           <h2 className="flex items-center gap-2 text-xl font-medium text-zinc-950">
             <Newspaper size={20} className="text-indigo-600" />
             {t('market.news')}
+            {newsLoading && <Loader2 className="w-4 h-4 animate-spin text-zinc-400 ml-2" />}
           </h2>
           <div className="space-y-4">
-            {(!marketOverview?.topNews?.length && displayLoading) ? Array(3).fill(0).map((_, i) => (
-              <div key={`news-skeleton-${i}`} className="h-32 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
-            )) : marketOverview?.topNews?.map((news, i) => (
-              <a key={`news-${i}-${news.url || news.title}`} href={news.url} target="_blank" rel="noopener noreferrer" className="group block rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:border-indigo-600/30 shadow-sm">
-                <div className="mb-2 flex items-start justify-between gap-4">
-                  <h3 className="text-lg font-semibold text-zinc-950 transition-colors group-hover:text-indigo-600">{news.title}</h3>
-                  <ExternalLink size={16} className="mt-1 shrink-0 text-zinc-400" />
+            {(newsLoading && !hotNews.length) ? Array(5).fill(0).map((_, i) => (
+              <div key={`news-skeleton-${i}`} className="h-20 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
+            )) : hotNews?.map((news, i) => (
+              <a key={`news-${i}-${news.url || news.title}`} href={news.url} target="_blank" rel="noopener noreferrer" className="group block rounded-2xl border border-zinc-200 bg-white p-5 transition-all hover:border-indigo-600/30 hover:shadow-md">
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="text-sm font-medium text-zinc-950 transition-colors group-hover:text-indigo-600 leading-snug">{news.title}</h3>
+                  {news.url && <ExternalLink size={14} className="mt-0.5 shrink-0 text-zinc-300 group-hover:text-indigo-400 transition-colors" />}
                 </div>
-                <p className="mb-3 line-clamp-2 text-sm text-zinc-500 leading-relaxed">{news.summary}</p>
-                <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-wider text-zinc-400">
-                  <span className="rounded bg-zinc-50 px-2 py-0.5 border border-zinc-100">{news.source}</span>
-                  <span>{news.time}</span>
+                <div className="mt-3 flex items-center gap-3 font-mono text-[9px] uppercase tracking-widest text-zinc-400">
+                  <span className="rounded bg-zinc-100 px-2 py-0.5 text-zinc-600 font-medium">{news.source}</span>
+                  <span className="text-zinc-400">{news.time}</span>
                 </div>
               </a>
             ))}
@@ -421,6 +472,40 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
         </div>
 
         <div className="space-y-6">
+          {(overviewMarket === 'A-Share' || overviewMarket === 'HK-Share') && (
+            <div className="rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/50 to-white p-6 shadow-[0_2px_12px_rgb(0,0,0,0.02)]">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-950 mb-4">
+                <Coins size={18} className="text-indigo-600" />
+                {t('analysis.panel.institutional_consensus', 'Institutional Flow')}
+                {flowsLoading && <Loader2 className="w-4 h-4 animate-spin text-zinc-400 ml-2" />}
+              </h2>
+              
+              {northboundFlow && overviewMarket === 'A-Share' && (
+                <div className="mb-5 flex items-center justify-between p-3 bg-white rounded-xl border border-zinc-100">
+                  <span className="text-xs font-medium text-zinc-500">北向资金 (Northbound)</span>
+                  <span className={cn("text-xs font-semibold px-2 py-1 rounded bg-zinc-50", 
+                    String(northboundFlow['净买额']).includes('-') ? "text-rose-500" : "text-emerald-500"
+                  )}>
+                    {northboundFlow['净买额']} 亿元
+                  </span>
+                </div>
+              )}
+              
+              <div className="space-y-3">
+                <span className="text-[10px] uppercase font-bold tracking-widest text-zinc-400">Top Sectors (Inflow)</span>
+                {sectorFlow?.topInflows?.map((sector: any, i: number) => (
+                  <div key={sector['行业'] || i} className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-zinc-700">{sector['行业']}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="text-xs font-bold text-rose-500">{sector['主力净流入-净额']}</span>
+                      <span className="text-[10px] text-zinc-400">{sector['涨跌幅']}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h2 className="flex items-center gap-2 text-xl font-medium text-zinc-950">
             <TrendingUp size={20} className="text-amber-500" />
             {t('market.trending_search')}

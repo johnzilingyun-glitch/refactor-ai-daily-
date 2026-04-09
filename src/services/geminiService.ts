@@ -174,10 +174,8 @@ export async function withRetry<T>(
         if (useConfigStore.getState().debugMode) {
           remoteLog('quota_exhausted_failure', { error: errorStr, attempt });
         }
-        useConfigStore.getState().setServiceStatus('quota_exhausted');
-        const tier = useConfigStore.getState().config?.tier || 'free';
-        const cooldownDuration = tier === 'paid' ? 3000 : 8000;
-        useConfigStore.getState().setCooldownUntil(Date.now() + cooldownDuration);
+        // Do not permanently lock the UI state or queue for 8s; 
+        // Just flag it temporarily so the orchestrator can instantly fallback to a faster model.
         throw new QuotaError(errorStr);
       }
 

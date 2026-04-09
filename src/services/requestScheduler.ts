@@ -68,7 +68,7 @@ class RequestScheduler {
       const tier = config?.tier || 'free';
       const model = config?.model || 'gemini-3.1-flash-lite-preview';
       
-      let dynamicInterval = 4500;
+      let dynamicInterval = 2500;
       if (tier === 'paid') {
         // Paid tier is much faster but still has limits for Pro (25 RPM)
         if (model.includes('pro')) {
@@ -79,13 +79,13 @@ class RequestScheduler {
       } else {
         // Free tier model-specific RPM logic
         if (model.includes('pro')) {
-          dynamicInterval = 31000; // 2 RPM safety
+          dynamicInterval = 2500;  // Modified: Allow 2.5s for fast multi-round fallback triggering
         } else if (model.includes('flash-lite')) {
-          dynamicInterval = 4200;  // 15 RPM safety
+          dynamicInterval = 3000;  // 15 RPM safety
         } else if (model.includes('flash')) {
-          dynamicInterval = 12500; // 5 RPM safety
+          dynamicInterval = 4000;  // 15 RPM safety
         } else {
-          dynamicInterval = 5000;  // Default safety
+          dynamicInterval = 4000;  // Default safety
         }
       }
       
@@ -113,14 +113,14 @@ class RequestScheduler {
           
           if (isQuota) {
             const tier = useConfigStore.getState().config?.tier || 'free';
-            const cooldownDuration = tier === 'paid' ? 3000 : 8000;
+            const cooldownDuration = tier === 'paid' ? 1000 : 2000;
             const newCooldown = Date.now() + cooldownDuration;
             
             // Only update if the new cooldown is significantly further in the future
-            if (newCooldown > effectiveCooldown + 1000) {
+            if (newCooldown > effectiveCooldown + 500) {
               this.cooldownUntil = newCooldown;
-              useConfigStore.getState().setCooldownUntil(newCooldown);
-              console.error(`Quota reached (${tier} tier), entering ${cooldownDuration/1000}s cooldown...`);
+              // Remove the store-level global freeze so the UI doesn't visually lock up, 
+              // but the scheduler waits briefly to alleviate the surge.
             }
           }
           item.reject(error);

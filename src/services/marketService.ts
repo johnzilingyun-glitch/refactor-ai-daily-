@@ -86,18 +86,47 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
       indicesData = await res.json();
     }
   } catch (e) {
-    console.warn('Indices tool failed, falling back to search:', e);
+    console.warn('Indices fetch failed:', e);
+  }
+
+  let newsData = [];
+  try {
+    const res = await fetch(`/api/stock/news?market=${market}`);
+    if (res.ok) {
+      newsData = await res.json();
+    }
+  } catch (e) {
+    console.warn('News fetch failed:', e);
+  }
+
+  let sectorsData = null;
+  if (market === 'A-Share' || market === 'HK-Share') {
+    try {
+      const res = await fetch('/api/stock/sectors');
+      if (res.ok) sectorsData = await res.json();
+    } catch (e) {
+      console.warn('Sectors fetch failed:', e);
+    }
+  }
+
+  let northboundData = null;
+  if (market === 'A-Share') {
+    try {
+      const res = await fetch('/api/stock/northbound');
+      if (res.ok) northboundData = await res.json();
+    } catch (e) {
+      console.warn('Northbound fetch failed:', e);
+    }
   }
 
   const commoditiesData = await getCommoditiesData();
-  const prompt = getMarketOverviewPrompt(indicesData, commoditiesData, history, beijingDate, now, market, language);
+  const prompt = getMarketOverviewPrompt(indicesData, commoditiesData, newsData, sectorsData, northboundData, history, beijingDate, now, market, language);
 
   const raw = await generateAndParseJsonWithRetry<MarketOverview>(ai, {
     model: config?.model || GEMINI_MODEL,
     contents: prompt,
     config: { 
-      responseMimeType: "application/json",
-      tools: [{ googleSearch: {} }]
+      responseMimeType: "application/json"
     }
   }, undefined, priority);
 

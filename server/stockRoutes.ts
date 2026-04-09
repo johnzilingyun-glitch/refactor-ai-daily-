@@ -6,6 +6,20 @@ import { logDebug, logError } from './stockLogger.js';
 const yahooFinance = new YahooFinance();
 const router = Router();
 
+// --- Simple InMemory Cache ---
+const apiCache = new Map<string, { data: any, timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached(key: string) {
+  const item = apiCache.get(key);
+  if (item && Date.now() - item.timestamp < CACHE_TTL) return item.data;
+  return null;
+}
+function setCache(key: string, data: any) {
+  apiCache.set(key, { data, timestamp: Date.now() });
+}
+// -----------------------------
+
 // Market Indices
 router.get('/stock/indices', async (req, res) => {
   const { market } = req.query;
@@ -37,6 +51,10 @@ router.get('/stock/indices', async (req, res) => {
   const marketKey = (market as string) || 'A-Share';
   const validMarkets = ['A-Share', 'HK-Share', 'US-Share'];
   const symbols = indexSymbols[validMarkets.includes(marketKey) ? marketKey : 'A-Share'];
+
+  const cacheKey = `indices_${marketKey}`;
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
 
   try {
     const startTime = Date.now();
@@ -131,6 +149,7 @@ router.get('/stock/indices', async (req, res) => {
     }
 
     monitor.recordSuccess('yahoo', Date.now() - startTime);
+    setCache(cacheKey, filteredResults);
     res.json(filteredResults);
   } catch (error) {
     monitor.recordFailure('yahoo');
@@ -148,6 +167,10 @@ router.get('/stock/commodities', async (req, res) => {
     { symbol: 'SI=F', name: '白银', unit: '$/oz' },
     { symbol: 'USDCNY=X', name: '美元/人民币', unit: 'CNY' },
   ];
+
+  const cacheKey = 'commodities';
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
 
   try {
     const results: any[] = [];
@@ -169,10 +192,148 @@ router.get('/stock/commodities', async (req, res) => {
         console.warn(`Failed to fetch commodity ${item.symbol}:`, e instanceof Error ? e.message : String(e));
       }
     }
+    setCache(cacheKey, results);
     res.json(results);
   } catch (error) {
     console.error('Commodities fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch commodities data' });
+  }
+});
+
+// Financial News (Backend deterministic fetch to save AI tokens)
+router.get('/stock/news', async (req, res) => {
+  const { market } = req.query;
+  const marketKey = (market as string) || 'A-Share';
+  const cacheKey = `news_${marketKey}`;
+  
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    const news: any[] = [];
+    // 1. Primary Top-Tier Fetch via Python Microservice (AkShare / FinNLP style)
+    try {
+      const pythonRes = await fetch(`http://127.0.0.1:8000/api/market/news?market=${marketKey}`);
+      if (pythonRes.ok) {
+        const pythonData = await pythonRes.json();
+        if (pythonData.success && pythonData.data && pythonData.data.length > 0) {
+          news.push(...pythonData.data);
+        }
+      }
+    } catch (e) {
+      console.warn("Python News MS unavailable, falling back to Node fetchers:", e);
+    }
+    
+    // 2. Fallback simple fetch for Sina Roll News (if A-share/HK-share)
+    if (news.length < 5 && (marketKey === 'A-Share' || marketKey === 'HK-Share')) {
+      try {
+        const sinaUrl = 'https://finance.sina.com.cn/rss/roll.xml';
+        const response = await fetch(sinaUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+        const text = await response.text();
+        
+        // Flexible regex for RSS items, handling both CDATA and plain text titles
+        const itemRegex = /<item>[\s\S]*?<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?<\/title>[\s\S]*?<link>(.*?)<\/link>[\s\S]*?<pubDate>(.*?)<\/pubDate>[\s\S]*?<\/item>/g;
+        let match;
+        let count = 0;
+        
+        while ((match = itemRegex.exec(text)) !== null && count < (8 - news.length)) {
+          news.push({
+            title: match[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim(),
+            url: match[2].trim(),
+            time: new Date(match[3]).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+            source: 'Sina Finance'
+          });
+          count++;
+        }
+      } catch (e) {
+        logError('Sina News Fetch Failed', e);
+      }
+    }
+
+    // Always fetch some global Yahoo news (Guaranteed Fallback)
+    if (news.length < 5 || marketKey === 'US-Share') {
+      try {
+        const query = marketKey === 'A-Share' ? '000001.SS' : marketKey === 'HK-Share' ? '0700.HK' : 'SPY';
+        const query2 = marketKey === 'A-Share' ? 'BABA' : marketKey === 'HK-Share' ? 'BABA' : 'QQQ';
+        
+        const [yahooNews1, yahooNews2] = await Promise.all([
+          yahooFinance.search(query, { newsCount: 4 }),
+          yahooFinance.search(query2, { newsCount: 4 })
+        ]);
+        
+        const combinedNews = [...(yahooNews1?.news || []), ...(yahooNews2?.news || [])];
+        
+        if (combinedNews.length > 0) {
+          combinedNews.forEach((n: any) => {
+            news.push({
+              title: n.title,
+              url: n.link,
+              time: new Date(n.providerPublishTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+              source: n.publisher || 'Yahoo Finance'
+            });
+          });
+        }
+      } catch (e) {
+        logError('Yahoo News Fetch Failed', e);
+      }
+    }
+
+    // De-duplicate by title
+    const uniqueNews = Array.from(new Map(news.map(item => [item.title, item])).values()).slice(0, 8);
+    
+    setCache(cacheKey, uniqueNews);
+    res.json(uniqueNews);
+  } catch (error) {
+    console.error('News fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch news data' });
+  }
+});
+
+// Institutional Sector Flows (Python Microservice Proxy)
+router.get('/stock/sectors', async (req, res) => {
+  const cacheKey = 'sector_flow';
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/market/sector_flow');
+    if (!response.ok) throw new Error(`Python service failed: ${response.status}`);
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      setCache(cacheKey, data.data);
+      res.json(data.data);
+    } else {
+      throw new Error('Invalid data format from Python service');
+    }
+  } catch (error) {
+    console.warn('Sector flow fetch error (is Python backend running?):', error);
+    res.status(500).json({ error: 'Python service unavailable' });
+  }
+});
+
+// Northbound Capital Flows (Python Microservice Proxy)
+router.get('/stock/northbound', async (req, res) => {
+  const cacheKey = 'northbound_flow';
+  const cached = getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/market/northbound');
+    if (!response.ok) throw new Error(`Python service failed: ${response.status}`);
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      setCache(cacheKey, data.data);
+      res.json(data.data);
+    } else {
+      throw new Error('Invalid data format from Python service');
+    }
+  } catch (error) {
+    console.warn('Northbound flow fetch error (is Python backend running?):', error);
+    res.status(500).json({ error: 'Python service unavailable' });
   }
 });
 

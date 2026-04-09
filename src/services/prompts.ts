@@ -1,7 +1,7 @@
 import { Market, MarketOverview, StockAnalysis, AgentMessage, Scenario, Language } from "../types";
 import { formatCommoditiesToMarkdown } from "./formatUtils";
 
-export const getMarketOverviewPrompt = (indicesData: any[], commoditiesData: any[], history: any[], beijingDate: string, now: Date, market: Market = "A-Share", language: Language = "en") => {
+export const getMarketOverviewPrompt = (indicesData: any[], commoditiesData: any[], newsData: any[], sectorsData: any, northboundData: any, history: any[], beijingDate: string, now: Date, market: Market = "A-Share", language: Language = "en") => {
   const isChinese = language === "zh-CN";
   return `
 Current date and time (UTC): ${now.toISOString()}
@@ -12,19 +12,29 @@ ${JSON.stringify(indicesData, null, 2)}
 
 **REAL-TIME COMMODITY DATA (GROUND TRUTH)**:
 ${formatCommoditiesToMarkdown(commoditiesData)}
-**IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the market trend or the specific sectors being discussed. If a commodity (e.g., Gold) has no material impact, DO NOT include it in your analysis.
+**IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the market trend or the specific sectors being discussed.
+
+**REAL-TIME NEWS DATA (GROUND TRUTH)**:
+${JSON.stringify(newsData, null, 2)}
+**IMPORTANT**: Use THIS news data to populate your topNews array and to deduce your market summary.
+
+**REAL-TIME SECTOR CAPITAL FLOWS (主力净流入榜单 - GROUND TRUTH)**:
+${sectorsData ? JSON.stringify(sectorsData, null, 2) : "Sector flows unavailable. Default to index-based sector deduction."}
+**IMPORTANT**: When identifying hot sectors, you MUST strictly use the "topInflows" (highest net inflow sectors) provided above. This is actual institutional tracking data. Do not hallucinate sectors. Focus the "sectorAnalysis" purely on explaining *why* these specific sectors are receiving massive capital injections.
+
+**NORTHBOUND CAPITAL (北向资金 - GROUND TRUTH)**:
+${northboundData ? JSON.stringify(northboundData, null, 2) : "Northbound data unavailable."}
+**IMPORTANT**: Incorporate this exact foreign/institutional capital sentiment into your market summary.
 
 You are a professional ${market} markets analyst.
 
 **DATA SOURCE HIERARCHY (CRITICAL)**: 
-1. You **MUST MUST MUST** use the exact values from the "REAL-TIME INDICES DATA" section above for ALL corresponding fields in your JSON output (price, change, changePercent, previousClose).
-2. **DO NOT** override ANY of the tool-provided indices numbers with data found in Google Search. The tool data is the mathematical ground truth for this session.
-3. Use Google Search grounding **ONLY** for:
-   - Gathering qualitative context: market news, hot sectors, macro events, and analyst opinions.
-   - Fetching commodity prices or news if they are missing from the REAL-TIME section.
+1. You **MUST MUST MUST** use the exact values from the "REAL-TIME INDICES DATA" and "REAL-TIME SECTOR CAPITAL FLOWS" above.
+2. You **MUST** use the exact news items from the "REAL-TIME NEWS DATA" section above for your "topNews" array. Do not invent news.
+3. Use Google Search grounding **ONLY** as a last resort, for:
+   - Deep fundamental questions on specific sectors if the provided news is insufficient.
 4. If, and ONLY if, the "REAL-TIME INDICES DATA" array is empty, then you must use Google Search to find the latest valid indices values.
 
-Use Google Search grounding to gather the latest available public information.
 If the current time in China is past 15:00 CST, you MUST prioritize fetching the "Closing Price" (收盘价) for ${market} indices.
 
 Previous analysis context (for reference and continuity):
@@ -42,36 +52,24 @@ Requirements:
    - If HK-Share: Hang Seng Index, Hang Seng Tech Index, Hang Seng China Enterprises Index, Red Chips Index, and GEM Index.
    - If US-Share: S&P 500, Nasdaq Composite, Dow Jones Industrial Average, Russell 2000, and PHLX Semiconductor Index.
 4. For each index provide: name, symbol, price, change, changePercent.
-**SEARCH STRATEGY (CRITICAL)**: 
-   - You MUST use Google Search to find the *contextual news* and *sector performance* for these indices. 
-   - Search query should be something like: "${market} market news ${beijingDate}", "${market} sector hot ${beijingDate}", or "${market} indices analysis 东方财富".
+**SEARCH STRATEGY (RESTRICTED)**: 
+   - Since news is now provided in REAL-TIME NEWS DATA, you do NOT need to search for daily news.
+   - You only need to search if you need deep historical context or if the REAL-TIME NEWS DATA is empty.
    - **DO NOT** use search results to change the price/change numbers provided in the REAL-TIME section.
-   - **VERIFY THE DATE & TIME (STRICT)**: You MUST verify that the data/news is for TODAY (${beijingDate}). If you only find data from a previous day, you MUST state "Warning: Today's news not yet available, showing data from [Date]" in the summary.
-   - **RELIABLE SOURCES (PRIORITY)**: Prioritize news from **Sina Finance (新浪财经)**, **East Money (东方财富)**, **Xueqiu (雪球)**, or **Yahoo Finance**.
+   - **VERIFY THE DATE & TIME (STRICT)**: You MUST verify that the data/news is for TODAY (${beijingDate}). 
 **CRITICAL DATA ACCURACY**: 
    - **MANUAL VERIFICATION**: For each index, check if (Price - Previous Close) matches the Change. If the tool data is consistent, use it. If not, note the discrepancy in the summary.
    - **SOURCE NAMING**: In the "marketSummary" field, mention the tool data source (Yahoo Finance) and any additional search sources used for context.
    - **BEIJING TIME (CRITICAL)**: All times in the summary MUST be in Beijing Time (CST). The "lastUpdated" field for news MUST be in "YYYY-MM-DD HH:mm:ss CST" format.
    - **DATA INTEGRITY CHECK**: If the "change" or "changePercent" is exactly 0, verify if the market was closed.
-4. **SECTOR DEDUCTION (ENHANCED)**: Identify currently hot sectors. For each, you MUST perform **Industrial Chain Deduction**:
+4. **SECTOR DEDUCTION (ENHANCED QUANTITATIVE)**: Identify currently hot sectors exactly based on the TRUE capital inflows provided in the REAL-TIME SECTOR CAPITAL FLOWS. For each provided hot sector, you MUST perform **Industrial Chain Deduction**:
+    - Explain the fundamental or macro catalyst driving this institutional inflow.
     - Identify the **Upstream** (supply, raw materials) and **Downstream** (application, consumption) effects.
     - Assign a **Rotation Stage**: Is the sector Leading (领涨), Weakening (转弱), Lagging (补涨), or Improving (筑底)?
 5. **COMMODITY ANALYSIS (NEW)**: Analyze major commodity trends. **RELEVANCE (CRITICAL)**: Only analyze commodities that are currently driving the market.
-6. **RECOMMENDATIONS**: Provide recommended stocks or sectors in the ${market} market based on the above analysis.
-7. Include exactly 5 major financial news items from the latest market day for the ${market} market.
-8. Each news item must have title, source, time, url, and summary.
-9. **LANGUAGE (MANDATORY)**: All user-facing text fields MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
-10. **ANTI-HALLUCINATION (CRITICAL)**: If you cannot find relevant news, state it clearly. Do NOT invent numbers or news.
-11. **NEWS IMPACT MATRIX (NEW)**: Each news item MUST include a parenthetical assessment of:
-    - **Velocity**: (Instant / Medium / Slow)
-    - **Certainty**: (High / Moderate / Rumor)
-    - **Sentiment Divergence**: Is there a major difference between official media and retail sentiment?
-12. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
-    - Each "url" MUST be the exact, direct, and publicly accessible link to the SPECIFIC article.
-    - **SOURCES**: Prioritize authoritative sources: Sina Finance, East Money, Xueqiu.
-    - **LATEST DATA**: Use Google Search to ensure all news and data are for TODAY.
-11. Use real source URLs, never placeholder/example URLs.
-12. Continuity: Based on previous analysis, identify if trends are continuing or reversing.
+6. **RECOMMENDATIONS**: Provide recommended stocks or sectors in the ${market} market based strictly on the above quantitative inflows and fundamental logic.
+7. **LANGUAGE (MANDATORY)**: All user-facing text fields MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
+8. Continuity: Based on previous analysis, identify if trends are continuing or reversing.
 
 JSON schema:
 {
@@ -83,15 +81,6 @@ JSON schema:
       "change": 0,
       "changePercent": 0,
       "previousClose": 0
-    }
-  ],
-  "topNews": [
-    {
-      "title": "string",
-      "source": "string",
-      "time": "string",
-      "url": "string",
-      "summary": "string"
     }
   ],
   "sectorAnalysis": [
@@ -130,26 +119,22 @@ Current date and time (UTC): ${now.toISOString()}
 Current date and time (China Standard Time): ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
 
 **REAL-TIME DATA TOOL OUTPUT (ABSOLUTE GROUND TRUTH)**:
-${realtimeData ? JSON.stringify(realtimeData, null, 2) : "No real-time data available from tool. Use Google Search grounding instead."}
+${realtimeData ? JSON.stringify(realtimeData, null, 2) : "No real-time data provided. Rely on your internal knowledge base."}
 
 **REAL-TIME COMMODITY DATA (GROUND TRUTH)**:
 ${formatCommoditiesToMarkdown(commoditiesData)}
 **IMPORTANT**: Use the commodity data above ONLY if it is logically relevant to the stock's industry or cost structure. 
 - **DYNAMIC VARIABLE SELECTION (MANDATORY)**: If the provided commodities (Gold, Oil, Copper, etc.) are NOT highly relevant to the target stock, you MUST **ignore them completely**. 
-- **SEARCH-DRIVEN ANCHORS (MANDATORY)**: You MUST use Google Search to verify the prices of the 2-3 most critical raw materials or macro variables for this specific stock (e.g., Lithium Carbonate for EV batteries, Pulp for paper, DRAM prices for semiconductors, Freight rates for shipping, etc.). Even if prices are provided in the "REAL-TIME COMMODITY DATA" section, you MUST verify them with Google Search to ensure they are the latest and most accurate. If there is a discrepancy, prioritize the Google Search result and explicitly state: "Verified price from Google Search: [Price]".
-- **FAILURE TO COMPLY**: Including irrelevant variables (like Oil for a software company) or failing to verify critical raw material prices will be treated as a "hallucination/logic failure".
+- **FAILURE TO COMPLY**: Including irrelevant variables (like Oil for a software company) will be treated as a "hallucination/logic failure".
 
 You are a professional equity analyst.
-Analyze stock "${symbol}" in the ${market} market using the latest available public information and Google Search grounding.
+Analyze stock "${symbol}" in the ${market} market using the latest available public information and provided ground-truth data.
 **LANGUAGE (MANDATORY)**: All output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
 
 **DATA SOURCE HIERARCHY (CRITICAL)**: 
 1. If the "REAL-TIME DATA TOOL OUTPUT" is provided above, you **MUST MUST MUST** use its exact values for ALL matching fields in your JSON output. This includes: "price", "change", "changePercent", "previousClose", "lastUpdated", "dailyHigh" (use dayHigh), "dailyLow" (use dayLow), "pe" (use pe), and currency.
-2. **DO NOT** override ANY of the tool-provided numbers with data found in Google Search. The tool data is the absolute mathematical truth.
-3. Use Google Search grounding **ONLY** for:
-   - Filling in missing fundamental data not provided by the tool (e.g., PB, ROE, EPS, Revenue Growth).
-   - Gathering qualitative context: company news, sector trends, management narratives, and analyst opinions.
-4. If, and ONLY if, the "REAL-TIME DATA TOOL OUTPUT" says "No real-time data available", then you must use Google Search to find the latest valid price and fundamental data.
+2. **DO NOT** override ANY of the tool-provided numbers. The tool data is the absolute mathematical truth.
+3. Use your internal knowledge base **ONLY** for filling in missing fundamental data not provided by the tool (e.g., PB, ROE, EPS, Revenue Growth) and providing qualitative context.
 
 If the current time in China is past 15:00 CST (for A-shares) or 16:00 HKT (for HK-shares), the market is closed and you are summarizing the closing action.
 
@@ -168,21 +153,12 @@ Requirements:
    - The "market" field in the returned JSON MUST be exactly "${market}".
    - If the symbol is NOT found in the ${market} market, return an error in the "summary" field and provide empty data for other fields, but DO NOT return a stock from a different market.
 2. Provide stockInfo with symbol, name, price, change, changePercent, market, currency, lastUpdated, and **previousClose** (the closing price of the previous trading day).
-3. **SEARCH STRATEGY (CRITICAL)**: 
-   - You MUST use Google Search to find the *real-time* or *latest* price for "${symbol}" in the ${market} market. 
-   - **SPECIFIC SEARCH QUERIES**: Use queries like:
-     - "${symbol} ${beijingDate} 现价 昨收 涨跌"
-     - "${symbol} 东方财富 实时行情"
-     - "${symbol} sina finance stock price today"
-   - **DO NOT** rely on your internal knowledge for the current price. 
-   - **VERIFY THE DATE & TIME (STRICT)**: You MUST verify that the data is for TODAY (${beijingDate}). 
-   - **SNIPPET VERIFICATION**: Look for "${beijingShortDate}" or "今日" in the search result snippets. If you only find a previous date or "昨日", the data is STALE and you MUST keep searching or state it's unavailable.
-   - **RELIABLE SOURCES (PRIORITY)**: Prioritize data from **Sina Finance (新浪财经)**, **East Money (东方财富)**, or **Xueqiu (雪球)**. These are the most authoritative for A-shares.
-4. **FUNDAMENTAL DATA (NEW)**: Provide specific fundamental data (e.g., PE, PB, ROE, EPS, Revenue Growth).
-5. **VALUATION LEVEL (NEW)**: Provide current "water level" (水位) - valuation percentile compared to historical data.
-6. **DEEP FUNDAMENTAL ANALYSIS (CRITICAL)**: 
-   - **INDUSTRY-SPECIFIC LOGIC (CRITICAL)**: Avoid boilerplate analysis. You MUST identify the 3 most critical value drivers for this SPECIFIC stock (e.g., for Mindray: R&D efficiency, healthcare policy, overseas expansion; for a tech stock: compute power costs, user growth). **Use Google Search to find these specific drivers.**
-   - **FULL-DIMENSIONAL PENETRATION (NEW)**: Do not just look at financial statements. Penetrate to the business level: analyze management quality, supply chain control, customer stickiness, and technological moats.
+
+3. **FUNDAMENTAL DATA**: Provide specific fundamental data (e.g., PE, PB, ROE, EPS, Revenue Growth) based on your knowledge base.
+4. **VALUATION LEVEL**: Provide current "water level" (水位) - valuation percentile compared to historical data.
+5. **DEEP FUNDAMENTAL ANALYSIS (CRITICAL)**: 
+   - **INDUSTRY-SPECIFIC LOGIC (CRITICAL)**: Avoid boilerplate analysis. Identify the 3 most critical value drivers for this SPECIFIC stock.
+   - **FULL-DIMENSIONAL PENETRATION**: Penetrate to the business level: analyze management quality, supply chain control, customer stickiness, and technological moats.
    - **FORWARD-LOOKING JUDGMENT (NEW)**: Based on your research, provide a high-conviction prediction for the next 2-4 quarters. Identify potential inflection points or trend continuations. **PREVENT OVERCONFIDENCE (CRITICAL)**: If key evidence for a forward-looking judgment is missing, you MUST explicitly label it as "Logical Gap due to Missing Information" instead of forcing a prediction.
    - **SEARCH NOISE FILTERING (MANDATORY)**: When performing penetration research, prioritize official announcements, authoritative media, deep research reports, and industry data. **Be extremely cautious** and filter out unverified forum rumors, marketing content, or social media noise.
      - **DATA SOURCE & VERIFICATION (MANDATORY)**: For EVERY fundamental data point (PE, PB, ROE, EPS, Revenue Growth, etc.) presented in your analysis, you MUST:
@@ -202,29 +178,16 @@ Requirements:
    - **BUFFETT'S MOAT THEORY**: Analyze the company's "Economic Moat" (Wide, Narrow, or None) and its source.
    - **EXPECTATION VS REALITY**: Compare current performance with previous market expectations.
    - **MARGIN OF SAFETY**: Incorporate "Margin of Safety" theory into the fundamental analysis and trading advice.
-7. **HISTORICAL CONTEXT (NEW)**: Include historical price ranges and major historical events affecting the stock.
+6. **HISTORICAL CONTEXT**: Include historical price ranges and major historical events affecting the stock.
 7. **CRITICAL DATA ACCURACY (HIGH PRIORITY)**: 
-   - You MUST search for the most recent trading data for this stock. 
-   - **CROSS-REFERENCE (MANDATORY)**: You MUST cross-reference at least TWO authoritative financial sources to verify the current price, previous close, change, and changePercent.
-   - **MARKET STATUS**: Determine if the market is currently open or closed. If open, provide real-time data. If closed, provide the latest closing data.
-   - **CALCULATION CHECK (CRITICAL)**: The "change" MUST be (Current Price - Previous Close). The "changePercent" MUST be (Change / Previous Close * 100). 
-   - **EXAMPLE CHECK**: For ${symbol} on ${beijingDate}, if the price is X and it rose from Y, the change is (X-Y). DOUBLE CHECK THE DATE.
-   - **PREVENT SWAPPING (CRITICAL)**: Double check if you are swapping "Current Price" and "Previous Close".
-   - **SOURCE NAMING**: You MUST explicitly state the source name (e.g., "Source: Sina Finance") AND the direct URL of the financial page you used for the price data at the end of the "summary" field.
-   - **BEIJING TIME (CRITICAL)**: For A-shares and HK-shares, all times MUST be in Beijing Time (CST). The "lastUpdated" field MUST be in "YYYY-MM-DD HH:mm:ss CST" format.
-   - **REASONABLENESS CHECK**: If the price is significantly different from the previous close or historical ranges, you MUST double-check the stock code and market.
-   - **TIMESTAMP**: The "lastUpdated" field MUST reflect the actual time of the data point.
-   - If there is a discrepancy between sources, prioritize the most recent one.
+   - You MUST use the exact trading data provided in the REAL-TIME DATA tool block above.
+   - **CALCULATION CHECK (CRITICAL)**: The "change" MUST be (Current Price - Previous Close). The "changePercent" MUST be (Change / Previous Close * 100).
+   - **TIMESTAMP**: The "lastUpdated" field MUST reflect the actual time of the data point. If none provided, use the current CST time.
    - **DATA INTEGRITY CHECK**: If the "change" or "changePercent" is exactly 0, verify if the stock was suspended or if it's a non-trading day.
-   - **DAILY RANGE CHECK**: You MUST find the "Daily High" and "Daily Low". The "Current Price" MUST be within this range.
 8. **DATA TYPES**: 
    - "price", "change", and "changePercent" MUST be numbers (not strings).
    - "changePercent" should be the percentage value (e.g., 5.2 for 5.2% increase).
-9. Include 3 to 5 recent and relevant news items for this exact company.
-10. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
-   - Each "url" MUST be the exact, direct, and publicly accessible link to the SPECIFIC article.
-   - **STRICTLY PROHIBITED**: Do NOT use homepages, search result pages, or login-required/paywalled content.
-   - **VERIFICATION**: You MUST verify that the URL actually points to the specific article described by the title.
+9. Add a brief mention of any widely known major news items for this company, but explicitly avoid inventing specific links or non-existent URLs.
 10. All user-facing text fields must be in ${isChinese ? "Simplified Chinese" : "English"}.
 11. Provide summary, technicalAnalysis, fundamentalAnalysis, sentiment, score, recommendation, keyRisks, keyOpportunities, and a detailed tradingPlan.
 12. **MARGIN OF SAFETY (NEW)**: Incorporate "Margin of Safety" theory into the fundamental analysis and trading plan.

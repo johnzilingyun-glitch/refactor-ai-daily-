@@ -141,7 +141,8 @@ describe('schemas', () => {
       const result = MarketOverviewSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.topNews).toEqual([]);
+        expect(result.data.commodityAnalysis).toEqual([]);
+        expect(result.data.recommendations).toEqual([]);
         expect(result.data.sectorAnalysis).toEqual([]);
       }
     });

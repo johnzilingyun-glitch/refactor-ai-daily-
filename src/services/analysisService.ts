@@ -36,8 +36,7 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
       model: config?.model || GEMINI_MODEL,
       contents: prompt,
       config: {
-        responseMimeType: "application/json",
-        tools: [{ googleSearch: {} }]
+        responseMimeType: "application/json"
       }
     },
     {
