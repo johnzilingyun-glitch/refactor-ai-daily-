@@ -437,9 +437,9 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
                     {t('analysis.tools.catalyst_list')}
                   </h4>
                   <div className="space-y-2">
-                    {catalystList.map((c, i) => (
-                      <div key={`catalyst-${c.event.substring(0, 20)}-${i}`} className="flex items-center justify-between text-[11px]">
-                        <span className="text-zinc-500 font-medium">{c.event}</span>
+                    {catalystList.map((c: any, i: number) => (
+                      <div key={`catalyst-${i}`} className="flex items-center justify-between text-[11px]">
+                        <span className="text-zinc-500 font-medium">{typeof c.event === 'string' ? c.event : JSON.stringify(c.event)}</span>
                         <div className="flex items-center gap-4">
                           <span className="text-zinc-400">{t('analysis.tools.probability')}: {c.probability}%</span>
                           <span className="text-amber-500 font-medium">{t('analysis.tools.outputs')}: {c.impact}</span>
@@ -457,10 +457,10 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
                     {t('analysis.tools.verification_metrics')}
                   </h4>
                   <div className="space-y-3">
-                    {verificationMetrics?.map((m, i) => (
-                      <div key={`verification-${m.indicator.substring(0, 20)}-${i}`} className="space-y-1">
+                    {verificationMetrics?.map((m: any, i: number) => (
+                      <div key={`verification-${i}`} className="space-y-1">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-zinc-600 font-medium">{m.indicator}</span>
+                          <span className="text-zinc-600 font-medium">{typeof m.indicator === 'string' ? m.indicator : JSON.stringify(m.indicator)}</span>
                           <span className="text-indigo-600 font-mono">{m.threshold}</span>
                         </div>
                         <div className="flex items-center justify-between text-[9px] text-zinc-400">
@@ -512,8 +512,8 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
                     <div className="space-y-1">
                       <span className="text-[8px] text-zinc-400 uppercase font-semibold">{t('analysis.tools.layered_entry')}</span>
                       <div className="flex flex-wrap gap-2">
-                        {positionManagement.layeredEntry?.map((step, i) => (
-                          <span key={`entry-step-${i}-${step.substring(0, 20)}`} className="text-[9px] px-2 py-0.5 rounded bg-zinc-50 text-zinc-500 border border-zinc-200">{step}</span>
+                        {positionManagement.layeredEntry?.map((step: any, i: number) => (
+                          <span key={`entry-step-${i}`} className="text-[9px] px-2 py-0.5 rounded bg-zinc-50 text-zinc-500 border border-zinc-200">{typeof step === 'string' ? step : JSON.stringify(step)}</span>
                         ))}
                       </div>
                     </div>
@@ -546,13 +546,13 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
                       <div className="space-y-1">
                         <span className="text-[8px] text-zinc-400 uppercase font-semibold">{t('analysis.tools.milestones')}</span>
                         <ul className="list-disc list-inside text-[9px] text-zinc-500 space-y-0.5">
-                          {timeDimension.keyMilestones?.map((m, i) => <li key={`milestone-${i}-${m.substring(0, 10)}`}>{m}</li>)}
+                          {timeDimension.keyMilestones?.map((m: any, i: number) => <li key={`milestone-${i}`}>{typeof m === 'string' ? m : JSON.stringify(m)}</li>)}
                         </ul>
                       </div>
                       <div className="space-y-1">
                         <span className="text-[8px] text-zinc-400 uppercase font-semibold">{t('analysis.tools.exit_triggers')}</span>
                         <ul className="list-disc list-inside text-[9px] text-zinc-500 space-y-0.5">
-                          {timeDimension.exitTriggers?.map((t, i) => <li key={`trigger-${i}-${t.substring(0, 10)}`}>{t}</li>)}
+                          {timeDimension.exitTriggers?.map((t: any, i: number) => <li key={`trigger-${i}`}>{typeof t === 'string' ? t : JSON.stringify(t)}</li>)}
                         </ul>
                       </div>
                     </div>

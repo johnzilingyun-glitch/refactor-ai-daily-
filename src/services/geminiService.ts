@@ -4,11 +4,12 @@ import { requestScheduler } from "./requestScheduler";
 
 export const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
-// Fallback chain: when a model hits quota, try the next one
+// Fallback chain: when a model hits quota, try the next one securely
 export const MODEL_FALLBACK_CHAIN: string[] = [
   "gemini-3.1-flash-lite-preview",
-  "gemini-2.5-flash-lite",
   "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-1.5-flash"
 ];
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -59,6 +60,7 @@ export async function generateAndParseJsonWithRetry<T>(
 
   for (const model of modelsToTry) {
     let lastParseError: unknown;
+    lastError = undefined; // Fix: Clear previous model's transport transport error state
 
     for (let attempt = 1; attempt <= parseRetries; attempt++) {
       let responseText: string;
@@ -76,6 +78,7 @@ export async function generateAndParseJsonWithRetry<T>(
           // Build clean config for the SDK (params.config is what the SDK reads)
           const mergedConfig = {
             ...(params.config || {}),
+            maxOutputTokens: options?.maxOutputTokens || params.config?.maxOutputTokens || 65536, // Force max generation headroom
             responseMimeType,
             responseSchema,
             tools,
@@ -430,10 +433,13 @@ export async function fetchAvailableModelsList(config?: any): Promise<ModelInfo[
   const ai = createAI(config);
   
   const modelsToCheck = [
-    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Unlimited)', description: 'Paid 层级无限制 RPD，4000 RPM 的顶级高频模型。' },
-    { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Ultra Fast)', description: 'Optimized for speed and low-latency tasks.' },
-    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (Fast & Balanced)', description: 'Best for general analysis and quick summaries.' },
-    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Advanced Reasoning)', description: 'Best for complex financial logic and deep analysis.' }
+    { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite (Default)', description: 'Free Tier 最强高吞吐引擎，官方赋予 15 RPM 超高配额。' },
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3.0 Flash (Next-Gen)', description: '下一代核心快速模型。' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: '成熟稳定的多模块复合扫盘。' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Fallback Ultra-Fast)', description: '高稳定性容灾备用模型。' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Advanced Reasoning)', description: '极强的上下文推理，适用于极客深研。' },
+    // Paid / Extreme Tier -------------------------
+    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (Ultimate Engine)', description: '[受限 API 专属] 地表最强金融逻辑穿透引擎。' }
   ];
 
   const results: ModelInfo[] = [];

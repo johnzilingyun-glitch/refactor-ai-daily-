@@ -191,10 +191,10 @@ export function StockHeroCard({ analysis }: StockHeroCardProps) {
             </div>
           </div>
           <ul className="space-y-2">
-            {analysis.historicalData?.majorEvents?.map((event, i) => (
-              <li key={`hist-event-${event.substring(0, 20)}-${i}`} className="text-xs text-zinc-400 flex items-start gap-2">
+            {analysis.historicalData?.majorEvents?.map((event: any, i: number) => (
+              <li key={`hist-event-${i}`} className="text-xs text-zinc-400 flex items-start gap-2">
                 <span className="mt-1.5 w-1 h-1 rounded-full bg-zinc-300 shrink-0" />
-                {event}
+                {typeof event === 'string' ? event : JSON.stringify(event)}
               </li>
             ))}
           </ul>

@@ -49,10 +49,10 @@ export function ScorePanel({ analysis, trackRecord }: ScorePanelProps) {
             {t('analysis.info.opportunities')}
           </h3>
           <ul className="space-y-3">
-            {analysis.keyOpportunities?.map((opp, i) => (
-              <li key={`opp-${opp.substring(0, 20)}-${i}`} className="flex items-start gap-3 text-sm text-zinc-500">
+            {analysis.keyOpportunities?.map((opp: any, i: number) => (
+              <li key={`opp-${i}`} className="flex items-start gap-3 text-sm text-zinc-500">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" />
-                {opp}
+                {typeof opp === 'string' ? opp : JSON.stringify(opp)}
               </li>
             ))}
           </ul>
@@ -63,10 +63,10 @@ export function ScorePanel({ analysis, trackRecord }: ScorePanelProps) {
             {t('analysis.info.risks')}
           </h3>
           <ul className="space-y-3">
-            {analysis.keyRisks?.map((risk, i) => (
-              <li key={`risk-${risk.substring(0, 20)}-${i}`} className="flex items-start gap-3 text-sm text-zinc-500">
+            {analysis.keyRisks?.map((risk: any, i: number) => (
+              <li key={`risk-${i}`} className="flex items-start gap-3 text-sm text-zinc-500">
                 <AlertCircle size={16} className="mt-0.5 shrink-0 text-rose-500" />
-                {risk}
+                {typeof risk === 'string' ? risk : JSON.stringify(risk)}
               </li>
             ))}
           </ul>
