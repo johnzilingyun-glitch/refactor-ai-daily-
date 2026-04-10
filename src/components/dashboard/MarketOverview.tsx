@@ -74,12 +74,12 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
   useEffect(() => {
     let cancelled = false;
     async function fetchFlows() {
-      if (isHistoryMode || overviewMarket === 'US-Share') return;
+      if (isHistoryMode || overviewMarket !== 'A-Share') return;
       setFlowsLoading(true);
       try {
         const [sectorsRes, northboundRes] = await Promise.all([
           fetch(`/api/stock/sectors`),
-          overviewMarket === 'A-Share' ? fetch(`/api/stock/northbound`) : Promise.resolve(null)
+          fetch(`/api/stock/northbound`)
         ]);
         if (sectorsRes.ok && !cancelled) setSectorFlow(await sectorsRes.json());
         if (northboundRes && northboundRes.ok && !cancelled) setNorthboundFlow(await northboundRes.json());
@@ -310,7 +310,7 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           {(!marketOverview?.indices?.length && displayLoading) ? Array(5).fill(0).map((_, i) => (
-            <div key={`skeleton-index-${i}`} className="h-24 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
+            <div key={`skeleton-index-${i}`} className="h-24 skeleton rounded-2xl border border-zinc-200" />
           )) : marketOverview?.indices?.map((index, i) => (
             <div key={`index-${index.symbol || index.name}-${i}`} className="rounded-2xl border border-zinc-200 bg-white p-4">
               <p className="mb-1 text-xs font-medium text-zinc-400">{index.name}</p>
@@ -455,7 +455,7 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
           </h2>
           <div className="space-y-4">
             {(newsLoading && !hotNews.length) ? Array(5).fill(0).map((_, i) => (
-              <div key={`news-skeleton-${i}`} className="h-20 animate-pulse rounded-2xl border border-zinc-200 bg-white" />
+              <div key={`news-skeleton-${i}`} className="h-20 skeleton rounded-2xl border border-zinc-200" />
             )) : hotNews?.map((news, i) => (
               <a key={`news-${i}-${news.url || news.title}`} href={news.url} target="_blank" rel="noopener noreferrer" className="group block rounded-2xl border border-zinc-200 bg-white p-5 transition-all hover:border-indigo-600/30 hover:shadow-md">
                 <div className="flex items-start justify-between gap-4">
@@ -472,8 +472,8 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
         </div>
 
         <div className="space-y-6">
-          {(overviewMarket === 'A-Share' || overviewMarket === 'HK-Share') && (
-            <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-border-subtle)', background: 'var(--color-surface-card)', boxShadow: 'var(--shadow-sm)' }}>
+          {overviewMarket === 'A-Share' && (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-950 mb-4">
                 <Coins size={18} className="text-indigo-600" />
                 {t('analysis.panel.institutional_consensus', 'Institutional Flow')}

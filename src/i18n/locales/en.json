@@ -70,7 +70,14 @@
   "analysis": {
     "score": "Overall Score",
     "sentiment": "Market Sentiment",
-    "recommendation": "Recommendation",
+    "recommendation": {
+      "_label": "Recommendation",
+      "buy": "Buy",
+      "overweight": "Overweight",
+      "hold": "Hold",
+      "underweight": "Underweight",
+      "sell": "Sell"
+    },
     "summary": "Core Summary",
     "technical": "Technical Analysis",
     "fundamental": "Fundamental Analysis",

@@ -1,7 +1,7 @@
 import type { StockAnalysis, BacktestTimeSeries, BacktestEntry, SystematicBias } from '../types';
 
-const BULLISH_RECS = new Set(['Strong Buy', 'Buy']);
-const BEARISH_RECS = new Set(['Sell', 'Strong Sell']);
+const BULLISH_RECS = new Set(['Buy', 'Overweight']);
+const BEARISH_RECS = new Set(['Sell', 'Underweight']);
 
 export function buildBacktestTimeSeries(
   symbol: string,

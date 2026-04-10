@@ -16,8 +16,21 @@ export interface BacktestResult {
 export function performBacktest(current: StockAnalysis, previous: StockAnalysis | null): BacktestResult | null {
   if (!previous) return null;
 
+  // Date-aware validation: ensure previous analysis is from a different (earlier) time
+  // to prevent look-ahead bias in backtesting
+  const prevDate = new Date(previous.stockInfo.lastUpdated);
+  const currDate = new Date(current.stockInfo.lastUpdated);
+  if (!isNaN(prevDate.getTime()) && !isNaN(currDate.getTime()) && prevDate > currDate) {
+    console.warn('[Backtest] Previous analysis date is after current — skipping to avoid look-ahead bias');
+    return null;
+  }
+
   const prevPrice = previous.stockInfo.price;
   const currPrice = current.stockInfo.price;
+
+  // Validate prices are positive numbers
+  if (!prevPrice || !currPrice || prevPrice <= 0 || currPrice <= 0) return null;
+
   const returnRaw = ((currPrice - prevPrice) / prevPrice) * 100;
   const returnStr = `${returnRaw > 0 ? "+" : ""}${returnRaw.toFixed(2)}%`;
 
@@ -28,14 +41,19 @@ export function performBacktest(current: StockAnalysis, previous: StockAnalysis 
   if (prevTarget > 0 && currPrice >= prevTarget) status = "Target Hit";
   else if (prevStop > 0 && currPrice <= prevStop) status = "Stop Loss Hit";
 
+  // Detect logic drift: if the analysis date gap is too large (>45 days),
+  // mark as Logic Drift since the original thesis may no longer be relevant
+  const daysBetween = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysBetween > 45 && status === "In Progress") {
+    status = "Logic Drift";
+  }
+
   // Calculate generic accuracy (closer to target or predicted direction)
-  // If direction matches, score is at least 50.
   const predictedDirection = prevTarget > prevPrice ? 1 : -1;
   const actualDirection = currPrice > prevPrice ? 1 : -1;
   let accuracy = 50; 
   if (predictedDirection === actualDirection) {
     accuracy = 70;
-    // If it hit target, very high accuracy
     if (status === "Target Hit") accuracy = 95;
   } else {
     accuracy = 30;

@@ -150,7 +150,7 @@ export interface StockAnalysis {
   industryAnchors?: IndustryAnchor[];
   sentiment: "Bullish" | "Bearish" | "Neutral";
   score: number;
-  recommendation: "Strong Buy" | "Buy" | "Hold" | "Sell" | "Strong Sell";
+  recommendation: "Buy" | "Overweight" | "Hold" | "Underweight" | "Sell";
   keyRisks: string[];
   keyOpportunities: string[];
   discussion?: AgentMessage[];
@@ -233,6 +233,11 @@ export type AgentRole =
   | "Fundamental Analyst"
   | "Sentiment Analyst"
   | "Risk Manager"
+  | "Aggressive Risk Analyst"
+  | "Conservative Risk Analyst"
+  | "Neutral Risk Analyst"
+  | "Bull Researcher"
+  | "Bear Researcher"
   | "Contrarian Strategist"
   | "Deep Research Specialist"
   | "Professional Reviewer"

@@ -27,6 +27,21 @@ describe('AI Service Helpers', () => {
       const raw = 'Just some text without braces';
       expect(() => extractJsonBlock(raw)).toThrow('Gemini returned a non-JSON response');
     });
+
+    it('should strip Gemini citation markers before extraction', () => {
+      const raw = '[cite: analysis] {"key": "value"} [cite: 1]';
+      expect(extractJsonBlock(raw)).toBe('{"key": "value"}');
+    });
+
+    it('should handle citation-only response gracefully', () => {
+      const raw = '[cite: analysis report section 2]';
+      expect(() => extractJsonBlock(raw)).toThrow('Gemini returned a non-JSON response');
+    });
+
+    it('should strip cite_start/cite_end markers', () => {
+      const raw = '[cite_start]Some ref[cite_end] {"key": "value"}';
+      expect(extractJsonBlock(raw)).toBe('{"key": "value"}');
+    });
   });
 
   describe('parseJsonResponse', () => {

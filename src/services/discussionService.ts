@@ -10,12 +10,13 @@ import { buildTopology } from "./discussion/orchestrator";
 import { getExpertPrompt, getExpertResponseSchema } from "./discussion/expertPrompts";
 import { aggregateResults } from "./discussion/resultAggregator";
 import { normalizeCoreVariablesByPriority } from "./coreVariablePriority";
+import { reflectAndRemember, retrieveMemories, formatMemoryForPrompt } from "./reflectionService";
 
 // Iteration count per analysis level (how many times the middle cycle repeats)
 const ITERATION_COUNT: Record<AnalysisLevel, number> = {
   quick: 0,
   standard: 1,
-  deep: 2,
+  deep: 1, // single pass through all 12 experts; iteration=2 exceeded free-tier 15 RPM
 };
 
 export interface MultiRoundProgress {
@@ -68,6 +69,9 @@ export async function startMultiRoundDiscussion(
   const previousAnalysis = await getPreviousStockAnalysis(analysis.stockInfo.symbol);
   const backtest = performBacktest(analysis, previousAnalysis);
 
+  // Store reflection from backtest outcomes for future retrieval
+  reflectAndRemember(analysis, backtest);
+
   const iterations = ITERATION_COUNT[level];
 
   // Build iterative topology:
@@ -108,7 +112,7 @@ export async function startMultiRoundDiscussion(
           model: config?.model || GEMINI_MODEL,
           contents: inputPrompt,
         }, { 
-          transportRetries: 5, 
+          transportRetries: 3, 
           baseDelayMs: 3000,
           responseMimeType: "application/json",
           responseSchema: getExpertResponseSchema(role),
@@ -466,7 +470,14 @@ export async function startAgentDiscussion(
     - **强制指令**: 深度研究专家和首席策略师必须在讨论中明确引用上述历史业绩情况。如果是"预测被打脸"或"逻辑漂移"，必须解释原因并修正逻辑；如果是"目标达成"，则讨论是否该止盈或提高目标价。
   ` : "";
 
-  const prompt = getDiscussionPrompt(analysis, commoditiesData, memoryContext, historyContext, currentLanguage);
+  // Inject reflection memory from past outcomes
+  const memories = retrieveMemories(analysis.stockInfo.symbol, analysis.sentiment);
+  const reflectionMemory = formatMemoryForPrompt(memories);
+
+  // Store reflection if we have backtest data (learn from this cycle)
+  reflectAndRemember(analysis, resolvedBacktest);
+
+  const prompt = getDiscussionPrompt(analysis, commoditiesData, memoryContext + reflectionMemory, historyContext, currentLanguage);
   
   const raw = await generateAndParseJsonWithRetry<AgentDiscussion>(ai, {
     model: config?.model || GEMINI_MODEL,

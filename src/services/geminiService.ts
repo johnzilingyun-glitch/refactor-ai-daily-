@@ -1,18 +1,36 @@
 import { GoogleGenAI } from "@google/genai";
 import { useConfigStore } from "../stores/useConfigStore";
 import { requestScheduler } from "./requestScheduler";
+import { tryFallbackProviders, getAvailableFallbackProviders } from "./llmProvider";
 
 export const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
-// Fallback chain: when a model hits quota, try the next one securely
+// Fallback chain: only models with high daily quota (RPD ≥ 500).
+// Gemini 2.5-flash (20 RPD) and 2.0-flash (deprecated) removed — they exhaust daily quota
+// after a single failed analysis cascade, poisoning all subsequent attempts.
 export const MODEL_FALLBACK_CHAIN: string[] = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash",
-  "gemini-1.5-flash"
+  "gemini-3.1-flash-lite-preview",  // 500 RPD, 15 RPM
+  "gemini-3-flash-preview",         // 500 RPD, 5 RPM
 ];
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Track key-level quota exhaustion across calls.
+// Only set when a model confirms RPD (daily) exhaustion — NOT for RPM (per-minute) limits.
+let _keyQuotaExhaustedUntil = 0;
+
+export function isKeyQuotaExhausted(): boolean {
+  return Date.now() < _keyQuotaExhaustedUntil;
+}
+
+function markKeyQuotaExhausted() {
+  // Block all Gemini attempts for 120 seconds — if RPD is truly exhausted, no point retrying
+  _keyQuotaExhaustedUntil = Date.now() + 120_000;
+}
+
+export function clearKeyQuotaExhausted() {
+  _keyQuotaExhaustedUntil = 0;
+}
 
 export function getApiKey(config?: { apiKey?: string }): string {
   // Priority: 1. Explicit config → 2. Store (user-set) → 3. Env var
@@ -57,8 +75,16 @@ export async function generateAndParseJsonWithRetry<T>(
   const modelsToTry = [requestedModel, ...MODEL_FALLBACK_CHAIN.filter(m => m !== requestedModel)];
 
   let lastError: unknown;
+  let consecutiveQuotaErrors = 0;
 
   for (const model of modelsToTry) {
+    // If 2+ consecutive models hit quota, the entire API key is exhausted — skip remaining
+    if (consecutiveQuotaErrors >= 2) {
+      console.warn(`[ModelFallback] Skipping ${model} — API key quota exhausted (${consecutiveQuotaErrors} consecutive 429s)`);
+      lastError = lastError || new QuotaError('API key quota exhausted');
+      continue;
+    }
+
     let lastParseError: unknown;
     lastError = undefined; // Clear previous model's transport error state
 
@@ -97,10 +123,11 @@ export async function generateAndParseJsonWithRetry<T>(
           return result.text;
         }, transportRetries, baseDelayMs);
       } catch (transportErr) {
-        // On quota error, try the next fallback model
+        // On quota/model-gone error, try the next fallback model
         if (transportErr instanceof QuotaError) {
           console.warn(`[ModelFallback] ${model} quota exhausted, trying next model...`);
           lastError = transportErr;
+          consecutiveQuotaErrors++;
           break; // break parse retry loop, continue to next model
         }
         throw transportErr;
@@ -128,8 +155,21 @@ export async function generateAndParseJsonWithRetry<T>(
     }
   }
 
-  // All models exhausted
-  throw new Error('API 配额已耗尽 (Free tier limits hit)。所有备选模型均不可用，请等待几分钟后重试。');
+  // All Gemini models exhausted — try cross-provider fallback (OpenAI/Anthropic)
+  const fallbackProviders = getAvailableFallbackProviders();
+  if (fallbackProviders.length > 0) {
+    try {
+      console.warn('[ModelFallback] All Gemini models exhausted. Trying cross-provider fallback...');
+      const prompt = typeof params.contents === 'string' ? params.contents : JSON.stringify(params.contents);
+      const fallbackText = await tryFallbackProviders(prompt);
+      return parseJsonResponse<T>(fallbackText);
+    } catch (fallbackErr) {
+      console.error('[ModelFallback] Cross-provider fallback also failed:', fallbackErr);
+    }
+  }
+
+  // All providers exhausted
+  throw new Error('API 配额已耗尽。所有模型（Gemini/OpenAI/Anthropic）均不可用，请等待几分钟后重试或配置备用 API Key。');
 }
 
 export async function remoteLog(type: string, data: any) {
@@ -155,7 +195,10 @@ export async function withRetry<T>(
   let lastError: any;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await fn();
+      const result = await fn();
+      // Success — clear key-level quota flag for fast recovery
+      clearKeyQuotaExhausted();
+      return result;
     } catch (error: any) {
       lastError = error;
       const errorStr = typeof error === 'string' ? error : (error?.message || JSON.stringify(error));
@@ -165,6 +208,11 @@ export async function withRetry<T>(
                       errorStr.includes('RESOURCE_EXHAUSTED') || 
                       errorStr.toLowerCase().includes('quota') ||
                       error?.status === 429;
+
+      // Model not found (deprecated/removed) — skip to next model like quota
+      const isModelGone = errorStr.includes('NOT_FOUND') ||
+                          errorStr.includes('is not found') ||
+                          error?.status === 404;
       
       const isTransient = errorStr.includes('503') ||
                           errorStr.includes('500') ||
@@ -172,13 +220,29 @@ export async function withRetry<T>(
                           error?.status === 503 ||
                           error?.status === 500;
 
-      // Quota errors: fail fast — retrying wastes more quota
+      // Model gone: skip immediately to next model
+      if (isModelGone) {
+        if (useConfigStore.getState().debugMode) {
+          remoteLog('model_not_found', { error: errorStr, attempt });
+        }
+        throw new QuotaError(errorStr);
+      }
+
+      // Rate limit (429): likely RPM limit which resets in seconds.
+      // Wait 5s and retry ONCE on the same model before giving up.
+      // This avoids cascading to fallback models that have lower RPD limits.
+      if (isQuota && attempt < maxRetries) {
+        console.warn(`[RateLimit] 429 on attempt ${attempt}/${maxRetries}. Waiting 5s for RPM reset...`);
+        await delay(5000 + Math.random() * 2000);
+        continue;
+      }
+
+      // If still 429 after retries, it's likely RPD (daily) exhaustion — mark key-level
       if (isQuota) {
+        markKeyQuotaExhausted();
         if (useConfigStore.getState().debugMode) {
           remoteLog('quota_exhausted_failure', { error: errorStr, attempt });
         }
-        // Do not permanently lock the UI state or queue for 8s; 
-        // Just flag it temporarily so the orchestrator can instantly fallback to a faster model.
         throw new QuotaError(errorStr);
       }
 
@@ -214,6 +278,9 @@ export class QuotaError extends Error {
 
 export function extractJsonBlock(raw: string): string {
   let cleaned = raw.trim();
+
+  // 0. Strip Gemini citation markers like [cite: 1], [cite: analysis], [cite_start]...[cite_end] etc.
+  cleaned = cleaned.replace(/\[cite(?:_start|_end)?:?[^\]]*\]/gi, '');
   
   // 1. Try to find triple backtick blocks
   const tripleBacktickMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);

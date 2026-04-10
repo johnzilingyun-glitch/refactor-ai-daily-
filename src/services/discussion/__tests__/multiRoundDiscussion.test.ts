@@ -82,7 +82,7 @@ describe('startMultiRoundDiscussion', () => {
     });
   });
 
-  it('deep mode calls experts following [DR → TA+FA → SA+RM+CS → Reviewer] ×3 → CS pattern', async () => {
+  it('deep mode calls 14 experts (12 + Bull/Bear revision) + synthesis', async () => {
     const progressUpdates: MultiRoundProgress[] = [];
 
     const result = await startMultiRoundDiscussion(
@@ -92,12 +92,11 @@ describe('startMultiRoundDiscussion', () => {
       (progress) => progressUpdates.push({ ...progress, messages: [...progress.messages] }),
     );
 
-    // Deep topology: [DR(1) + TA+FA(2) + SA+RM+CS(3) + Reviewer(1)] × 2 + CS(1)
-    // = 7 * 2 + 1 = 15 expert calls + 1 synthesis call = 16 total AI calls
-    expect(callCount).toBe(16);
+    // Deep topology: 14 rounds (12 experts + Bull/Bear revision rounds) + 1 synthesis = 15
+    expect(callCount).toBe(15);
 
     // All multi-round messages should be in the result
-    expect(result.messages).toHaveLength(15);
+    expect(result.messages).toHaveLength(14);
 
     // Each message should have content
     result.messages.forEach((msg) => {
@@ -106,7 +105,7 @@ describe('startMultiRoundDiscussion', () => {
     });
 
     // Progress should have been called for each expert + 1 synthesis
-    expect(progressUpdates.length).toBe(16);
+    expect(progressUpdates.length).toBe(15);
 
     // First expert should be Deep Research Specialist
     expect(progressUpdates[0].currentExpert).toBe('Deep Research Specialist');
@@ -121,9 +120,9 @@ describe('startMultiRoundDiscussion', () => {
   it('standard mode runs single iteration (no repetition)', async () => {
     const result = await startMultiRoundDiscussion(mockAnalysis, 'standard');
 
-    // Standard topology: DR + TA + FA + RM + Reviewer + CS = 6 expert calls + 1 synthesis = 7
-    expect(callCount).toBe(7);
-    expect(result.messages).toHaveLength(6);
+    // Standard topology: DR + TA + FA + Bull + Bear + RM + Reviewer + CS = 8 expert calls + 1 synthesis = 9
+    expect(callCount).toBe(9);
+    expect(result.messages).toHaveLength(8);
   });
 
   it('messages accumulate across rounds (each expert sees previous messages)', async () => {

@@ -113,7 +113,7 @@ describe('backtestTimeSeries', () => {
     it('detects bullish drift when consistently overestimates', () => {
       const entries: BacktestEntry[] = [
         { date: '2026-03-20', recommendation: 'Buy', targetPrice: 170, stopLoss: 130, actualPrice: 140, returnPercent: -6.7, directionCorrect: false, targetHit: false },
-        { date: '2026-03-21', recommendation: 'Strong Buy', targetPrice: 180, stopLoss: 140, actualPrice: 145, returnPercent: -3.3, directionCorrect: false, targetHit: false },
+        { date: '2026-03-21', recommendation: 'Overweight', targetPrice: 180, stopLoss: 140, actualPrice: 145, returnPercent: -3.3, directionCorrect: false, targetHit: false },
         { date: '2026-03-22', recommendation: 'Buy', targetPrice: 175, stopLoss: 135, actualPrice: 142, returnPercent: -5, directionCorrect: false, targetHit: false },
       ];
       const bias = detectSystematicBias({

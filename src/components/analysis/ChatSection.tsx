@@ -87,7 +87,7 @@ export function ChatSection({ onSendChatReport, onChat }: ChatSectionProps) {
         ))}
         {isChatting && (
           <div className="flex justify-start">
-            <div className="animate-pulse rounded-2xl rounded-tl-none bg-zinc-50 px-4 py-2 text-sm text-zinc-400">{t('analysis.tools.ai_thinking')}</div>
+            <div className="loading-pulse rounded-2xl rounded-tl-none bg-zinc-50 px-4 py-2 text-sm text-zinc-400">{t('analysis.tools.ai_thinking')}</div>
           </div>
         )}
       </div>

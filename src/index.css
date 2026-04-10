@@ -5,6 +5,29 @@
 
 /* ─── Design Tokens (Impeccable: OKLCH, tinted neutrals, 4pt scale) ──── */
 @theme {
+  /* ── Override Tailwind zinc palette with warm-indigo tinted neutrals ── */
+  /* hue=270, subtle chroma 0.005-0.012 so border-zinc-200, text-zinc-950 etc. 
+     all get the tinted neutral treatment automatically across 300+ usages */
+  --color-zinc-50:  oklch(0.985 0.005 270);
+  --color-zinc-100: oklch(0.96 0.008 270);
+  --color-zinc-200: oklch(0.92 0.008 270);
+  --color-zinc-300: oklch(0.85 0.01 270);
+  --color-zinc-400: oklch(0.65 0.01 270);
+  --color-zinc-500: oklch(0.55 0.012 270);
+  --color-zinc-600: oklch(0.45 0.012 270);
+  --color-zinc-700: oklch(0.37 0.01 270);
+  --color-zinc-800: oklch(0.27 0.01 270);
+  --color-zinc-900: oklch(0.20 0.01 270);
+  --color-zinc-950: oklch(0.14 0.01 270);
+
+  /* ── Override Tailwind shadow scale with tinted layered shadows ── */
+  --shadow-xs:  0 1px 2px oklch(0.15 0.01 270 / 0.04);
+  --shadow-sm:  0 1px 3px oklch(0.15 0.01 270 / 0.06), 0 1px 2px oklch(0.15 0.01 270 / 0.04);
+  --shadow-md:  0 4px 12px oklch(0.15 0.01 270 / 0.06), 0 2px 4px oklch(0.15 0.01 270 / 0.03);
+  --shadow-lg:  0 8px 24px oklch(0.15 0.01 270 / 0.08), 0 4px 8px oklch(0.15 0.01 270 / 0.04);
+  --shadow-xl:  0 16px 48px oklch(0.15 0.01 270 / 0.10), 0 8px 16px oklch(0.15 0.01 270 / 0.05);
+  --shadow-2xl: 0 24px 64px oklch(0.15 0.01 270 / 0.14), 0 12px 24px oklch(0.15 0.01 270 / 0.06);
+
   /* Brand: warm indigo tint toward hue ~270 */
   --color-brand-600: oklch(0.45 0.18 270);
   --color-brand-500: oklch(0.52 0.17 270);
@@ -12,14 +35,14 @@
   --color-brand-100: oklch(0.95 0.02 270);
   --color-brand-50:  oklch(0.98 0.008 270);
 
-  /* Tinted neutrals (warm-indigo hue=270, chroma 0.005-0.01) */
-  --color-surface-primary:   oklch(0.985 0.005 270);  /* page bg */
-  --color-surface-card:      oklch(0.995 0.003 270);  /* card bg */
-  --color-surface-elevated:  oklch(1.0 0.0 270);      /* modals, popovers */
-  --color-surface-sunken:    oklch(0.96 0.008 270);   /* inset areas */
+  /* Semantic surface / text / border tokens (for explicit use) */
+  --color-surface-primary:   oklch(0.985 0.005 270);
+  --color-surface-card:      oklch(0.995 0.003 270);
+  --color-surface-elevated:  oklch(1.0 0.0 270);
+  --color-surface-sunken:    oklch(0.96 0.008 270);
   --color-border-primary:    oklch(0.90 0.01 270);
   --color-border-subtle:     oklch(0.93 0.008 270);
-  --color-text-primary:      oklch(0.15 0.01 270);
+  --color-text-primary:      oklch(0.14 0.01 270);
   --color-text-secondary:    oklch(0.40 0.015 270);
   --color-text-muted:        oklch(0.55 0.01 270);
 
@@ -31,20 +54,15 @@
   --color-warning:    oklch(0.65 0.16 75);
   --color-warning-bg: oklch(0.96 0.03 75);
 
-  /* Shadows: layered for depth */
-  --shadow-xs:  0 1px 2px oklch(0.15 0.01 270 / 0.04);
-  --shadow-sm:  0 1px 3px oklch(0.15 0.01 270 / 0.06), 0 1px 2px oklch(0.15 0.01 270 / 0.04);
-  --shadow-md:  0 4px 12px oklch(0.15 0.01 270 / 0.06), 0 2px 4px oklch(0.15 0.01 270 / 0.03);
-  --shadow-lg:  0 8px 24px oklch(0.15 0.01 270 / 0.08), 0 4px 8px oklch(0.15 0.01 270 / 0.04);
-  --shadow-xl:  0 16px 48px oklch(0.15 0.01 270 / 0.10), 0 8px 16px oklch(0.15 0.01 270 / 0.05);
+  /* Override Tailwind white to very slight tint (impeccable: never pure) */
+  --color-white: oklch(0.995 0.003 270);
 
   /* Easing: exponential (no bounce!) */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);    /* ease-out-expo */
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* ease-in-out-cubic */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /* Keep existing Tailwind colors available */
+  /* Indigo override stays available */
   --color-indigo-600: #4f46e5;
-  --color-zinc-900: #18181b;
 }
 
 /* ─── Base ──────────────────────────────────────────────────────────────── */

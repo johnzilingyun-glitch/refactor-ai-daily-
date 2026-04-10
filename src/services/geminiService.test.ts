@@ -242,10 +242,10 @@ describe('geminiService', () => {
       const result = await generateAndParseJsonWithRetry(mockAi, {
         model: 'gemini-3.1-flash-lite-preview',
         contents: 'test',
-      });
+      }, { transportRetries: 1 });
 
       expect(result).toEqual({ result: 'fallback_ok' });
-      // First model was tried, then fallback
+      // First model was tried (1 attempt, 429), then fallback to next model
       expect(modelsUsed[0]).toBe('gemini-3.1-flash-lite-preview');
       expect(modelsUsed.length).toBeGreaterThan(1);
     });

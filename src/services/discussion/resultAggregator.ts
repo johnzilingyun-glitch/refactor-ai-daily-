@@ -19,22 +19,35 @@ export function aggregateResults(
 
   // Extract structured data from specific experts
   const deepResearch = roundResults.get('Deep Research Specialist');
-  const riskManager = roundResults.get('Risk Manager');
+  const riskManager = roundResults.get('Risk Manager') || roundResults.get('Neutral Risk Analyst');
   const chiefStrategist = roundResults.get('Chief Strategist');
   const contrarian = roundResults.get('Contrarian Strategist');
+  const bearResearcher = roundResults.get('Bear Researcher');
+
+  // Collect controversial points from both contrarian and bear researcher
+  const controversialPoints: string[] = [];
+  if (contrarian?.message.content) controversialPoints.push(contrarian.message.content.slice(0, 200));
+  if (bearResearcher?.message.content) controversialPoints.push(bearResearcher.message.content.slice(0, 200));
+
+  // Merge quantified risks from Risk Manager and risk triad
+  const aggressiveRisk = roundResults.get('Aggressive Risk Analyst');
+  const conservativeRisk = roundResults.get('Conservative Risk Analyst');
+  const mergedRisks = [
+    ...(riskManager?.structuredData?.quantifiedRisks || []),
+    ...(aggressiveRisk?.structuredData?.quantifiedRisks || []),
+    ...(conservativeRisk?.structuredData?.quantifiedRisks || []),
+  ];
 
   const discussion: AgentDiscussion = {
     messages,
     finalConclusion: chiefStrategist?.message.content ?? '',
     coreVariables: deepResearch?.structuredData?.coreVariables,
-    quantifiedRisks: riskManager?.structuredData?.quantifiedRisks,
+    quantifiedRisks: mergedRisks.length > 0 ? mergedRisks : undefined,
     tradingPlan: chiefStrategist?.structuredData?.tradingPlan,
     scenarios: chiefStrategist?.structuredData?.scenarios,
     expectedValueOutcome: chiefStrategist?.structuredData?.expectedValueOutcome,
     sensitivityMatrix: chiefStrategist?.structuredData?.sensitivityMatrix,
-    controversialPoints: contrarian?.structuredData
-      ? (contrarian.message.content ? [contrarian.message.content.slice(0, 200)] : [])
-      : undefined,
+    controversialPoints: controversialPoints.length > 0 ? controversialPoints : undefined,
   };
 
   if (backtest) {

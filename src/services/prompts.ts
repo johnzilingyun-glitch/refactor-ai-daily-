@@ -133,7 +133,9 @@ ${formatCommoditiesToMarkdown(commoditiesData)}
 
 You are a professional equity analyst.
 Analyze stock "${symbol}" in the ${market} market using the latest available public information and provided ground-truth data.
-**LANGUAGE (MANDATORY)**: All output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
+**LANGUAGE POLICY (MANDATORY)**:
+- **Internal Reasoning**: Always reason in English for analytical quality.
+- **Output Language**: All user-facing text fields MUST be in ${isChinese ? "Simplified Chinese (简体中文)" : "English"}.
 
 **DATA SOURCE HIERARCHY (CRITICAL)**: 
 1. If the "REAL-TIME DATA TOOL OUTPUT" is provided above, you **MUST MUST MUST** use its exact values for ALL matching fields in your JSON output. This includes: "price", "change", "changePercent", "previousClose", "lastUpdated", "dailyHigh" (use dayHigh), "dailyLow" (use dayLow), "pe" (use pe), and currency.
@@ -201,11 +203,11 @@ Requirements:
 16. **TRACKABLE METRICS (NEW)**: Define specific "Verification Metrics".
 17. **CAPITAL BEHAVIOR (NEW)**: Analyze Northbound flow, institutional changes, and AH premium.
 18. **TRADING PLAN LOGIC (NEW)**: 
-    - If the recommendation is NOT "Buy" or "Strong Buy", set entryPrice, targetPrice, and stopLoss to "${isChinese ? '不推荐' : 'Not Recommended'}", and strategy should explain why the current price action doesn't support an entry.
+    - If the recommendation is NOT "Buy" or "Overweight", set entryPrice, targetPrice, and stopLoss to "${isChinese ? '不推荐' : 'Not Recommended'}", and strategy should explain why the current price action doesn't support an entry.
     - **STRATEGY RISKS (NEW)**: Clearly state the specific risks associated with the recommended strategy.
 19. tradingPlan must include: entryPrice, targetPrice, stopLoss, strategy, and strategyRisks (all as strings).
 20. sentiment must be one of: Bullish, Bearish, Neutral.
-21. recommendation must be one of: Strong Buy, Buy, Hold, Sell, Strong Sell.
+21. recommendation must be one of: Buy, Overweight, Hold, Underweight, Sell.
 22. Continuity: Based on previous analysis of this stock, identify if trends are continuing or reversing.
 23. **ANTI-HALLUCINATION (CRITICAL)**: If you cannot find the data, state it clearly in the summary. Do NOT find invent numbers.
 
@@ -309,7 +311,7 @@ JSON schema:
   "fundamentalAnalysis": "string",
   "sentiment": "Bullish | Bearish | Neutral",
   "score": 0,
-  "recommendation": "Strong Buy | Buy | Hold | Sell | Strong Sell",
+  "recommendation": "Buy | Overweight | Hold | Underweight | Sell",
   "keyRisks": ["string"],
   "keyOpportunities": ["string"],
   "tradingPlan": {
@@ -630,10 +632,13 @@ export const getDiscussionPrompt = (
   const now = new Date().toISOString();
   const today = now.split('T')[0];
   return `
-    You are a professional team of 8 elite financial analysts conducting a high-level joint meeting to provide institutional-grade research on the following stock.
+    You are a professional team of 12 elite financial analysts conducting a high-level joint meeting to provide institutional-grade research on the following stock.
     This is not a simple report, but a realistic, multi-round professional deliberation with intense debate and data cross-examination.
 
-    **LANGUAGE (MANDATORY)**: All communication and output MUST be in ${isChinese ? "Simplified Chinese" : "English"}.
+    **LANGUAGE POLICY (MANDATORY)**:
+    - **Internal Reasoning**: Always reason and think in English for maximum analytical quality.
+    - **Output Language**: All user-facing content in the JSON output MUST be in ${isChinese ? "Simplified Chinese (简体中文)" : "English"}.
+    - This means: think in English, write output in ${isChinese ? "Chinese" : "English"}.
 
     **Current Date**: ${today}
     **Data Timeliness Redline (CRITICAL)**: All macro variables (exchange rates, interest rates, commodities) MUST prioritize the **REAL-TIME COMMODITY DATA** below. If missing, use Google Search for today's (${today}) latest quotes.
@@ -647,7 +652,7 @@ export const getDiscussionPrompt = (
     - **DYNAMIC VARIABLE SELECTION (MANDATORY)**: If provided commodities are NOT relevant, IGNORE them.
     - **SEARCH-DRIVEN ANCHORS**: Use Google Search to identify the 2-3 most critical macro variables or raw material prices for this specific stock.
     
-    **Team Members (8, in order of speaking)**:
+    **Team Members (12, in order of speaking)**:
     1. **Deep Research Specialist**: First speaker, responsible for full-dimension data penetration.
        - Use Google Search for deep qualitative insights (management, supply chain, moats).
        - **Graham's Net-Net Value Calculation**: Attempt to calculate (Current Assets - Total Liabilities) vs current Market Cap.
@@ -667,21 +672,35 @@ export const getDiscussionPrompt = (
 
     4. **Sentiment Analyst**: Responsible for market sentiment and capital flow analysis.
        - Capital structure search (Northbound, Mutual Funds, AH Premium). Distinguish between "institutional accumulation" and "retail panic".
-       - **[Structured Output] Crowded Trade Indicator**: Specifically search for signs of overcrowded positions or extreme consensus.
 
-    5. **Risk Manager**: Responsible for extreme risk scenario analysis.
-       - Black swan scenarios, direct rebuttals to bullish views, quantified risk metrics.
+    5. **Bull Researcher**: Responsible for constructing the strongest bullish thesis.
+       - Build a complete bullish logic chain with catalysts, upside quantification, and expected returns.
+       - Preemptively counter bearish objections. Every bullish point must have a falsifiable condition.
+
+    6. **Bear Researcher**: Responsible for constructing the strongest bearish thesis.
+       - Build a complete bearish logic chain with risk factors, downside quantification, and worst-case scenarios.
+       - Must directly reference and rebut the Bull Researcher's core arguments.
+
+    7. **Aggressive Risk Analyst**: Opportunity-driven risk perspective.
+       - Maximum return within controlled risk. Identify over-priced risk premiums.
+
+    8. **Conservative Risk Analyst**: Capital preservation perspective.
+       - Worst-case loss analysis. Graham margin of safety. Black swan identification.
+
+    9. **Neutral Risk Analyst**: Balanced risk synthesis and final risk score.
+       - Synthesize aggressive/conservative views. Optimal risk-reward position sizing.
        - **[Structured Output] Quantitative Risk Matrix (MANDATORY)**: Populate \`quantifiedRisks\` in JSON.
 
-    6. **Contrarian Strategist**: Responsible for challenging all consensus.
+    10. **Contrarian Strategist**: Responsible for challenging all consensus.
        - Crowded trade analysis, deconstructing mainstream narratives, identifying "Blind Spots".
        - **[Antithesis Creation]**: Must formulate a logical "Inversion Theory" (What if the bullish base case fails?).
 
-    7. **Professional Reviewer**: Responsible for logic auditing and data "dehydration".
+    11. **Professional Reviewer**: Responsible for logic auditing and data "dehydration".
        - Attacking narrative traps, valuation consistency audit, SOTP decision matrix.
 
-    8. **Chief Strategist**: Last speaker, responsible for unified decision.
+    12. **Chief Strategist**: Last speaker, responsible for unified decision.
        - Probability-weighted framework (Σ(P_i * TargetPrice_i)), position sizing, exit triggers.
+       - Must arbitrate the Bull vs Bear debate and the risk triad's conflicting perspectives.
        - **[Structured Output] Core Decision Data**: Populate \`expectedValueOutcome\` and \`sensitivityMatrix\` in JSON.
 
     **Analysis Target Data**: ${JSON.stringify(analysis)}
@@ -798,7 +817,7 @@ Please return JSON:
   "stockInfo": { "symbol": "${symbol}", "name": "Name", "price": number, "change": number, "changePercent": number, "market": "${market}", "currency": "Currency", "lastUpdated": "Time", "previousClose": number },
   "score": 0-100,
   "sentiment": "Bullish" | "Bearish" | "Neutral",
-  "recommendation": "Strong Buy" | "Buy" | "Hold" | "Sell" | "Strong Sell",
+  "recommendation": "Buy" | "Overweight" | "Hold" | "Underweight" | "Sell",
   "summary": "Core judgment in 2-3 sentences",
   "keyRisks": ["Risk 1"],
   "keyOpportunities": ["Opportunity 1"],

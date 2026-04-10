@@ -32,14 +32,14 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
   // Destructure with fallbacks to single-shot analysis data if store is empty
   const scenarioResults = useScenarioStore();
   
-  const scenarios = scenarioResults.scenarios.length > 0 ? scenarioResults.scenarios : (analysis.scenarios || []);
-  const sensitivityFactors = scenarioResults.sensitivityFactors.length > 0 ? scenarioResults.sensitivityFactors : (analysis.sensitivityFactors || []);
+  const scenarios = (scenarioResults.scenarios?.length ?? 0) > 0 ? scenarioResults.scenarios : (analysis.scenarios || []);
+  const sensitivityFactors = (scenarioResults.sensitivityFactors?.length ?? 0) > 0 ? scenarioResults.sensitivityFactors : (analysis.sensitivityFactors || []);
   const expectationGap = scenarioResults.expectationGap || analysis.expectationGap;
-  const calculations = scenarioResults.calculations.length > 0 ? scenarioResults.calculations : (analysis.calculations || []);
+  const calculations = (scenarioResults.calculations?.length ?? 0) > 0 ? scenarioResults.calculations : (analysis.calculations || []);
   const dataFreshnessStatus = scenarioResults.dataFreshnessStatus || "Fresh";
   const stressTestLogic = scenarioResults.stressTestLogic || analysis.stressTestLogic;
-  const catalystList = scenarioResults.catalystList.length > 0 ? scenarioResults.catalystList : (analysis.catalystList || []);
-  const verificationMetrics = scenarioResults.verificationMetrics.length > 0 ? scenarioResults.verificationMetrics : (analysis.verificationMetrics || []);
+  const catalystList = (scenarioResults.catalystList?.length ?? 0) > 0 ? scenarioResults.catalystList : (analysis.catalystList || []);
+  const verificationMetrics = (scenarioResults.verificationMetrics?.length ?? 0) > 0 ? scenarioResults.verificationMetrics : (analysis.verificationMetrics || []);
   const capitalFlow = scenarioResults.capitalFlow || analysis.capitalFlow;
   const positionManagement = scenarioResults.positionManagement || analysis.positionManagement;
   const timeDimension = scenarioResults.timeDimension || analysis.timeDimension;

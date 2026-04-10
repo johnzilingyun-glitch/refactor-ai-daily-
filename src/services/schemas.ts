@@ -42,7 +42,7 @@ export const StockAnalysisSchema = z.object({
   fundamentalAnalysis: z.string().default(''),
   sentiment: z.enum(['Bullish', 'Bearish', 'Neutral']).catch('Neutral'),
   score: z.number().min(0).max(100).catch(50),
-  recommendation: z.enum(['Strong Buy', 'Buy', 'Hold', 'Sell', 'Strong Sell']).catch('Hold'),
+  recommendation: z.enum(['Buy', 'Overweight', 'Hold', 'Underweight', 'Sell']).catch('Hold'),
   keyRisks: z.array(z.string()).catch([]),
   keyOpportunities: z.array(z.string()).catch([]),
   news: z.array(z.any()).catch([]),

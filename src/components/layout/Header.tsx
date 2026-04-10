@@ -127,7 +127,7 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
   };
 
   return (
-    <header className="mb-12 animate-premium text-zinc-950 dark:text-white relative">
+    <header className="mb-12 animate-premium text-zinc-950 dark:text-white relative z-10">
       <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div className="cursor-pointer" onClick={onResetToHome}>
           <div className="flex items-center gap-2 mb-3">
