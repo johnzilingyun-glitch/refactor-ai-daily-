@@ -131,6 +131,30 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
   }, undefined, priority);
 
   const overview = validateResponse(MarketOverviewSchema, raw, 'MarketOverview') as MarketOverview;
+
+  // Anti-hallucination: enforce API indices data over AI-generated values
+  if (indicesData.length > 0 && overview.indices) {
+    const apiMap = new Map<string, any>(indicesData.map((idx: any) => [idx.symbol, idx]));
+    let driftDetected = false;
+    for (const aiIdx of overview.indices) {
+      const apiIdx: any = apiMap.get(aiIdx.symbol);
+      if (apiIdx && apiIdx.price != null && apiIdx.price > 0) {
+        const indexDriftPct = Math.abs(aiIdx.price - apiIdx.price) / apiIdx.price;
+        if (indexDriftPct > 0.02) { // 2% threshold for indices (large numbers, qualitative context)
+          console.warn(`[AntiHallucination] Market index ${aiIdx.symbol}: AI=${aiIdx.price}, API=${apiIdx.price} (${(indexDriftPct * 100).toFixed(2)}%). Correcting.`);
+          driftDetected = true;
+        }
+        aiIdx.price = Number(apiIdx.price);
+        if (apiIdx.change != null) aiIdx.change = Number(apiIdx.change);
+        if (apiIdx.changePercent != null) aiIdx.changePercent = Number(apiIdx.changePercent);
+        if (apiIdx.previousClose != null) aiIdx.previousClose = Number(apiIdx.previousClose);
+      }
+    }
+    if (driftDetected && overview.marketSummary) {
+      overview.marketSummary += '\n\n⚠️ 注意：AI分析中的部分指数数据已由实时API数据修正。';
+    }
+  }
+
   overview.id = `market-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   overview.generatedAt = Date.now();
   overview.market = market; // Tag market type for history recovery

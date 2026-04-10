@@ -60,7 +60,7 @@ export async function generateAndParseJsonWithRetry<T>(
 
   for (const model of modelsToTry) {
     let lastParseError: unknown;
-    lastError = undefined; // Fix: Clear previous model's transport transport error state
+    lastError = undefined; // Clear previous model's transport error state
 
     for (let attempt = 1; attempt <= parseRetries; attempt++) {
       let responseText: string;
@@ -363,9 +363,21 @@ export function parseJsonResponse<T>(raw: string): T {
     }
 
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      if (parsed.analysis) return parsed.analysis as T;
-      if (parsed.data) return parsed.data as T;
+      // Direct match: has expected root keys (stockInfo for stock, indices for market, messages for discussion)
       if (parsed.stockInfo && parsed.stockInfo.symbol) return parsed as T;
+      if (parsed.indices && Array.isArray(parsed.indices)) return parsed as T;
+      if (parsed.messages && Array.isArray(parsed.messages)) return parsed as T;
+      if (parsed.content && typeof parsed.content === 'string') return parsed as T;
+      
+      // Unwrap single-level wrappers only if they contain expected structures
+      if (parsed.analysis && typeof parsed.analysis === 'object' && (parsed.analysis.stockInfo || parsed.analysis.indices || parsed.analysis.messages)) {
+        return parsed.analysis as T;
+      }
+      if (parsed.data && typeof parsed.data === 'object' && (parsed.data.stockInfo || parsed.data.indices || parsed.data.messages)) {
+        return parsed.data as T;
+      }
+      
+      // Fallback: single-key wrapper around object with stockInfo
       const keys = Object.keys(parsed);
       if (keys.length === 1 && parsed[keys[0]] && typeof parsed[keys[0]] === 'object' && parsed[keys[0]].stockInfo) {
         return parsed[keys[0]] as T;

@@ -1,13 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
 import { createAI, withRetry, generateContentWithUsage, GEMINI_MODEL, generateAndParseJsonWithRetry } from "./geminiService";
 import { useConfigStore } from "../stores/useConfigStore";
-import { getAnalyzeStockPrompt, getChatMessagePrompt, getStockReportPrompt, getDiscussionReportPrompt, getChatReportPrompt } from "./prompts";
+import { getAnalyzeStockPrompt, getChatMessagePrompt, getStockReportPrompt, getDiscussionReportPrompt, getChatReportPrompt, getCorrectionPrompt } from "./prompts";
 import { Market, StockAnalysis, AgentMessage, Scenario, AgentDiscussion, GeminiConfig } from "../types";
 import { getHistoryContext, saveAnalysisToHistory } from "./adminService";
 import { getBeijingDate } from "./dateUtils";
 import { getCommoditiesData } from "./marketService";
 import { calculateQualityScore } from "./dataQualityService";
 import { StockAnalysisSchema, validateResponse } from "./schemas";
+import { detectDrift, enforceGroundTruth } from "./driftDetection";
 
 export async function analyzeStock(symbol: string, market: Market, config?: GeminiConfig): Promise<StockAnalysis> {
   const ai = createAI(config);
@@ -28,7 +28,12 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
 
   const language = useConfigStore.getState().language;
   const commoditiesData = await getCommoditiesData();
-  const prompt = getAnalyzeStockPrompt(symbol, resolvedMarket, realtimeData, commoditiesData, history, beijingDate, beijingShortDate, now, language);
+  
+  // Pre-fetch ticker-specific news to feed the AI context
+  const newsRes = await fetch(`/api/stock/news?symbol=${encodeURIComponent(symbol)}&market=${market}`).catch(() => null);
+  const newsData = newsRes && newsRes.ok ? await newsRes.json() : [];
+
+  const prompt = getAnalyzeStockPrompt(symbol, resolvedMarket, realtimeData, commoditiesData, newsData, history, beijingDate, beijingShortDate, now, language);
 
   const raw = await generateAndParseJsonWithRetry<StockAnalysis>(
     ai,
@@ -46,8 +51,35 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
       parseDelayMs: 1200,
     }
   );
-  const analysis = validateResponse(StockAnalysisSchema, raw, 'StockAnalysis') as StockAnalysis;
+  let analysis = validateResponse(StockAnalysisSchema, raw, 'StockAnalysis') as StockAnalysis;
   
+  // Anti-hallucination: multi-field drift detection and correction re-analysis
+  if (realtimeData?.price != null) {
+    const { hasDrift, correctedData } = detectDrift(analysis, realtimeData, commoditiesData);
+
+    if (hasDrift) {
+      const correctionPrompt = getCorrectionPrompt(analysis, correctedData, language);
+      try {
+        const correctedRaw = await generateAndParseJsonWithRetry<StockAnalysis>(
+          ai,
+          {
+            model: config?.model || GEMINI_MODEL,
+            contents: correctionPrompt,
+            config: { responseMimeType: "application/json" }
+          },
+          { transportRetries: 2, baseDelayMs: 2000, parseRetries: 1, parseDelayMs: 1000 }
+        );
+        analysis = validateResponse(StockAnalysisSchema, correctedRaw, 'StockAnalysis (corrected)') as StockAnalysis;
+        console.log(`[AntiHallucination] Correction re-analysis completed successfully`);
+      } catch (correctionErr) {
+        console.warn(`[AntiHallucination] Correction re-analysis failed, falling back to field override:`, correctionErr);
+      }
+    }
+
+    // Always enforce API ground truth for core trading fields (safety net)
+    enforceGroundTruth(analysis, realtimeData);
+  }
+
   // Calculate and associate data quality metadata
   analysis.dataQuality = calculateQualityScore(analysis.stockInfo);
   analysis.stockInfo.dataQuality = analysis.dataQuality;

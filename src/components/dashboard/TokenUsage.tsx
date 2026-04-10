@@ -12,7 +12,7 @@ export function TokenUsage() {
 
   return (
     <div className="mb-12">
-      <div className="premium-card p-8 group hover:border-indigo-200 transition-all duration-500 animate-premium overflow-hidden relative">
+      <div className="premium-card p-8 group transition-all animate-premium overflow-hidden relative">
         <div 
           className="absolute bottom-0 left-0 h-1 bg-indigo-600/10 transition-all duration-1000 ease-out"
           style={{ width: `${Math.min(100, (tokenUsage.totalTokens / 1000000) * 100)}%` }}

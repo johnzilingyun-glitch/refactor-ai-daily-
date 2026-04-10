@@ -22,8 +22,15 @@ export function buildBacktestTimeSeries(
     };
   }
 
+  // Ensure history is sorted chronologically (oldest first) for correct streak calculations
+  const sortedHistory = [...history].sort((a, b) => {
+    const timeA = new Date(a.stockInfo.lastUpdated || 0).getTime();
+    const timeB = new Date(b.stockInfo.lastUpdated || 0).getTime();
+    return timeA - timeB;
+  });
+
   const currentPrice = current.stockInfo.price;
-  const entries: BacktestEntry[] = history.map((prev) => {
+  const entries: BacktestEntry[] = sortedHistory.map((prev) => {
     const prevPrice = prev.stockInfo.price;
     const targetPrice = parseFloat(prev.tradingPlan?.targetPrice ?? '0');
     const stopLoss = parseFloat(prev.tradingPlan?.stopLoss ?? '0');
@@ -56,7 +63,7 @@ export function buildBacktestTimeSeries(
   // Profit factor
   const gains = entries.filter(e => e.returnPercent > 0).reduce((s, e) => s + e.returnPercent, 0);
   const losses = Math.abs(entries.filter(e => e.returnPercent < 0).reduce((s, e) => s + e.returnPercent, 0));
-  const profitFactor = losses > 0 ? gains / losses : gains > 0 ? Infinity : 0;
+  const profitFactor = losses > 0 ? gains / losses : gains > 0 ? 999 : 0;
 
   // Streaks
   let maxLosses = 0;

@@ -57,8 +57,7 @@ export async function getAvailableMarketDates(market: string): Promise<string[]>
 export async function getPreviousStockAnalysis(symbol: string): Promise<any | null> {
   try {
     const history = await getHistoryContext();
-    // history is expected to be an array of analytical records 
-    // Could be wrapped { type, data } or unwrapped (but with type inside)
+    // History items are saved as { ...analysisData, type, id, generatedAt } (flat, no .data wrapper)
     const previous = history
       .filter((item: any) => {
         const isStock = item.type === 'stock' || (item.stockInfo && !item.indices);
@@ -73,7 +72,7 @@ export async function getPreviousStockAnalysis(symbol: string): Promise<any | nu
       });
 
     // Return the most recent one (since save hasn't happened yet for current run)
-    return previous.length > 0 ? previous[0].data : null;
+    return previous.length > 0 ? previous[0] : null;
   } catch (err) {
     console.error('Failed to get previous stock analysis:', err);
     return null;

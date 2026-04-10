@@ -75,6 +75,7 @@ export const MarketOverviewSchema = z.object({
     changePercent: z.number(),
     previousClose: z.number().optional().default(0),
   })).min(1),
+  topNews: z.array(z.any()).catch([]),
   sectorAnalysis: z.array(z.any()).catch([]),
   commodityAnalysis: z.array(z.any()).catch([]),
   recommendations: z.array(z.any()).catch([]),

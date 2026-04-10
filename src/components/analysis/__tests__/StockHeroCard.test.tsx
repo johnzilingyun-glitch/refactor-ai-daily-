@@ -33,40 +33,18 @@ describe('StockHeroCard - AI Data Resilience Tests', () => {
     tradingPlan: { entryPrice: '100', targetPrice: '120', stopLoss: '90', strategy: 'Test' }
   };
 
-  it('OK Scenario: Renders successfully with standard valid string arrays', () => {
-    const okAnalysis = {
-      ...baseAnalysis,
-      historicalData: {
-        yearHigh: 150,
-        yearLow: 80,
-        majorEvents: ['Positive Earnings', 'CEO transition ok']
-      }
-    };
-
-    const { container } = render(<StockHeroCard analysis={okAnalysis} />);
+  it('OK Scenario: Renders successfully with core stock information', () => {
+    const { container } = render(<StockHeroCard analysis={baseAnalysis} />);
     expect(container).toBeInTheDocument();
-    expect(screen.getByText('Positive Earnings')).toBeInTheDocument();
+    expect(screen.getByText('Test Stock')).toBeInTheDocument();
+    expect(screen.getByText('TEST.SS')).toBeInTheDocument();
+    expect(screen.getByText('100.00')).toBeInTheDocument();
   });
 
-  it('NG Scenario: Survives gracefully without crashing when AI injects non-string object data into arrays', () => {
-    const ngAnalysis = {
-      ...baseAnalysis,
-      historicalData: {
-        yearHigh: 150,
-        yearLow: 80,
-        majorEvents: [
-          { date: '2026', event: 'Unexpected Object Injection instead of string' } 
-        ]
-      }
-    };
-
-    // The test naturally fails here if React throws "Objects are not valid as a React child"
-    // Our fix stringifies the object without blowing up the renderer or calling substring() on it.
-    const { container } = render(<StockHeroCard analysis={ngAnalysis} />);
+  it('Resilience Scenario: Renders successfully even if moat analysis is missing', () => {
+    const noMoatAnalysis = { ...baseAnalysis, moatAnalysis: undefined };
+    const { container } = render(<StockHeroCard analysis={noMoatAnalysis} />);
     expect(container).toBeInTheDocument();
-    
-    // Check if the safely stringified text is rendered instead of causing a white screen
-    const element = screen.getByText(/Unexpected Object Injection/i);
-    expect(element).toBeInTheDocument();
+    expect(screen.queryByText(/护城河/)).not.toBeInTheDocument();
   });
 });

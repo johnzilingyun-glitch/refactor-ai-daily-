@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import YahooFinance from 'yahoo-finance2';
-import { monitor } from './dataSourceHealth.js';
+import { monitor } from './dataSourceHealth';
 import { logDebug, logError } from './stockLogger.js';
 
 const yahooFinance = new YahooFinance();
@@ -202,26 +202,50 @@ router.get('/stock/commodities', async (req, res) => {
 
 // Financial News (Backend deterministic fetch to save AI tokens)
 router.get('/stock/news', async (req, res) => {
-  const { market } = req.query;
+  const { market, symbol } = req.query;
   const marketKey = (market as string) || 'A-Share';
-  const cacheKey = `news_${marketKey}`;
+  const symbolKey = symbol ? (symbol as string).toUpperCase() : null;
+  const cacheKey = symbolKey ? `news_${marketKey}_${symbolKey}` : `news_${marketKey}`;
   
   const cached = getCached(cacheKey);
   if (cached) return res.json(cached);
 
   try {
     const news: any[] = [];
-    // 1. Primary Top-Tier Fetch via Python Microservice (AkShare / FinNLP style)
-    try {
-      const pythonRes = await fetch(`http://127.0.0.1:8000/api/market/news?market=${marketKey}`);
-      if (pythonRes.ok) {
-        const pythonData = await pythonRes.json();
-        if (pythonData.success && pythonData.data && pythonData.data.length > 0) {
-          news.push(...pythonData.data);
+    
+    // 0. Ticker-specific search (Priority if symbol exists)
+    if (symbolKey) {
+      try {
+        const yfSym = appendMarketSuffix(symbolKey, marketKey);
+        const searchResult = await yahooFinance.search(yfSym, { newsCount: 8 });
+        if (searchResult?.news && searchResult.news.length > 0) {
+          searchResult.news.forEach((n: any) => {
+            news.push({
+              title: n.title,
+              url: n.link,
+              time: new Date(n.providerPublishTime).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }),
+              source: n.publisher || 'Yahoo Finance'
+            });
+          });
         }
+      } catch (e) {
+        logError(`Ticker News Fetch Failed for ${symbolKey}`, e);
       }
-    } catch (e) {
-      console.warn("Python News MS unavailable, falling back to Node fetchers:", e);
+    }
+
+    // 1. Primary Top-Tier Fetch via Python Microservice (AkShare / FinNLP style) - Only for general market news or if ticker news is empty
+    if (news.length < 3) {
+      try {
+        const pythonRes = await fetch(`http://127.0.0.1:8000/api/market/news?market=${marketKey}`);
+        if (pythonRes.ok) {
+          const pythonData = await pythonRes.json();
+          if (pythonData.success && pythonData.data && pythonData.data.length > 0) {
+            news.push(...pythonData.data);
+          }
+        }
+      } catch (e) {
+        console.warn("Python News MS unavailable, falling back to Node fetchers:", e);
+      }
     }
     
     // 2. Fallback simple fetch for Sina Roll News (if A-share/HK-share)

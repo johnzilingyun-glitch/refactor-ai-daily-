@@ -327,7 +327,7 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
             {/* AI-enriched sections: summary, sectors, commodities, recommendations */}
             {marketOverview.marketSummary ? (
             <>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3 stagger-children">
               <div className="premium-card p-8 md:col-span-2">
                 <p className="text-base italic leading-relaxed text-zinc-500 font-medium">"{marketOverview.marketSummary}"</p>
               </div>
@@ -473,7 +473,7 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
 
         <div className="space-y-6">
           {(overviewMarket === 'A-Share' || overviewMarket === 'HK-Share') && (
-            <div className="rounded-3xl border border-indigo-100 bg-gradient-to-b from-indigo-50/50 to-white p-6 shadow-[0_2px_12px_rgb(0,0,0,0.02)]">
+            <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--color-border-subtle)', background: 'var(--color-surface-card)', boxShadow: 'var(--shadow-sm)' }}>
               <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-950 mb-4">
                 <Coins size={18} className="text-indigo-600" />
                 {t('analysis.panel.institutional_consensus', 'Institutional Flow')}

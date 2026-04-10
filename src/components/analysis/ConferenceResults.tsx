@@ -3,7 +3,7 @@ import {
   AlertCircle, Loader2, AlertTriangle, Zap, Award, Target,
   RefreshCcw, Clock, Layers, Database, History, Coins,
   ShieldCheck, Search, TrendingUp, BarChart3, Cpu, CheckCircle2,
-  Share2, Download, User,
+  Share2, Download, User, ExternalLink,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
@@ -28,13 +28,37 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
   const isReviewing = useUIStore(selectIsReviewing);
   const { isGeneratingReport, isSendingReport, reportStatus } = useUIStore();
   const { discussionMessages, controversialPoints, tradingPlanHistory } = useDiscussionStore();
-  const {
-    scenarios, sensitivityFactors, expectationGap, calculations,
-    dataFreshnessStatus, stressTestLogic, catalystList,
-    verificationMetrics, capitalFlow, positionManagement, timeDimension,
-  } = useScenarioStore();
+  
+  // Destructure with fallbacks to single-shot analysis data if store is empty
+  const scenarioResults = useScenarioStore();
+  
+  const scenarios = scenarioResults.scenarios.length > 0 ? scenarioResults.scenarios : (analysis.scenarios || []);
+  const sensitivityFactors = scenarioResults.sensitivityFactors.length > 0 ? scenarioResults.sensitivityFactors : (analysis.sensitivityFactors || []);
+  const expectationGap = scenarioResults.expectationGap || analysis.expectationGap;
+  const calculations = scenarioResults.calculations.length > 0 ? scenarioResults.calculations : (analysis.calculations || []);
+  const dataFreshnessStatus = scenarioResults.dataFreshnessStatus || "Fresh";
+  const stressTestLogic = scenarioResults.stressTestLogic || analysis.stressTestLogic;
+  const catalystList = scenarioResults.catalystList.length > 0 ? scenarioResults.catalystList : (analysis.catalystList || []);
+  const verificationMetrics = scenarioResults.verificationMetrics.length > 0 ? scenarioResults.verificationMetrics : (analysis.verificationMetrics || []);
+  const capitalFlow = scenarioResults.capitalFlow || analysis.capitalFlow;
+  const positionManagement = scenarioResults.positionManagement || analysis.positionManagement;
+  const timeDimension = scenarioResults.timeDimension || analysis.timeDimension;
 
-  if (!isDiscussing && discussionMessages.length === 0) return null;
+  // New deep research fields
+  const industryAnchors = analysis.industryAnchors || [];
+  const fundamentalTable = analysis.fundamentalTable || [];
+  const moatAnalysis = analysis.moatAnalysis;
+  const narrativeConsistency = analysis.narrativeConsistency;
+  const cycleAnalysis = analysis.cycleAnalysis;
+
+  // Determine if we have enough deep data to show this panel even without a discussion
+  const hasDeepData = industryAnchors.length > 0 || 
+                      fundamentalTable.length > 0 || 
+                      scenarios.length > 0 || 
+                      !!expectationGap || 
+                      !!moatAnalysis;
+
+  if (!isDiscussing && discussionMessages.length === 0 && !hasDeepData) return null;
 
   return (
     <div className="flex flex-col gap-8 mt-4 pt-4 w-full">
@@ -236,6 +260,216 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Institutional Deep Research Sections */}
+              {industryAnchors.length > 0 && (
+                <div className="p-8 rounded-[2rem] bg-white border border-zinc-200 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2.5 rounded-2xl bg-emerald-600/10 text-emerald-600 border border-emerald-600/20">
+                      <Database size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">Institutional Core Variables</h4>
+                      <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Dynamic Macro Anchors & Supply Chain Matrix</p>
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-100">
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-400 tracking-widest">Variable / Material</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-400 tracking-widest text-center">Value</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-400 tracking-widest text-center">Weight</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-400 tracking-widest text-center">30D Δ</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-400 tracking-widest">Transmission Logic</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {industryAnchors.map((anchor, idx) => (
+                          <tr key={idx} className="border-b border-zinc-50 group hover:bg-zinc-50 transition-colors">
+                            <td className="py-4 px-2">
+                              <span className="text-xs font-bold text-zinc-900">{anchor.variable}</span>
+                            </td>
+                            <td className="py-4 px-2 text-center">
+                              <span className="text-xs font-mono font-medium text-emerald-600">{anchor.currentValue}</span>
+                            </td>
+                            <td className="py-4 px-2 text-center">
+                              <span className="text-[10px] font-bold text-zinc-500">{anchor.weight}</span>
+                            </td>
+                            <td className="py-4 px-2 text-center">
+                              <span className={cn(
+                                "text-[10px] font-mono font-bold",
+                                anchor.monthlyChange?.includes('+') ? "text-rose-500" : "text-emerald-500"
+                              )}>{anchor.monthlyChange}</span>
+                            </td>
+                            <td className="py-4 px-2">
+                              <p className="text-[10px] text-zinc-500 leading-relaxed max-w-xs">{anchor.logic}</p>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {fundamentalTable.length > 0 && (
+                <div className="p-8 rounded-[2rem] bg-zinc-950 border border-zinc-800 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none">
+                    <Cpu size={140} className="text-zinc-200" />
+                  </div>
+                  <div className="flex items-center gap-3 mb-8 relative z-10">
+                    <div className="p-2.5 rounded-2xl bg-zinc-100/10 text-zinc-100 border border-zinc-100/15">
+                      <BarChart3 size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-100">Consensus vs Reality Matrix</h4>
+                      <p className="text-[9px] text-zinc-500 font-medium uppercase tracking-wider">Alpha Source Verification - 2026E</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto relative z-10">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-800">
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">Indicator</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">Current/Real</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">Market Est.</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest text-center">Deviation</th>
+                          <th className="py-4 px-2 text-[10px] uppercase font-bold text-zinc-500 tracking-widest">Analyst Note</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fundamentalTable.map((item, idx) => (
+                          <tr key={idx} className="border-b border-zinc-900 group hover:bg-white/5 transition-colors">
+                            <td className="py-4 px-2">
+                              <span className="text-xs font-bold text-zinc-300">{item.indicator}</span>
+                            </td>
+                            <td className="py-4 px-2">
+                              <span className="text-xs font-mono font-bold text-indigo-400">{item.value}</span>
+                            </td>
+                            <td className="py-4 px-2">
+                              <span className="text-xs font-mono text-zinc-500">{item.consensus}</span>
+                            </td>
+                            <td className="py-4 px-2 text-center">
+                              <span className={cn(
+                                "text-[10px] font-mono font-bold px-2 py-0.5 rounded",
+                                item.deviation?.includes('+') ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                              )}>{item.deviation}</span>
+                            </td>
+                            <td className="py-4 px-2">
+                              <p className="text-[10px] text-zinc-400 leading-relaxed italic">"{item.remark}"</p>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {(moatAnalysis || cycleAnalysis || narrativeConsistency) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {moatAnalysis && (
+                    <div className="p-8 rounded-[2rem] bg-indigo-600/5 border border-indigo-100 shadow-sm group">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 rounded-2xl bg-indigo-600 text-white">
+                          <ShieldCheck size={20} />
+                        </div>
+                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">Moat Analysis</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-zinc-500">Strength:</span>
+                          <span className={cn(
+                            "text-xs font-bold uppercase px-3 py-1 rounded-full",
+                            moatAnalysis.strength === "Wide" ? "bg-emerald-500/10 text-emerald-600" :
+                            moatAnalysis.strength === "Narrow" ? "bg-indigo-600/10 text-indigo-600" :
+                            "bg-rose-500/10 text-rose-600"
+                          )}>{moatAnalysis.strength} MOAT</span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white border border-zinc-200/60">
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Source of Moat</p>
+                          <p className="text-xs font-bold text-zinc-900">{moatAnalysis.type}</p>
+                        </div>
+                        <p className="text-sm text-zinc-600 leading-relaxed font-medium">{moatAnalysis.logic}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {cycleAnalysis && (
+                    <div className="p-8 rounded-[2rem] bg-amber-500/5 border border-amber-500/10 shadow-sm group">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 rounded-2xl bg-amber-500 text-white">
+                          <RefreshCcw size={20} />
+                        </div>
+                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Cycle Dynamics</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-zinc-500">Current Phase:</span>
+                          <span className="text-xs font-bold uppercase px-3 py-1 rounded-full bg-amber-500/10 text-amber-600">
+                            {cycleAnalysis.stage} PHASE
+                          </span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white border border-zinc-200/60">
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-1">Volatility Risk</p>
+                          <p className="text-xs font-bold text-zinc-900">{cycleAnalysis.volatilityRisk}</p>
+                        </div>
+                        <p className="text-sm text-zinc-600 leading-relaxed font-medium">{cycleAnalysis.logic}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recent Catalysts & Intelligence */}
+              {((analysis.news && analysis.news.length > 0) || (analysis.historicalData?.majorEvents && analysis.historicalData.majorEvents.length > 0)) && (
+                <div className="p-8 rounded-[2rem] bg-zinc-50/50 border border-zinc-200/60 shadow-sm">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2.5 rounded-2xl bg-amber-600/10 text-amber-600 border border-amber-600/20">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">Recent Catalysts & Intelligence</h4>
+                      <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Verified Real-time Narrative Stream</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {analysis.news?.map((n: any, i: number) => (
+                      <a 
+                        key={`news-catalyst-${i}`} 
+                        href={n.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-4 rounded-xl bg-white border border-zinc-200 hover:border-amber-600/30 transition-all group flex flex-col justify-between"
+                      >
+                        <h5 className="text-[11px] font-bold text-zinc-900 line-clamp-2 leading-relaxed mb-3 group-hover:text-amber-600 transition-colors">
+                          {n.title}
+                        </h5>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">{n.source}</span>
+                          <div className="flex items-center gap-1.5 text-[9px] font-mono font-medium text-zinc-400 italic">
+                            {n.time}
+                            <ExternalLink size={10} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                    
+                    {(!analysis.news || analysis.news.length === 0) && analysis.historicalData?.majorEvents?.map((event: any, i: number) => (
+                      <div key={`event-catalyst-${i}`} className="p-4 rounded-xl bg-white border border-zinc-200 flex items-start gap-3">
+                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <p className="text-[11px] font-medium text-zinc-500 leading-relaxed italic">
+                          {typeof event === 'string' ? event : JSON.stringify(event)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -573,10 +807,8 @@ export function ConferenceResults({ analysis, onSendDiscussionReport }: Conferen
               ))}
               {discussionMessages.length > 0 && isDiscussing && (
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-50/30 border border-zinc-200/60">
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce [animation-delay:-0.3s]" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce [animation-delay:-0.15s]" />
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce" />
+                  <div className="loading-pulse">
+                    <span /><span /><span />
                   </div>
                   <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">{t('analysis.conference.active_discussion')}</p>
                 </div>

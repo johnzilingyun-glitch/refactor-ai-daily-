@@ -112,14 +112,18 @@ JSON schema:
 `;
 };
 
-export const getAnalyzeStockPrompt = (symbol: string, market: Market, realtimeData: any, commoditiesData: any[], history: any[], beijingDate: string, beijingShortDate: string, now: Date, language: Language = "en") => {
+export const getAnalyzeStockPrompt = (symbol: string, market: Market, realtimeData: any, commoditiesData: any[], newsData: any[], history: any[], beijingDate: string, beijingShortDate: string, now: Date, language: Language = "en") => {
   const isChinese = language === "zh-CN";
   return `
 Current date and time (UTC): ${now.toISOString()}
 Current date and time (China Standard Time): ${now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
 
 **REAL-TIME DATA TOOL OUTPUT (ABSOLUTE GROUND TRUTH)**:
-${realtimeData ? JSON.stringify(realtimeData, null, 2) : "No real-time data provided. Rely on your internal knowledge base."}
+${realtimeData ? JSON.stringify(realtimeData, null, 2) : "No real-time data provided. Use Google Search to find the latest market data. Do NOT guess or fabricate prices."}
+
+**REAL-TIME NEWS DATA (GROUND TRUTH)**:
+${newsData && newsData.length > 0 ? JSON.stringify(newsData, null, 2) : "No real-time ticker news provided. Use Google Search to find latest catalysts."}
+**IMPORTANT**: Use THIS news data to populate your "news" array and to inform your "industryAnchors" and "fundamentalAnalysis". Do not invent news.
 
 **REAL-TIME COMMODITY DATA (GROUND TRUTH)**:
 ${formatCommoditiesToMarkdown(commoditiesData)}
@@ -165,7 +169,7 @@ Requirements:
        1. **Pre-label the source and date**: Before presenting the value, explicitly state the source and the date of the data.
        2. **Cross-verify**: You MUST cross-verify this data point against at least TWO authoritative sources. If there is a discrepancy, explain how you resolved it or which source you prioritized and why.
    - **TABLE 1: REAL-TIME CORE INDICATORS & DEVIATION (MANDATORY)**: Must include columns: Indicator (2026E), Real-time Value, Market Consensus, Deviation (%), Note. Include EPS, PE (Forward), ROE, Dividend Yield. **DATA CONSISTENCY (CRITICAL)**: Prioritize the latest real-time data from search and explicitly label the data date.
-   - **TABLE 2: INDUSTRY CORE VARIABLES & MACRO ANCHORS (DYNAMIC)**: Must include columns: Variable/Material (with units), Current Value, Logic Weight, Last 30 Days Change (%), cost/revenue transmission logic, **Data Source and Date (MANDATORY)**.
+   - **TABLE 2: INDUSTRY CORE VARIABLES & MACRO ANCHORS (DYNAMIC)**: Must include columns: Variable/Material (with units), Current Value, Logic Weight, Last 30 Days Change (%), cost/revenue transmission logic, **Data Source and Date (MANDATORY)**. If no industry-specific macro variables are logically relevant (e.g., for a pure-software company), you may return this as an empty array instead of forcing irrelevant entries.
    - **VARIABLE SELECTION & VERIFICATION (CRITICAL)**: DO NOT include irrelevant variables. You must use industry-specific variables relevant to this stock.
    - **EXPECTATION GAP IDENTIFICATION**: Identify market blind spots and Alpha sources.
    - **TARGET PRICE & SENTIMENT**: Provide a 6-month target range (with confidence interval) and a sentiment score (0-100).
@@ -187,7 +191,7 @@ Requirements:
 8. **DATA TYPES**: 
    - "price", "change", and "changePercent" MUST be numbers (not strings).
    - "changePercent" should be the percentage value (e.g., 5.2 for 5.2% increase).
-9. Add a brief mention of any widely known major news items for this company, but explicitly avoid inventing specific links or non-existent URLs.
+9. Add a brief mention of any widely known major news items for this company. For the "news" array, use ONLY the news items provided in the REAL-TIME NEWS DATA section. **NEVER fabricate URLs** — if the original news item has a URL, include it; otherwise leave the "url" field as an empty string.
 10. All user-facing text fields must be in ${isChinese ? "Simplified Chinese" : "English"}.
 11. Provide summary, technicalAnalysis, fundamentalAnalysis, sentiment, score, recommendation, keyRisks, keyOpportunities, and a detailed tradingPlan.
 12. **MARGIN OF SAFETY (NEW)**: Incorporate "Margin of Safety" theory into the fundamental analysis and trading plan.
@@ -197,7 +201,7 @@ Requirements:
 16. **TRACKABLE METRICS (NEW)**: Define specific "Verification Metrics".
 17. **CAPITAL BEHAVIOR (NEW)**: Analyze Northbound flow, institutional changes, and AH premium.
 18. **TRADING PLAN LOGIC (NEW)**: 
-    - If the recommendation is NOT "Buy" or "Strong Buy", the tradingPlan should state "Not Recommended" for entryPrice, targetPrice, and stopLoss. 
+    - If the recommendation is NOT "Buy" or "Strong Buy", set entryPrice, targetPrice, and stopLoss to "${isChinese ? '不推荐' : 'Not Recommended'}", and strategy should explain why the current price action doesn't support an entry.
     - **STRATEGY RISKS (NEW)**: Clearly state the specific risks associated with the recommended strategy.
 19. tradingPlan must include: entryPrice, targetPrice, stopLoss, strategy, and strategyRisks (all as strings).
 20. sentiment must be one of: Bullish, Bearish, Neutral.
@@ -317,6 +321,118 @@ JSON schema:
   }
 }
 `;
+};
+
+/**
+ * Correction prompt: sent when the AI's first-pass analysis used wrong price data.
+ * This is a lightweight second call — no Google Search, just re-derive conclusions from correct numbers.
+ */
+export const getCorrectionPrompt = (originalAnalysis: StockAnalysis, correctedData: Record<string, any>, language: Language = "en") => {
+  const isChinese = language === "zh-CN";
+  const driftSignals: string[] = correctedData._driftSignals || [];
+  const driftList = driftSignals.length > 0 ? driftSignals.map(s => `  - ${s}`).join('\n') : '';
+  const commodityDrifts: Array<{ varName: string; aiValue: number; apiValue: number; apiName: string; unit: string }> = correctedData._commodityDrifts || [];
+  const commoditiesData: any[] = correctedData._commoditiesData || [];
+
+  // Format commodity corrections section
+  const commodityCorrectionCN = commodityDrifts.length > 0
+    ? `\n**核心变量/行业锚点商品数据偏差**:\n${commodityDrifts.map(d => `  - "${d.varName}": 你使用=${d.aiValue}, API正确值=${d.apiValue} ${d.unit} (来源: ${d.apiName})`).join('\n')}\n\n**实时商品行情 (GROUND TRUTH)**:\n${formatCommoditiesToMarkdown(commoditiesData)}`
+    : '';
+  const commodityCorrectionEN = commodityDrifts.length > 0
+    ? `\n**Core Variable / Industry Anchor Commodity Drift**:\n${commodityDrifts.map(d => `  - "${d.varName}": You used=${d.aiValue}, API correct=${d.apiValue} ${d.unit} (source: ${d.apiName})`).join('\n')}\n\n**REAL-TIME COMMODITY DATA (GROUND TRUTH)**:\n${formatCommoditiesToMarkdown(commoditiesData)}`
+    : '';
+
+  return `
+${isChinese ? `
+**数据校正指令 (CRITICAL)**
+
+你上一轮分析中使用了错误的数据。以下是权威API返回的正确数据，与你使用的数据存在显著偏差：
+
+**检测到偏差的字段**:
+${driftList || '  - 价格及关联数据'}
+
+**正确的实时交易数据 (ABSOLUTE GROUND TRUTH)**:
+- 现价: ${correctedData.price}
+- 涨跌额: ${correctedData.change}
+- 涨跌幅: ${correctedData.changePercent}%
+- 前收盘: ${correctedData.previousClose}
+${correctedData.open != null ? `- 开盘价: ${correctedData.open}` : ''}
+${correctedData.dailyHigh != null ? `- 最高价: ${correctedData.dailyHigh}` : ''}
+${correctedData.dailyLow != null ? `- 最低价: ${correctedData.dailyLow}` : ''}
+${correctedData.volume != null ? `- 成交量: ${correctedData.volume}` : ''}
+${correctedData.marketCap != null ? `- 总市值: ${correctedData.marketCap}` : ''}
+${correctedData.pe != null ? `- 市盈率(TTM): ${correctedData.pe}` : ''}
+${commodityCorrectionCN}
+
+**你上一轮使用的错误数据**:
+- 价格: ${originalAnalysis.stockInfo.price} (正确值: ${correctedData.price})
+- 涨跌: ${originalAnalysis.stockInfo.change} (正确值: ${correctedData.change})
+- 涨跌幅: ${originalAnalysis.stockInfo.changePercent}% (正确值: ${correctedData.changePercent}%)
+- 前收盘: ${originalAnalysis.stockInfo.previousClose} (正确值: ${correctedData.previousClose})
+${correctedData.pe != null && originalAnalysis.fundamentals?.pe ? `- 市盈率: ${originalAnalysis.fundamentals.pe} (正确值: ${correctedData.pe})` : ''}
+
+你必须基于正确数据，重新推导以下内容：
+1. **technicalAnalysis**: 基于正确价格/成交量重新评估技术形态、支撑阻力位、量价关系
+2. **fundamentalAnalysis**: 基于正确市值/市盈率重新计算估值水位（PE/PB基于正确值）
+3. **fundamentalTable**: 更新基本面表格中的成交量、市值、市盈率等字段为正确API值
+4. **coreVariables / industryAnchors**: 如检测到商品/行业数据偏差，更新对应核心变量的value和delta，并重新推导基于该变量的结论（如成本传导、利润预测等）
+5. **tradingPlan**: 重新评估入场价、目标价、止损位是否仍然合理
+6. **score**: 基于正确数据重新评分
+7. **sentiment / recommendation**: 基于正确涨跌幅、量能、行业变量重新判断情绪和建议
+8. **keyRisks / keyOpportunities**: 如果价格/量能/核心变量变化方向或幅度变了，风险和机会判断也需更新
+9. **businessModel**: 如果核心变量涉及成本/收入驱动因子，更新drivers和projectedProfit
+10. **summary**: 用正确数据重写摘要
+
+保留原有分析的行业逻辑、护城河分析、新闻事件等定性判断（这些不受数据偏差影响），仅更新受错误数据影响的量化结论。
+` : `
+**DATA CORRECTION DIRECTIVE (CRITICAL)**
+
+Your previous analysis used incorrect data. Here is the authoritative API data with significant deviation from what you used:
+
+**Drift detected in**:
+${driftList || '  - Price and related fields'}
+
+**CORRECT REAL-TIME TRADING DATA (ABSOLUTE GROUND TRUTH)**:
+- Price: ${correctedData.price}
+- Change: ${correctedData.change}
+- Change%: ${correctedData.changePercent}%
+- Previous Close: ${correctedData.previousClose}
+${correctedData.open != null ? `- Open: ${correctedData.open}` : ''}
+${correctedData.dailyHigh != null ? `- Day High: ${correctedData.dailyHigh}` : ''}
+${correctedData.dailyLow != null ? `- Day Low: ${correctedData.dailyLow}` : ''}
+${correctedData.volume != null ? `- Volume: ${correctedData.volume}` : ''}
+${correctedData.marketCap != null ? `- Market Cap: ${correctedData.marketCap}` : ''}
+${correctedData.pe != null ? `- P/E (TTM): ${correctedData.pe}` : ''}
+${commodityCorrectionEN}
+
+**Your previous incorrect data**:
+- Price: ${originalAnalysis.stockInfo.price} (Correct: ${correctedData.price})
+- Change: ${originalAnalysis.stockInfo.change} (Correct: ${correctedData.change})
+- Change%: ${originalAnalysis.stockInfo.changePercent}% (Correct: ${correctedData.changePercent}%)
+- Previous Close: ${originalAnalysis.stockInfo.previousClose} (Correct: ${correctedData.previousClose})
+${correctedData.pe != null && originalAnalysis.fundamentals?.pe ? `- P/E: ${originalAnalysis.fundamentals.pe} (Correct: ${correctedData.pe})` : ''}
+
+You must re-derive the following based on correct data:
+1. **technicalAnalysis**: Re-evaluate technical patterns, support/resistance, volume-price analysis with correct price & volume
+2. **fundamentalAnalysis**: Recalculate valuation metrics with correct market cap & P/E
+3. **fundamentalTable**: Update volume, market cap, P/E and other verifiable fields to correct API values
+4. **coreVariables / industryAnchors**: If commodity/industry data drift was detected, update the variable's value and delta, and re-derive all conclusions based on it (cost transmission, profit projections, etc.)
+5. **tradingPlan**: Re-assess entry, target, stop-loss based on correct price levels
+6. **score**: Re-score with correct data
+7. **sentiment / recommendation**: Re-judge based on correct change direction, magnitude, volume, and industry variables
+8. **keyRisks / keyOpportunities**: Update if price, volume, or core variables changed direction or magnitude
+9. **businessModel**: If core variable drift involves cost/revenue drivers, update drivers and projectedProfit
+10. **summary**: Rewrite with correct data
+
+Retain qualitative analysis (industry logic, moat analysis, news events) — only update quantitative conclusions affected by the data drift.
+`}
+
+**原始分析 (保留定性部分，修正量化部分)**:
+${JSON.stringify(originalAnalysis)}
+
+**LANGUAGE**: All output in ${isChinese ? "Simplified Chinese" : "English"}.
+Return the complete corrected JSON with the same schema as the original. No markdown fences.
+`.trim();
 };
 
 export const getChatMessagePrompt = (userMessage: string, analysis: StockAnalysis, commoditiesData: any[], language: Language = "en") => {
@@ -442,8 +558,11 @@ export const getDailyReportPrompt = (marketOverview: MarketOverview, commodities
     1. Summarize the market tone.
     2. Include key indices performance.
     3. List 3-5 major financial news items.
-    4. **NEWS ACCURACY & ACCESSIBILITY (CRITICAL)**: 
-       - Each news item MUST include a direct, publicly accessible URL.
+    4. **NEWS ACCURACY (CRITICAL)**: 
+       - Each news item MUST be a real, verifiable event. Use Google Search grounding to find actual news.
+       - Include source name and date for each news item.
+       - If you have a verified URL from Google Search, include it. Otherwise, omit the URL field rather than inventing a fake one.
+       - **NEVER fabricate or guess URLs**. A missing URL is far better than a hallucinated one.
     5. Provide a prediction for today's market opening and trend.
     6. Recommend 3 stocks or sectors to watch today with brief reasons.
     7. Please use a format friendly to Feishu cards: do not use #, >, - or other Markdown symbols. Use **bold text** and Emojis as headers. Each major block must be separated by '---'.
@@ -592,6 +711,12 @@ export const getDiscussionPrompt = (
     10. **Kelly Criterion Position Sizing (NEW)**:
         - The Chief Strategist MUST use a simplified Kelly Criterion [f* = (bp - q) / b] to suggest position size.
         - b = odds, p = probability of win, q = probability of loss.
+    11. **ANTI-HALLUCINATION RULES (CRITICAL)**:
+        - **Price Data**: The stock price, change, and changePercent in your analysis MUST match the "Analysis Target Data" provided. Do NOT invent different price values.
+        - **News & Events**: Only reference news from the provided data or from verified Google Search results. Do NOT fabricate news events.
+        - **URLs**: Only include URLs returned by Google Search grounding. NEVER guess or construct URLs.
+        - **Data Gaps**: If you cannot find a specific data point, explicitly say "Data not available" instead of inventing a plausible number.
+        - **Source Attribution**: Every quantitative claim must cite its source (API data, Google Search result, or expert calculation). Unsourced numbers are hallucinations.
 
     Return JSON ONLY. No markdown code blocks, no extraneous text.
 
@@ -616,18 +741,30 @@ export const getDiscussionPrompt = (
         "riskRewardRatio": 2.5
       },
       "coreVariables": [
-        { "name": "Var Name", "value": "Val", "unit": "Unit", "marketExpect": "Exp", "delta": "Delta", "reason": "Reason", "evidenceLevel": "Lvl", "source": "Src", "dataDate": "Date" }
+        { "name": "Var Name", "value": "Val", "unit": "Unit", "marketExpect": "Exp", "delta": "Delta", "reason": "Reason", "evidenceLevel": "High|Medium|Low", "source": "Src", "dataDate": "YYYY-MM-DD" }
       ],
-      "businessModel": { ... },
-      "quantifiedRisks": [ ... ],
+      "businessModel": { "revenue_streams": "string", "cost_structure": "string", "competitive_advantage": "string", "key_risks": "string" },
+      "quantifiedRisks": [
+        { "risk": "string", "probability": 0.3, "impact": "-15%", "expectedLoss": "string", "hedge": "string" }
+      ],
       "riskAdjustedValuation": 150,
-      "scenarios": [ ... ],
-      "sensitivityFactors": [ ... ],
-      "expectationGap": { ... },
-      "expectedValueOutcome": { ... },
-      "sensitivityMatrix": [ ... ],
-      "controversialPoints": [ ... ],
-      "calculations": [ ... ],
+      "scenarios": [
+        { "name": "Bull Case", "probability": 0.3, "targetPrice": "string", "catalyst": "string", "logic": "string" },
+        { "name": "Base Case", "probability": 0.5, "targetPrice": "string", "catalyst": "string", "logic": "string" },
+        { "name": "Bear Case", "probability": 0.2, "targetPrice": "string", "catalyst": "string", "logic": "string" }
+      ],
+      "sensitivityFactors": [
+        { "factor": "string", "upside": "string", "downside": "string", "currentState": "string" }
+      ],
+      "expectationGap": { "blind_spot": "string", "alpha_source": "string", "market_mispricing": "string" },
+      "expectedValueOutcome": { "ev": 0, "upside": "string", "downside": "string", "riskRewardRatio": 0 },
+      "sensitivityMatrix": [
+        { "variable": "string", "change": "string", "netProfitImpact": "string", "priceImpact": "string" }
+      ],
+      "controversialPoints": ["string"],
+      "calculations": [
+        { "name": "string", "formula": "string", "result": "string", "interpretation": "string" }
+      ],
       "dataFreshnessStatus": "Fresh",
       "stressTestLogic": "...",
       "catalystList": [ ... ],

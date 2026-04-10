@@ -18,8 +18,8 @@ export function ScorePanel({ analysis, trackRecord }: ScorePanelProps) {
   return (
     <div className="space-y-8">
       {/* Score */}
-      <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white p-8 text-center">
-        <div className="absolute left-0 top-0 h-1 w-full bg-zinc-50">
+      <div className="relative overflow-hidden rounded-2xl border bg-white p-8 text-center" style={{ borderColor: 'var(--color-border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
+        <div className="absolute left-0 top-0 h-1 w-full" style={{ background: 'var(--color-surface-sunken)' }}>
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${analysis.score}%` }}
@@ -44,7 +44,7 @@ export function ScorePanel({ analysis, trackRecord }: ScorePanelProps) {
 
       {/* Opportunities & Risks */}
       <div className="space-y-4">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+        <div className="rounded-2xl border bg-white p-6" style={{ borderColor: 'var(--color-border-subtle)' }}>
           <h3 className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-indigo-600">
             {t('analysis.info.opportunities')}
           </h3>
@@ -58,7 +58,7 @@ export function ScorePanel({ analysis, trackRecord }: ScorePanelProps) {
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+        <div className="rounded-2xl border bg-white p-6" style={{ borderColor: 'var(--color-border-subtle)' }}>
           <h3 className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-rose-400">
             {t('analysis.info.risks')}
           </h3>

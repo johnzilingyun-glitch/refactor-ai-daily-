@@ -10,7 +10,7 @@ router.post('/feishu/send-report', async (req, res) => {
     return res.status(500).json({ error: '飞书 Webhook 未配置。请在系统设置中填入 Webhook URL。' });
   }
 
-  if (!content) {
+  if (!content?.trim()) {
     return res.status(400).json({ error: '内容不能为空' });
   }
 
@@ -89,6 +89,10 @@ router.post('/feishu/send-report', async (req, res) => {
         card: card,
       }),
     });
+
+    if (!response.ok) {
+      throw new Error(`Feishu API HTTP ${response.status}: ${response.statusText}`);
+    }
 
     const data = await response.json();
     if (data.code !== 0) {

@@ -17,8 +17,6 @@ class RequestScheduler {
   private queue: QueuedTask<any>[] = [];
   private isProcessing: boolean = false;
   
-  // Gemini Free Tier: ~15 RPM is safe. Let's target 12 RPM (5s interval).
-  private minIntervalMs: number = 4500; 
   private lastRequestTime: number = 0;
   private cooldownUntil: number = 0;
 
@@ -74,7 +72,7 @@ class RequestScheduler {
         if (model.includes('pro')) {
           dynamicInterval = 2500; // 25 RPM safety
         } else {
-          dynamicInterval = 300;  // 1000-4000 RPM safety
+          dynamicInterval = 1500;  // ~40 RPM safety for paid non-Pro models
         }
       } else {
         // Free tier model-specific RPM logic
@@ -135,11 +133,10 @@ class RequestScheduler {
     return this.queue.length;
   }
 
-  public reset(minInterval: number = 4500) {
+  public reset() {
     this.queue = [];
     this.isProcessing = false;
     this.lastRequestTime = 0;
-    this.minIntervalMs = minInterval;
     this.cooldownUntil = 0;
   }
 }

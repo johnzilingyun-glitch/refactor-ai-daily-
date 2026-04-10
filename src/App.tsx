@@ -83,11 +83,11 @@ export default function App() {
   }, [urlSearchPending, initialUrlParams.symbol, handleSearch]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-600 font-sans selection:bg-indigo-600/10 transition-colors duration-500">
+    <div className="min-h-screen font-sans selection:bg-indigo-600/10 transition-colors duration-500" style={{ background: 'var(--color-surface-primary)', color: 'var(--color-text-secondary)' }}>
       {/* Subtle Background Decoration */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[10%] left-[15%] h-[40%] w-[40%] rounded-full bg-indigo-600/5 blur-[120px]" />
-        <div className="absolute bottom-[10%] right-[15%] h-[30%] w-[30%] rounded-full bg-violet-500/5 blur-[120px]" />
+        <div className="absolute top-[10%] left-[15%] h-[40%] w-[40%] rounded-full blur-[120px]" style={{ background: 'oklch(0.45 0.18 270 / 0.04)' }} />
+        <div className="absolute bottom-[10%] right-[15%] h-[30%] w-[30%] rounded-full blur-[120px]" style={{ background: 'oklch(0.50 0.14 300 / 0.03)' }} />
       </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-12 md:px-12">
@@ -155,13 +155,13 @@ export default function App() {
           {analysis ? (
             <ErrorBoundary fallback="Analysis component encountered an error">
             <Suspense fallback={
-              <div className="space-y-6 animate-pulse">
-                <div className="h-16 bg-zinc-200/60 rounded-2xl" />
-                <div className="h-64 bg-zinc-200/40 rounded-2xl" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="h-32 bg-zinc-200/40 rounded-2xl" />
-                  <div className="h-32 bg-zinc-200/40 rounded-2xl" />
-                  <div className="h-32 bg-zinc-200/40 rounded-2xl" />
+              <div className="space-y-6 stagger-children">
+                <div className="h-16 skeleton" />
+                <div className="h-64 skeleton" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="h-32 skeleton" />
+                  <div className="h-32 skeleton" />
+                  <div className="h-32 skeleton" />
                 </div>
               </div>
             }>
@@ -194,15 +194,13 @@ export default function App() {
 
       <DetailModal onSendHistoryToFeishu={handleSendHistoryToFeishu} />
 
-      <footer className="mx-auto mt-12 max-w-7xl border-t border-zinc-200 px-4 py-12 md:px-8">
-        <div className="flex flex-col items-center justify-between gap-6 font-mono text-xs uppercase tracking-widest text-zinc-400 md:flex-row">
-          <div className="text-center md:text-left">
-            <p>© 2026 每日股票智能分析 AI</p>
-          </div>
+      <footer className="mx-auto mt-16 max-w-7xl px-4 py-10 md:px-8" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+        <div className="flex flex-col items-center justify-between gap-6 section-label md:flex-row">
+          <p>© 2026 AI 每日智析</p>
           <div className="flex gap-8">
-            <a href="#" className="transition-colors hover:text-zinc-500">数据来源</a>
-            <a href="#" className="transition-colors hover:text-zinc-500">服务条款</a>
-            <a href="#" className="transition-colors hover:text-zinc-500">隐私政策</a>
+            <a href="#" className="transition-colors duration-200" style={{ color: 'var(--color-text-muted)' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}>数据来源</a>
+            <a href="#" className="transition-colors duration-200" style={{ color: 'var(--color-text-muted)' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}>服务条款</a>
+            <a href="#" className="transition-colors duration-200" style={{ color: 'var(--color-text-muted)' }} onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-text-secondary)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}>隐私政策</a>
           </div>
         </div>
       </footer>

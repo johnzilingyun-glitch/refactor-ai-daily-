@@ -47,7 +47,7 @@ const roleColors: Record<AgentRole, string> = {
   "Deep Research Specialist": "text-cyan-600 bg-cyan-50 border-cyan-200/60",
   "Professional Reviewer": "text-blue-600 bg-blue-50 border-blue-200/60",
   "Chief Strategist": "text-amber-600 bg-amber-50 border-amber-200/60",
-  "Moderator": "text-zinc-500 bg-zinc-100 border-zinc-200/60",
+  "Moderator": "text-zinc-600 bg-zinc-50 border-zinc-200/60",
 };
 
 interface DiscussionPanelProps {
