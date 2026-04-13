@@ -10,9 +10,9 @@ describe('Discussion Orchestrator', () => {
       maxConcurrency: 3,
     };
 
-    it('generates 14 rounds for deep analysis', () => {
+    it('generates 9 rounds for deep analysis (with parallel groups)', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds).toHaveLength(14);
+      expect(rounds).toHaveLength(9);
     });
 
     it('starts with Deep Research Specialist in round 1', () => {
@@ -23,31 +23,38 @@ describe('Discussion Orchestrator', () => {
       expect(rounds[0].dependsOn).toEqual([]);
     });
 
-    it('sequentially calls Technical analyst in round 2', () => {
+    it('parallelizes Technical Analyst & Fundamental Analyst in round 2', () => {
       const rounds = buildTopology(deepConfig);
       expect(rounds[1].round).toBe(2);
-      expect(rounds[1].experts).toEqual(['Technical Analyst']);
-      expect(rounds[1].parallel).toBe(false);
+      expect(rounds[1].experts).toEqual(['Technical Analyst', 'Fundamental Analyst']);
+      expect(rounds[1].parallel).toBe(true);
       expect(rounds[1].dependsOn).toEqual([1]);
     });
 
-    it('has Fundamental Analyst in round 3', () => {
+    it('has Professional Reviewer in round 7', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds[2].round).toBe(3);
-      expect(rounds[2].experts).toEqual(['Fundamental Analyst']);
-      expect(rounds[2].parallel).toBe(false);
+      expect(rounds[6].round).toBe(7);
+      expect(rounds[6].experts).toContain('Professional Reviewer');
     });
 
-    it('has Professional Reviewer in round 11', () => {
+    it('ends with Chief Strategist in round 9', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds[10].round).toBe(11);
-      expect(rounds[10].experts).toContain('Professional Reviewer');
+      expect(rounds[8].round).toBe(9);
+      expect(rounds[8].experts).toEqual(['Chief Strategist']);
     });
 
-    it('ends with Chief Strategist in round 14', () => {
+    it('parallelizes risk management triad in round 5', () => {
       const rounds = buildTopology(deepConfig);
-      expect(rounds[13].round).toBe(14);
-      expect(rounds[13].experts).toEqual(['Chief Strategist']);
+      expect(rounds[4].round).toBe(5);
+      expect(rounds[4].experts).toEqual(['Aggressive Risk Analyst', 'Conservative Risk Analyst', 'Neutral Risk Analyst']);
+      expect(rounds[4].parallel).toBe(true);
+    });
+
+    it('parallelizes Bull & Bear revision in round 8', () => {
+      const rounds = buildTopology(deepConfig);
+      expect(rounds[7].round).toBe(8);
+      expect(rounds[7].experts).toEqual(['Bull Researcher', 'Bear Researcher']);
+      expect(rounds[7].parallel).toBe(true);
     });
   });
 
@@ -80,14 +87,25 @@ describe('Discussion Orchestrator', () => {
   });
 
   describe('buildTopology - standard level', () => {
-    it('generates 8 rounds for standard analysis', () => {
+    it('generates 6 rounds for standard analysis (with parallel groups)', () => {
       const config: OrchestratorConfig = {
         level: 'standard',
         assetType: 'stock',
         maxConcurrency: 3,
       };
       const rounds = buildTopology(config);
-      expect(rounds).toHaveLength(8);
+      expect(rounds).toHaveLength(6);
+    });
+
+    it('parallelizes TA & FA in standard mode', () => {
+      const config: OrchestratorConfig = {
+        level: 'standard',
+        assetType: 'stock',
+        maxConcurrency: 3,
+      };
+      const rounds = buildTopology(config);
+      expect(rounds[1].experts).toEqual(['Technical Analyst', 'Fundamental Analyst']);
+      expect(rounds[1].parallel).toBe(true);
     });
   });
 

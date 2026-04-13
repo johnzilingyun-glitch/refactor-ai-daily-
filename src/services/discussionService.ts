@@ -218,39 +218,77 @@ export async function startMultiRoundDiscussion(
     };
 
     let results: (ExpertOutput | null)[] = [];
-    // Always run experts sequentially to ensure true serial discussion
-    // and avoid API rate limits (503)
-    for (let i = 0; i < round.experts.length; i++) {
-      if (abortSignal?.aborted) break;
-      // Add inter-call delay to space out requests (skip before first call)
-      if (i > 0) await delay(400);
-      
-      let output: ExpertOutput | null = null;
-      try {
-        output = await callExpert(round.experts[i]);
-      } catch (expertErr) {
-        // Gracefully degrade: log the error and continue with remaining experts
-        console.error(`[Discussion] Expert ${round.experts[i]} failed:`, expertErr);
-        const errorMsg = expertErr instanceof Error ? expertErr.message : String(expertErr);
-        output = {
-          role: round.experts[i],
-          message: {
-            id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-            role: round.experts[i],
-            content: `[${round.experts[i]} 分析暂时不可用] ${errorMsg.includes('quota') || errorMsg.includes('配额') ? '因 API 配额限制，该专家暂时无法提供分析。' : '该专家分析生成过程中出现异常，建议参考其他专家意见。'}`,
-            timestamp: new Date().toISOString(),
-            type: 'discussion',
-            round: roundNum,
-          },
-          structuredData: {},
-        };
+
+    // Execute experts based on round's parallel flag.
+    // Parallel rounds: experts share the same prior context and run concurrently
+    // (API calls are still throttled by the scheduler at 4.2s intervals, but LLM
+    // processing overlaps server-side — cutting wall-clock time significantly).
+    // Sequential rounds: experts see each preceding expert's output immediately.
+    if (round.parallel && round.experts.length > 1) {
+      // Parallel execution — all experts see the same allMessages snapshot
+      const parallelOutputs = await Promise.all(
+        round.experts.map(async (expertRole) => {
+          if (abortSignal?.aborted) return null;
+          let output: ExpertOutput | null = null;
+          try {
+            output = await callExpert(expertRole);
+          } catch (expertErr) {
+            console.error(`[Discussion] Expert ${expertRole} failed:`, expertErr);
+            const errorMsg = expertErr instanceof Error ? expertErr.message : String(expertErr);
+            output = {
+              role: expertRole,
+              message: {
+                id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                role: expertRole,
+                content: `[${expertRole} 分析暂时不可用] ${errorMsg.includes('quota') || errorMsg.includes('配额') ? '因 API 配额限制，该专家暂时无法提供分析。' : '该专家分析生成过程中出现异常，建议参考其他专家意见。'}`,
+                timestamp: new Date().toISOString(),
+                type: 'discussion',
+                round: roundNum,
+              },
+              structuredData: {},
+            };
+          }
+          return output;
+        })
+      );
+      // Batch-add all parallel results after completion
+      for (const output of parallelOutputs) {
+        if (output) {
+          results.push(output);
+          allMessages.push(output.message);
+          expertResults.set(output.role, output);
+        }
       }
-      if (output) {
-        results.push(output);
-        // CRITICAL: Update allMessages IMMEDIATELY so the NEXT expert in the SAME round
-        // can see the previous expert's message. This ensures true seriality.
-        allMessages.push(output.message);
-        expertResults.set(output.role, output);
+    } else {
+      // Sequential execution — each expert sees the previous one's output
+      for (let i = 0; i < round.experts.length; i++) {
+        if (abortSignal?.aborted) break;
+        if (i > 0) await delay(400);
+
+        let output: ExpertOutput | null = null;
+        try {
+          output = await callExpert(round.experts[i]);
+        } catch (expertErr) {
+          console.error(`[Discussion] Expert ${round.experts[i]} failed:`, expertErr);
+          const errorMsg = expertErr instanceof Error ? expertErr.message : String(expertErr);
+          output = {
+            role: round.experts[i],
+            message: {
+              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+              role: round.experts[i],
+              content: `[${round.experts[i]} 分析暂时不可用] ${errorMsg.includes('quota') || errorMsg.includes('配额') ? '因 API 配额限制，该专家暂时无法提供分析。' : '该专家分析生成过程中出现异常，建议参考其他专家意见。'}`,
+              timestamp: new Date().toISOString(),
+              type: 'discussion',
+              round: roundNum,
+            },
+            structuredData: {},
+          };
+        }
+        if (output) {
+          results.push(output);
+          allMessages.push(output.message);
+          expertResults.set(output.role, output);
+        }
       }
     }
   }

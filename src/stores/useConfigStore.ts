@@ -10,8 +10,13 @@ interface ConfigState {
     promptTokens: number;
     candidatesTokens: number;
     totalTokens: number;
+    dailyTotal: number;       // Tokens used today
+    dailyResetDate: string;   // YYYY-MM-DD of current tracking day
   };
   addTokenUsage: (usage: { promptTokens?: number, candidatesTokens?: number, totalTokens?: number }) => void;
+  /** Daily token budget (0 = unlimited). Free tier default: 900,000 (90% of 1M daily limit). */
+  dailyTokenBudget: number;
+  setDailyTokenBudget: (budget: number) => void;
   availableModels: { id: string, name: string, description: string, status?: string, statusMessage?: string }[];
   setAvailableModels: (models: { id: string, name: string, description: string, status?: string, statusMessage?: string }[]) => void;
   feishuWebhookUrl: string;
@@ -42,16 +47,25 @@ export const useConfigStore = create<ConfigState>((set) => {
   return {
     geminiConfig: initialConfig,
     config: initialConfig,
-    tokenUsage: { promptTokens: 0, candidatesTokens: 0, totalTokens: 0 },
+    tokenUsage: { promptTokens: 0, candidatesTokens: 0, totalTokens: 0, dailyTotal: 0, dailyResetDate: new Date().toISOString().split('T')[0] },
     availableModels: [],
     setAvailableModels: (models) => set({ availableModels: models }),
-    addTokenUsage: (usage) => set((state) => ({
-      tokenUsage: {
-        promptTokens: state.tokenUsage.promptTokens + (usage.promptTokens || 0),
-        candidatesTokens: state.tokenUsage.candidatesTokens + (usage.candidatesTokens || 0),
-        totalTokens: state.tokenUsage.totalTokens + (usage.totalTokens || 0),
-      }
-    })),
+    dailyTokenBudget: 900_000, // 90% of free-tier 1M daily limit
+    setDailyTokenBudget: (budget) => set({ dailyTokenBudget: budget }),
+    addTokenUsage: (usage) => set((state) => {
+      const today = new Date().toISOString().split('T')[0];
+      const isNewDay = state.tokenUsage.dailyResetDate !== today;
+      const added = usage.totalTokens || 0;
+      return {
+        tokenUsage: {
+          promptTokens: state.tokenUsage.promptTokens + (usage.promptTokens || 0),
+          candidatesTokens: state.tokenUsage.candidatesTokens + (usage.candidatesTokens || 0),
+          totalTokens: state.tokenUsage.totalTokens + (usage.totalTokens || 0),
+          dailyTotal: isNewDay ? added : state.tokenUsage.dailyTotal + added,
+          dailyResetDate: today,
+        },
+      };
+    }),
     setGeminiConfig: (config) => {
       localStorage.setItem('gemini_config', JSON.stringify(config));
       set({ geminiConfig: config, config: config });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { startAgentDiscussion } from '../services/discussionService';
 import * as geminiService from '../services/geminiService';
+import { clearCommoditiesCache } from '../services/marketService';
 import { StockAnalysis } from '../types';
 
 // Mock geminiService
@@ -56,6 +57,7 @@ describe('AI Discussion Commodity Data Integration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    clearCommoditiesCache();
     // Mock fetch for commodities API — include .text() for adminService compatibility
     (global.fetch as any).mockImplementation((url: string) => {
       if (typeof url === 'string' && url.includes('history')) {

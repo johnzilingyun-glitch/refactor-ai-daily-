@@ -169,13 +169,20 @@ describe('startMultiRoundDiscussion', () => {
     expect(result.messages.length).toBeLessThan(22);
   });
 
-  it('uses googleSearch tool instead of responseSchema', async () => {
+  it('uses googleSearch tool for search-specific experts, schema for others', async () => {
+    const searchRoles = new Set(['Deep Research Specialist', 'Sentiment Analyst', 'Contrarian Strategist']);
     (geminiService.generateAndParseJsonWithRetry as any).mockImplementation((_ai: any, params: any, options: any) => {
-      // Verify config uses googleSearch, not responseSchema
       const tools = options?.tools || params.config?.tools;
       const schema = options?.responseSchema || params.config?.responseSchema;
+      const role = options?.role;
       
-      expect(tools).toEqual([{ googleSearch: {} }]);
+      if (searchRoles.has(role)) {
+        // Search experts get tools
+        expect(tools).toEqual([{ googleSearch: {} }]);
+      } else {
+        // Non-search experts get schema enforcement (no tools)
+        expect(tools).toBeUndefined();
+      }
       expect(schema).toBeDefined();
       expect(options?.responseMimeType || params.config?.responseMimeType).toBe('application/json');
       callCount++;
@@ -189,14 +196,15 @@ describe('startMultiRoundDiscussion', () => {
   it('round numbers are assigned to messages', async () => {
     const result = await startMultiRoundDiscussion(mockAnalysis, 'standard');
 
-    // Standard: 6 rounds (sequential)
+    // Standard: 6 rounds, with TA+FA parallel in round 2 and Bull+Bear parallel in round 3
     const rounds = result.messages.map((m) => m.round);
     expect(rounds[0]).toBe(1); // DR
-    expect(rounds[1]).toBe(2); // TA
-    expect(rounds[2]).toBe(3); // FA
-    expect(rounds[3]).toBe(4); // RM
-    expect(rounds[4]).toBe(5); // Reviewer
-    expect(rounds[5]).toBe(6); // CS
+    // TA and FA are parallel in round 2 — order may vary but both should be round 2
+    const round2Messages = result.messages.filter(m => m.round === 2);
+    expect(round2Messages.length).toBe(2);
+    // Bull and Bear parallel in round 3
+    const round3Messages = result.messages.filter(m => m.round === 3);
+    expect(round3Messages.length).toBe(2);
   });
 
   it('handles expert structured data extraction', async () => {

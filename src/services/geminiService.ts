@@ -134,6 +134,7 @@ export async function generateAndParseJsonWithRetry<T>(
     responseMimeType?: string;
     tools?: any[];
     role?: string;
+    maxOutputTokens?: number;
   },
   priority: number = 0
 ): Promise<T> {
@@ -155,6 +156,20 @@ export async function generateAndParseJsonWithRetry<T>(
   // naturally stays under 15 RPM.
   if (isKeyQuotaExhausted()) {
     console.warn('[QuotaGuard] Key quota was recently exhausted. Will still attempt API call (scheduler handles pacing).');
+  }
+
+  // Token budget check — prevent runaway usage on free tier
+  const { dailyTokenBudget, tokenUsage } = useConfigStore.getState();
+  if (dailyTokenBudget > 0 && tokenUsage.dailyTotal >= dailyTokenBudget) {
+    const pct = Math.round((tokenUsage.dailyTotal / dailyTokenBudget) * 100);
+    throw new QuotaError(
+      `今日 Token 用量已达预算上限 (${tokenUsage.dailyTotal.toLocaleString()} / ${dailyTokenBudget.toLocaleString()}, ${pct}%)。` +
+      `\n可在设置中调整每日 Token 预算，或等待明日重置。`
+    );
+  }
+  // Warn at 80% budget
+  if (dailyTokenBudget > 0 && tokenUsage.dailyTotal >= dailyTokenBudget * 0.8) {
+    console.warn(`[TokenBudget] Daily usage at ${Math.round((tokenUsage.dailyTotal / dailyTokenBudget) * 100)}% (${tokenUsage.dailyTotal.toLocaleString()} / ${dailyTokenBudget.toLocaleString()})`);
   }
 
   for (const model of modelsToTry) {

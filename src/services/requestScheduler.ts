@@ -50,9 +50,9 @@ class RequestScheduler {
     while (this.queue.length > 0) {
       const now = Date.now();
       
-      // Check if we are in a cooldown period (e.g. after a 429 error)
-      const storeCooldown = useConfigStore.getState().cooldownUntil || 0;
-      const effectiveCooldown = Math.max(this.cooldownUntil, storeCooldown);
+      // Scheduler-local cooldown is the single source of truth.
+      // store.cooldownUntil is only written by the scheduler for UI display (one-way).
+      const effectiveCooldown = this.cooldownUntil;
       
       if (now < effectiveCooldown) {
         const waitTime = effectiveCooldown - now;
@@ -118,8 +118,8 @@ class RequestScheduler {
             // Only update if the new cooldown is significantly further in the future
             if (newCooldown > effectiveCooldown + 500) {
               this.cooldownUntil = newCooldown;
-              // Remove the store-level global freeze so the UI doesn't visually lock up, 
-              // but the scheduler waits briefly to alleviate the surge.
+              // Sync to store for UI display (one-way: scheduler → store)
+              useConfigStore.getState().setCooldownUntil(newCooldown);
             }
           }
           item.reject(error);

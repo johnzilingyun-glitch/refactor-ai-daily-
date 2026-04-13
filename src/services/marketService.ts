@@ -79,47 +79,17 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
     }
   }
 
-  let indicesData = [];
-  try {
-    const res = await fetch(`/api/stock/indices?market=${market}`);
-    if (res.ok) {
-      indicesData = await res.json();
-    }
-  } catch (e) {
-    console.warn('Indices fetch failed:', e);
-  }
+  // Fetch all market data in parallel — these endpoints are independent
+  const needsSectors = market === 'A-Share' || market === 'HK-Share';
+  const needsNorthbound = market === 'A-Share';
 
-  let newsData = [];
-  try {
-    const res = await fetch(`/api/stock/news?market=${market}`);
-    if (res.ok) {
-      newsData = await res.json();
-    }
-  } catch (e) {
-    console.warn('News fetch failed:', e);
-  }
-
-  let sectorsData = null;
-  if (market === 'A-Share' || market === 'HK-Share') {
-    try {
-      const res = await fetch('/api/stock/sectors');
-      if (res.ok) sectorsData = await res.json();
-    } catch (e) {
-      console.warn('Sectors fetch failed:', e);
-    }
-  }
-
-  let northboundData = null;
-  if (market === 'A-Share') {
-    try {
-      const res = await fetch('/api/stock/northbound');
-      if (res.ok) northboundData = await res.json();
-    } catch (e) {
-      console.warn('Northbound fetch failed:', e);
-    }
-  }
-
-  const commoditiesData = await getCommoditiesData();
+  const [indicesData, newsData, sectorsData, northboundData, commoditiesData] = await Promise.all([
+    fetch(`/api/stock/indices?market=${market}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    fetch(`/api/stock/news?market=${market}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    needsSectors ? fetch('/api/stock/sectors').then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null),
+    needsNorthbound ? fetch('/api/stock/northbound').then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null),
+    getCommoditiesData(),
+  ]);
   const prompt = getMarketOverviewPrompt(indicesData, commoditiesData, newsData, sectorsData, northboundData, history, beijingDate, now, market, language);
 
   const raw = await generateAndParseJsonWithRetry<MarketOverview>(ai, {
@@ -166,11 +136,26 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
   return overview;
 }
 
+// Cache commodities data for 5 minutes — it's fetched by analysisService,
+// discussionService, and marketService within the same analysis session.
+let _commoditiesCache: { data: any[]; expiry: number } = { data: [], expiry: 0 };
+
+/** Reset commodities cache (for testing) */
+export function clearCommoditiesCache() {
+  _commoditiesCache = { data: [], expiry: 0 };
+}
+
 export async function getCommoditiesData(): Promise<any[]> {
+  const now = Date.now();
+  if (_commoditiesCache.expiry > now && _commoditiesCache.data.length > 0) {
+    return _commoditiesCache.data;
+  }
   try {
     const res = await fetch('/api/stock/commodities');
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      _commoditiesCache = { data, expiry: now + 5 * 60 * 1000 };
+      return data;
     }
   } catch (e) {
     console.warn('Commodities fetch failed:', e);
