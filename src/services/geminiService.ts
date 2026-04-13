@@ -206,6 +206,12 @@ export async function generateAndParseJsonWithRetry<T>(
           delete mergedParams.generationConfig;
 
           const result = await generateContentWithUsage(ai, mergedParams, priority);
+          if (!result.text && result.text !== '') {
+            // Empty response — safety filter, empty candidates, or blocked content
+            const finishReason = result.candidates?.[0]?.finishReason;
+            console.warn(`[Gemini] Empty response text. finishReason=${finishReason}`);
+            throw new Error(`Gemini returned empty response (finishReason: ${finishReason || 'unknown'}). The model may have blocked the content.`);
+          }
           return result.text;
         }, transportRetries, baseDelayMs);
       } catch (transportErr) {
@@ -432,6 +438,9 @@ export class ModelNotFoundError extends Error {
 }
 
 export function extractJsonBlock(raw: string): string {
+  if (raw == null) {
+    throw new Error('Gemini returned a non-JSON response (empty/undefined response text).');
+  }
   let cleaned = raw.trim();
 
   // 0. Strip Gemini citation markers like [cite: 1], [cite: analysis], [cite_start]...[cite_end] etc.
