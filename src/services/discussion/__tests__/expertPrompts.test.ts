@@ -91,7 +91,7 @@ describe('expertPrompts', () => {
     it.each(roles)('returns schema for %s', (role) => {
       const schema = getExpertResponseSchema(role);
       expect(schema).toBeDefined();
-      expect(schema.type).toBe('OBJECT');
+      expect(schema.type).toBe('object');
       expect(schema.properties).toBeDefined();
     });
 

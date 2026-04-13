@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Clock, BarChart3, ChevronRight, History as HistoryIcon } from 'lucide-react';
+import { X, Search, Clock, BarChart3, ChevronRight, History as HistoryIcon, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getHistoryContext } from '../services/aiService';
 import { generateHistoryItemKey } from '../services/dateUtils';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface HistoryModalProps {
   isOpen: boolean;
@@ -25,10 +31,17 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
     }
   }, [isOpen]);
 
-  const filteredHistory = history.filter(item => 
-    item.stockInfo?.symbol?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.stockInfo?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredHistory = history.filter(item => {
+    const search = searchTerm.toLowerCase();
+    if (item.stockInfo) {
+      return item.stockInfo.symbol?.toLowerCase().includes(search) ||
+             item.stockInfo.name?.toLowerCase().includes(search);
+    }
+    if (item.marketSummary) {
+      return item.marketSummary.toLowerCase().includes(search);
+    }
+    return false;
+  });
 
   return (
     <AnimatePresence>
@@ -56,7 +69,7 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-zinc-950 tracking-tight">历史研判回顾</h2>
-                  <p className="text-xs font-medium text-zinc-400 mt-0.5">Review your previous market analysis</p>
+                  <p className="text-xs font-medium text-zinc-400 mt-0.5">Review your previous market and stock analysis</p>
                 </div>
               </div>
               <button
@@ -73,7 +86,7 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
                 <input
                   type="text"
-                  placeholder="搜索历史股票代码或名称..."
+                  placeholder="搜索历史股票、大盘摘要..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="input-premium h-12 pl-12 pr-6"
@@ -96,6 +109,8 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
               ) : (
                 filteredHistory.map((item, idx) => {
                   const itemKey = generateHistoryItemKey(item, idx);
+                  const isStock = !!item.stockInfo;
+                  
                   return (
                     <button
                       key={itemKey}
@@ -103,14 +118,23 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                       className="w-full flex items-center justify-between p-5 bg-white hover:bg-zinc-50 rounded-2xl transition-all border border-zinc-100 hover:border-zinc-200 group"
                     >
                       <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 group-hover:bg-white group-hover:text-indigo-600 transition-all">
-                          <BarChart3 size={20} />
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl border flex items-center justify-center transition-all",
+                          isStock 
+                            ? "bg-zinc-50 border-zinc-100 text-zinc-400 group-hover:bg-white group-hover:text-indigo-600"
+                            : "bg-emerald-50 border-emerald-100 text-emerald-600 group-hover:bg-white"
+                        )}>
+                          {isStock ? <BarChart3 size={20} /> : <Globe size={20} />}
                         </div>
                         <div className="text-left">
-                          <h4 className="font-bold text-zinc-900 group-hover:text-indigo-600 transition-colors">{item.stockInfo?.name}</h4>
+                          <h4 className="font-bold text-zinc-900 group-hover:text-indigo-600 transition-colors">
+                            {isStock ? item.stockInfo.name : '今日大盘概览'}
+                          </h4>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="font-mono text-[10px] font-bold text-zinc-400 group-hover:text-zinc-500 transition-colors">{item.stockInfo?.symbol}</span>
-                            {item.chatHistory && item.chatHistory.length > 0 && (
+                            <span className="font-mono text-[10px] font-bold text-zinc-400 group-hover:text-zinc-500 transition-colors">
+                              {isStock ? item.stockInfo.symbol : 'MARKET OVERVIEW'}
+                            </span>
+                            {isStock && item.chatHistory && item.chatHistory.length > 0 && (
                               <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-[8px] font-black uppercase text-indigo-600 tracking-tighter">
                                 已沉淀对话
                               </span>
@@ -122,7 +146,10 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                         <div className="text-right">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">Analysis Date</p>
                           <p className="text-xs font-semibold text-zinc-500">
-                            {item.stockInfo?.lastUpdated?.split(' ')[0] || '--'}
+                            {isStock 
+                              ? (item.stockInfo.lastUpdated?.split(' ')[0] || '--')
+                              : (item.generatedAt?.split('T')[0] || '--')
+                            }
                           </p>
                         </div>
                         <ChevronRight size={16} className="text-zinc-300 group-hover:text-indigo-600 transition-all group-hover:translate-x-1" />

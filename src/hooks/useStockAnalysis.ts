@@ -27,6 +27,11 @@ export function useStockAnalysis() {
       if (!logsRes.ok) {
         console.error(`Failed to fetch optimization logs: ${logsRes.status} ${logsRes.statusText}`);
       } else {
+        const contentType = logsRes.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+          console.warn('Received HTML instead of JSON for optimization logs. This may be due to a redirect or server error.');
+          return;
+        }
         const text = await logsRes.text();
         try {
           const logs = JSON.parse(text);
@@ -119,8 +124,20 @@ export function useStockAnalysis() {
           await saveAnalysisToHistory('stock', finalAnalysis);
           void fetchAdminData();
         } catch (err) {
-          console.error('Agent discussion failed:', err);
-          setAnalysisError(err instanceof Error ? err.message : '专家讨论失败，请稍后重试。');
+          let errorMessage = '专家讨论失败，请稍后重试。';
+          if (err instanceof Error) {
+            try {
+              // Handle potential JSON error response from Gemini API
+              if (err.message.includes('Rpc failed') || err.message.includes('500') || err.message.includes('xhr error')) {
+                errorMessage = 'AI 服务暂时繁忙 (Rate Limit)，请稍等片刻后重试。';
+              } else {
+                errorMessage = err.message;
+              }
+            } catch {
+              errorMessage = err.message;
+            }
+          }
+          setAnalysisError(errorMessage);
         } finally {
           setIsDiscussing(false);
           setRoundProgress(0, 0);

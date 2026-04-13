@@ -136,13 +136,16 @@ export function AnalysisResult({
       {(isDiscussing || discussionMessages.length > 0) && (
         <div className="flex flex-col gap-8 mt-4 pt-4 w-full">
           <div className="space-y-6 w-full">
-            <div className="p-8 rounded-2xl bg-white border border-zinc-200 shadow-sm">
-                <h3 className="text-lg font-bold uppercase tracking-[0.2em] text-zinc-500 mb-8 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-indigo-50 border border-indigo-100">
-                      <Zap size={24} className="text-emerald-500" />
+            <div className="p-10 rounded-[2.5rem] bg-white border border-zinc-200/60 shadow-xl shadow-zinc-200/20">
+                <h3 className="text-xl font-black uppercase tracking-[0.3em] text-zinc-900 mb-10 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-zinc-950 text-white shadow-lg shadow-zinc-950/20">
+                      <Zap size={28} className="text-emerald-400" />
                     </div>
-                    研讨会核心结论与场景分析
+                    <div>
+                      研讨会核心结论与场景分析
+                      <p className="text-[10px] text-zinc-400 font-bold tracking-widest mt-1">SYMPOSIUM CORE CONSENSUS & SCENARIO ANALYSIS</p>
+                    </div>
                   </div>
                 {dataFreshnessStatus && (
                   <div className="flex items-center gap-2">
@@ -197,34 +200,38 @@ export function AnalysisResult({
 
                   {/* Final Conclusion Card - hidden during active discussion */}
                   {analysis.finalConclusion && !isDiscussing && (
-                    <div className="p-8 rounded-[2rem] bg-indigo-600/5 border border-indigo-100 relative overflow-hidden group shadow-sm">
-                      <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
-                        <Award size={120} className="text-indigo-600 rotate-12" />
+                    <div className="p-10 rounded-[3rem] bg-zinc-50 border border-zinc-200/60 relative overflow-hidden group shadow-inner">
+                      <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
+                        <Award size={160} className="text-zinc-950 -rotate-12" />
                       </div>
                       <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className="p-2.5 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
-                            <Award size={20} />
+                        <div className="flex items-center gap-4 mb-8">
+                          <div className="p-3 rounded-2xl bg-zinc-950 text-white shadow-xl shadow-zinc-950/20">
+                            <Award size={24} />
                           </div>
                           <div>
-                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600">联席会议最终结论</h4>
-                            <p className="text-[9px] text-zinc-400 font-medium uppercase tracking-wider">Final Consensus & Strategic Directive</p>
+                            <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-900">联席会议最终结论</h4>
+                            <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Final Consensus & Strategic Directive</p>
                           </div>
                         </div>
-                        <div className="prose prose-zinc max-w-none prose-p:text-zinc-700 prose-p:text-lg prose-p:font-medium prose-p:leading-relaxed prose-p:tracking-tight">
+                        <div className="prose prose-zinc max-w-none prose-p:text-zinc-800 prose-p:text-xl prose-p:font-medium prose-p:leading-relaxed prose-p:tracking-tight">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {analysis.finalConclusion}
                           </ReactMarkdown>
                         </div>
-                        <div className="mt-8 pt-6 border-t border-zinc-200/60 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center overflow-hidden">
-                              <User size={16} className="text-zinc-400" />
+                        <div className="mt-10 pt-8 border-t border-zinc-200 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-zinc-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                              <User size={20} className="text-zinc-400" />
                             </div>
-                            <span className="text-xs font-bold text-zinc-900 uppercase tracking-widest">首席策略师 签发</span>
+                            <div>
+                              <span className="text-xs font-black text-zinc-900 uppercase tracking-widest block">首席策略师 签发</span>
+                              <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-tight">CHIEF STRATEGIST SIGN-OFF</span>
+                            </div>
                           </div>
-                          <div className="text-[10px] font-mono text-zinc-400">
-                            VERIFIED BY MULTI-AGENT CONSENSUS
+                          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
+                            <ShieldCheck size={12} />
+                            Verified by Multi-Agent Consensus
                           </div>
                         </div>
                       </div>
@@ -233,22 +240,28 @@ export function AnalysisResult({
 
                   {/* Conflict Logger */}
                   {controversialPoints.length > 0 && (
-                    <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20">
-                      <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-400 mb-3 flex items-center gap-2">
-                        <AlertTriangle size={14} />
+                    <div className="p-8 rounded-[2rem] bg-rose-50 border border-rose-100 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <AlertTriangle size={80} className="text-rose-200" />
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-rose-600 mb-6 flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-rose-100 border border-rose-200">
+                          <AlertTriangle size={18} />
+                        </div>
                         逻辑冲突记录仪 (Conflict Logger)
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-4 relative z-10">
                         {controversialPoints.map((point, idx) => (
-                          <div key={`controversial-${idx}-${point.substring(0, 30)}-${Math.random().toString(36).slice(2, 7)}`} className="flex items-start gap-2">
-                            <div className="w-1 h-1 rounded-full bg-rose-500 mt-1.5 shrink-0" />
-                            <p className="text-[11px] text-zinc-500 leading-relaxed italic">{point}</p>
+                          <div key={`controversial-${idx}-${point.substring(0, 30)}`} className="flex items-start gap-4 p-4 rounded-2xl bg-white/60 border border-rose-100/50 group hover:bg-white transition-colors">
+                            <div className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-2 shrink-0 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+                            <p className="text-sm text-zinc-600 leading-relaxed italic font-medium group-hover:text-zinc-900 transition-colors">{point}</p>
                           </div>
                         ))}
                       </div>
-                      <p className="mt-3 text-[9px] text-zinc-400 uppercase font-semibold tracking-widest">
+                      <div className="mt-6 flex items-center gap-2 text-[10px] text-rose-400 uppercase font-black tracking-widest">
+                        <Info size={12} />
                         * 真正的 Alpha 往往隐藏在被否定的"逆向观点"里
-                      </p>
+                      </div>
                     </div>
                   )}
 
@@ -500,8 +513,8 @@ export function AnalysisResult({
                                 </div>
                                 <div className="space-y-3">
                                   <div className="grid grid-cols-2 gap-2">
-                                    {Object.entries(calc.inputs).map(([k, v]) => (
-                                      <div key={k} className="flex flex-col">
+                                    {Object.entries(calc.inputs).map(([k, v], iIdx) => (
+                                      <div key={`calc-input-${idx}-${k}-${iIdx}`} className="flex flex-col">
                                         <span className="text-[8px] text-zinc-400 uppercase font-semibold">{k}</span>
                                         <span className="text-[10px] text-zinc-500 font-mono">{String(v)}</span>
                                       </div>
@@ -664,7 +677,7 @@ export function AnalysisResult({
 
                   {/* Moderator messages */}
                   {discussionMessages.filter(m => m.role === "Moderator").map((m, i) => (
-                    <div key={`mod-${i}-${m.id || m.role}-${Math.random().toString(36).slice(2, 7)}`} className="relative">
+                    <div key={`mod-${i}-${m.id || m.role}`} className="relative">
                       <div className="absolute -left-2 top-0 bottom-0 w-1 bg-indigo-600/50 rounded-full" />
                       <div className="prose prose-invert prose-sm max-w-none pl-4">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -831,66 +844,66 @@ export function AnalysisResult({
       {/* Main Analysis Grid */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
-        <div className="premium-card p-10 md:p-14 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
-            <BarChart3 size={240} className="text-zinc-900" />
+        <div className="premium-card p-12 md:p-16 relative overflow-hidden bg-white/80 backdrop-blur-2xl border-zinc-200/60 shadow-2xl shadow-zinc-200/50">
+          <div className="absolute top-0 right-0 p-16 opacity-[0.03] pointer-events-none">
+            <BarChart3 size={320} className="text-zinc-900" />
           </div>
           
-          <div className="mb-14 flex flex-wrap items-end justify-between gap-10 relative z-10">
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <span className="rounded-xl bg-zinc-100 px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 border border-zinc-200/60 shadow-sm">
+          <div className="mb-16 flex flex-wrap items-end justify-between gap-12 relative z-10">
+            <div className="space-y-8">
+              <div className="flex items-center gap-6">
+                <span className="rounded-xl bg-zinc-100 px-5 py-2 font-mono text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 border border-zinc-200/60 shadow-sm">
                   {analysis.stockInfo?.market}
                 </span>
-                <h2 className="text-5xl font-bold tracking-tighter text-zinc-950">{analysis.stockInfo?.name}</h2>
-                <span className="font-mono text-2xl font-medium text-zinc-400 tracking-tighter">{analysis.stockInfo?.symbol}</span>
+                <h2 className="text-6xl font-black tracking-tighter text-zinc-950">{analysis.stockInfo?.name}</h2>
+                <span className="font-mono text-3xl font-bold text-zinc-300 tracking-tighter">{analysis.stockInfo?.symbol}</span>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-4">
                 {analysis.isDeepValue && (
-                  <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-2 shadow-sm">
-                    <Award size={14} />
-                    绝对安全边际 (Deep Value)
+                  <div className="px-4 py-2 rounded-xl bg-amber-500/5 border border-amber-500/10 text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] flex items-center gap-2 shadow-sm">
+                    <Award size={16} className="text-amber-500" />
+                    DEEP VALUE: 绝对安全边际
                   </div>
                 )}
                 {analysis.moatAnalysis && analysis.moatAnalysis.strength !== "None" && (
-                  <div className="px-3 py-1.5 rounded-xl bg-indigo-600/10 border border-indigo-600/20 text-[10px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2 shadow-sm">
-                    <ShieldCheck size={14} />
-                    护城河: {analysis.moatAnalysis.strength === "Wide" ? "宽阔" : "狭窄"} ({analysis.moatAnalysis.type})
+                  <div className="px-4 py-2 rounded-xl bg-indigo-600/5 border border-indigo-600/10 text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 shadow-sm">
+                    <ShieldCheck size={16} className="text-indigo-500" />
+                    MOAT: {analysis.moatAnalysis.strength === "Wide" ? "宽阔" : "狭窄"} ({analysis.moatAnalysis.type})
                   </div>
                 )}
                 {analysis.narrativeConsistency && (
                   <div className={cn(
-                    "px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm",
-                    analysis.narrativeConsistency.score >= 80 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" :
-                    analysis.narrativeConsistency.score >= 50 ? "bg-amber-500/10 border-amber-500/20 text-amber-600" :
-                    "bg-rose-500/10 border-rose-500/20 text-rose-600"
+                    "px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 shadow-sm",
+                    analysis.narrativeConsistency.score >= 80 ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-600" :
+                    analysis.narrativeConsistency.score >= 50 ? "bg-amber-500/5 border-amber-500/10 text-amber-600" :
+                    "bg-rose-500/5 border-rose-500/10 text-rose-600"
                   )}>
-                    <MessageSquare size={14} />
-                    叙事一致性: {analysis.narrativeConsistency.score}%
+                    <MessageSquare size={16} />
+                    NARRATIVE: {analysis.narrativeConsistency.score}%
                   </div>
                 )}
               </div>
               
-              <div className="flex items-baseline gap-8 pt-4">
-                <span className="text-8xl font-bold tracking-tighter text-zinc-950">
+              <div className="flex items-baseline gap-10 pt-6">
+                <span className="text-9xl font-black tracking-tighter text-zinc-950">
                   {analysis.stockInfo?.price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  <span className="ml-4 text-3xl font-medium uppercase text-zinc-300 tracking-tight">{analysis.stockInfo?.currency}</span>
+                  <span className="ml-6 text-4xl font-bold uppercase text-zinc-200 tracking-tight">{analysis.stockInfo?.currency}</span>
                 </span>
                 <div className={cn(
-                  'flex items-center gap-3 text-3xl font-bold tracking-tight px-6 py-2 rounded-[1.5rem] border shadow-sm', 
-                  (analysis.stockInfo?.change ?? 0) >= 0 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-500 bg-rose-50 border-rose-100'
+                  'flex items-center gap-4 text-4xl font-black tracking-tighter px-8 py-3 rounded-[2rem] border shadow-sm transition-all duration-500', 
+                  (analysis.stockInfo?.change ?? 0) >= 0 ? 'text-emerald-600 bg-emerald-50/50 border-emerald-100' : 'text-rose-500 bg-rose-50/50 border-rose-100'
                 )}>
-                  {(analysis.stockInfo?.change ?? 0) >= 0 ? <TrendingUp size={32} /> : <TrendingDown size={32} />}
+                  {(analysis.stockInfo?.change ?? 0) >= 0 ? <TrendingUp size={40} /> : <TrendingDown size={40} />}
                   <span>{(analysis.stockInfo?.change ?? 0) >= 0 ? '+' : ''}{analysis.stockInfo?.change}</span>
-                  <span className="text-xl opacity-60">({analysis.stockInfo?.changePercent}%)</span>
+                  <span className="text-2xl opacity-40">({analysis.stockInfo?.changePercent}%)</span>
                 </div>
               </div>
             </div>
             
-            <div className="text-right space-y-2 relative z-10">
-              <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-400">最后更新 (Last Sync)</p>
-              <p className="text-base font-semibold text-zinc-500 flex items-center justify-end gap-2">
-                <Clock size={16} className="text-zinc-300" />
+            <div className="text-right space-y-3 relative z-10">
+              <p className="font-mono text-[10px] font-black uppercase tracking-[0.4em] text-zinc-300">SYSTEM SYNC STATUS</p>
+              <p className="text-lg font-bold text-zinc-400 flex items-center justify-end gap-3">
+                <Clock size={20} className="text-zinc-200" />
                 {analysis.stockInfo?.lastUpdated}
               </p>
             </div>
@@ -1212,49 +1225,69 @@ export function AnalysisResult({
 
           {analysis.tradingPlan && (
             <div className={cn(
-              "space-y-4 rounded-2xl p-8 border transition-all duration-500",
+              "space-y-6 rounded-[2.5rem] p-10 border transition-all duration-500 shadow-xl",
               analysis.tradingPlan.entryPrice === '不推荐' 
-                ? "border-rose-500/20 bg-rose-500/5 shadow-[0_0_40px_-15px_rgba(244,63,94,0.1)]" 
-                : "border-indigo-100 bg-indigo-600/5 shadow-[0_0_40px_-15px_rgba(16,185,129,0.1)]"
+                ? "border-rose-200/60 bg-rose-50/30 shadow-rose-200/20" 
+                : "border-emerald-200/60 bg-emerald-50/30 shadow-emerald-200/20"
             )}>
-              <h3 className={cn(
-                "flex items-center gap-2 text-xl font-semibold tracking-tight",
-                analysis.tradingPlan.entryPrice === '不推荐' ? "text-rose-400" : "text-indigo-600"
-              )}>
-                <Zap size={20} />
-                交易计划 {analysis.tradingPlan.entryPrice === '不推荐' && '(基于安全边际不推荐)'}
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className={cn(
+                  "flex items-center gap-3 text-xl font-black uppercase tracking-[0.2em]",
+                  analysis.tradingPlan.entryPrice === '不推荐' ? "text-rose-600" : "text-emerald-600"
+                )}>
+                  <div className={cn(
+                    "p-2.5 rounded-2xl shadow-sm border",
+                    analysis.tradingPlan.entryPrice === '不推荐' ? "bg-rose-100 border-rose-200" : "bg-emerald-100 border-emerald-200"
+                  )}>
+                    <Zap size={24} />
+                  </div>
+                  交易计划 {analysis.tradingPlan.entryPrice === '不推荐' && '(不推荐)'}
+                </h3>
+                <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/50 border border-zinc-200 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                  <Clock size={12} />
+                  Valid for 24H
+                </div>
+              </div>
+
               {analysis.tradingPlan.entryPrice !== '不推荐' ? (
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="p-3 rounded-2xl bg-white border border-zinc-200">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">建议买入</p>
-                    <p className="text-sm font-medium text-indigo-600">{analysis.tradingPlan.entryPrice}</p>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="p-6 rounded-3xl bg-white border border-zinc-200/60 shadow-sm group hover:border-emerald-500/30 transition-all">
+                    <p className="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-3">建议买入</p>
+                    <p className="text-2xl font-black text-zinc-950 tracking-tighter group-hover:text-emerald-600 transition-colors">{analysis.tradingPlan.entryPrice}</p>
+                    <div className="mt-3 h-1 w-8 bg-emerald-500/20 rounded-full" />
                   </div>
-                  <div className="p-3 rounded-2xl bg-white border border-zinc-200">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">目标价位</p>
-                    <p className="text-sm font-medium text-indigo-600">{analysis.tradingPlan.targetPrice}</p>
+                  <div className="p-6 rounded-3xl bg-white border border-zinc-200/60 shadow-sm group hover:border-indigo-600/30 transition-all">
+                    <p className="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-3">目标价位</p>
+                    <p className="text-2xl font-black text-zinc-950 tracking-tighter group-hover:text-indigo-600 transition-colors">{analysis.tradingPlan.targetPrice}</p>
+                    <div className="mt-3 h-1 w-8 bg-indigo-600/20 rounded-full" />
                   </div>
-                  <div className="p-3 rounded-2xl bg-white border border-zinc-200">
-                    <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-1">止损价位</p>
-                    <p className="text-sm font-medium text-rose-400">{analysis.tradingPlan.stopLoss}</p>
+                  <div className="p-6 rounded-3xl bg-white border border-zinc-200/60 shadow-sm group hover:border-rose-500/30 transition-all">
+                    <p className="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-3">止损价位</p>
+                    <p className="text-2xl font-black text-zinc-950 tracking-tighter group-hover:text-rose-500 transition-colors">{analysis.tradingPlan.stopLoss}</p>
+                    <div className="mt-3 h-1 w-8 bg-rose-500/20 rounded-full" />
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
-                  <p className="text-sm font-medium text-rose-400">当前估值或风险不符合安全边际要求，暂不推荐买入计划。</p>
+                <div className="p-8 rounded-3xl bg-rose-100/50 border border-rose-200 text-center">
+                  <p className="text-sm font-bold text-rose-600">当前估值或风险不符合安全边际要求，暂不推荐买入计划。</p>
                 </div>
               )}
-              <div className="p-4 rounded-2xl bg-white border border-zinc-200">
-                <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-400 mb-2">操作策略</p>
-                <p className="text-sm leading-relaxed text-zinc-500 italic">{analysis.tradingPlan.strategy}</p>
+
+              <div className="p-8 rounded-3xl bg-white border border-zinc-200/60 shadow-sm">
+                <p className="text-[10px] text-zinc-400 uppercase font-black tracking-widest mb-4 flex items-center gap-2">
+                  <Target size={14} className="text-zinc-900" />
+                  核心执行策略
+                </p>
+                <p className="text-sm leading-relaxed text-zinc-600 font-medium italic">"{analysis.tradingPlan.strategy}"</p>
               </div>
+
               {analysis.tradingPlan.strategyRisks && (
-                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                  <p className="text-[10px] font-medium uppercase tracking-widest text-rose-400 mb-2 flex items-center gap-2">
-                    <ShieldAlert size={12} />
-                    交易策略风险提示
+                <div className="p-6 rounded-2xl bg-rose-50 border border-rose-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-2 flex items-center gap-2">
+                    <ShieldAlert size={14} />
+                    策略执行风险提示
                   </p>
-                  <p className="text-xs text-rose-200/80 leading-relaxed italic">
+                  <p className="text-xs text-rose-500/80 leading-relaxed font-medium">
                     {analysis.tradingPlan.strategyRisks}
                   </p>
                 </div>
@@ -1312,31 +1345,35 @@ export function AnalysisResult({
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-indigo-600">
-              <Zap size={16} />
-              潜在机会
+          <div className="rounded-[2.5rem] border border-zinc-200/60 bg-white p-10 shadow-xl shadow-zinc-200/20">
+            <h3 className="mb-8 flex items-center gap-3 text-xl font-black uppercase tracking-[0.2em] text-emerald-600">
+              <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-100 shadow-sm">
+                <Zap size={24} />
+              </div>
+              核心增长机会
             </h3>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {analysis.keyOpportunities?.map((opp, i) => (
-                <li key={`opp-${opp.substring(0, 20)}-${i}`} className="flex items-start gap-3 text-sm text-zinc-500">
-                  <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-500" />
-                  {opp}
+                <li key={`opp-${opp.substring(0, 20)}-${i}`} className="flex items-start gap-4 p-5 rounded-2xl bg-zinc-50 border border-zinc-100 group hover:border-emerald-200 transition-all">
+                  <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-emerald-500 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm text-zinc-600 font-medium leading-relaxed group-hover:text-zinc-900 transition-colors">{opp}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-rose-400">
-              <ShieldAlert size={16} />
-              核心风险
+          <div className="rounded-[2.5rem] border border-zinc-200/60 bg-white p-10 shadow-xl shadow-zinc-200/20">
+            <h3 className="mb-8 flex items-center gap-3 text-xl font-black uppercase tracking-[0.2em] text-rose-600">
+              <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-100 shadow-sm">
+                <ShieldAlert size={24} />
+              </div>
+              核心下行风险
             </h3>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {analysis.keyRisks?.map((risk, i) => (
-                <li key={`risk-${risk.substring(0, 20)}-${i}`} className="flex items-start gap-3 text-sm text-zinc-500">
-                  <AlertCircle size={16} className="mt-0.5 shrink-0 text-rose-500" />
-                  {risk}
+                <li key={`risk-${risk.substring(0, 20)}-${i}`} className="flex items-start gap-4 p-5 rounded-2xl bg-zinc-50 border border-zinc-100 group hover:border-rose-200 transition-all">
+                  <AlertCircle size={20} className="mt-0.5 shrink-0 text-rose-500 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm text-zinc-600 font-medium leading-relaxed group-hover:text-zinc-900 transition-colors">{risk}</span>
                 </li>
               ))}
             </ul>

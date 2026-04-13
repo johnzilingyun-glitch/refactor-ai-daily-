@@ -36,15 +36,27 @@ const roleIcons: Record<AgentRole, React.ReactNode> = {
 };
 
 const roleColors: Record<AgentRole, string> = {
- "Technical Analyst": "text-indigo-600 bg-indigo-50 border-indigo-200/60",
- "Fundamental Analyst": "text-emerald-600 bg-emerald-50 border-emerald-200/60",
- "Sentiment Analyst": "text-purple-600 bg-purple-50 border-purple-200/60",
- "Risk Manager": "text-rose-600 bg-rose-50 border-rose-200/60",
- "Contrarian Strategist": "text-orange-600 bg-orange-50 border-orange-200/60",
- "Deep Research Specialist": "text-cyan-600 bg-cyan-50 border-cyan-200/60",
- "Professional Reviewer": "text-blue-600 bg-blue-50 border-blue-200/60",
- "Chief Strategist": "text-amber-600 bg-amber-50 border-amber-200/60",
- "Moderator": "text-zinc-500 bg-zinc-100 border-zinc-200/60",
+  "Technical Analyst": "text-indigo-600 bg-indigo-50 border-indigo-200/60",
+  "Fundamental Analyst": "text-emerald-600 bg-emerald-50 border-emerald-200/60",
+  "Sentiment Analyst": "text-purple-600 bg-purple-50 border-purple-200/60",
+  "Risk Manager": "text-rose-600 bg-rose-50 border-rose-200/60",
+  "Contrarian Strategist": "text-orange-600 bg-orange-50 border-orange-200/60",
+  "Deep Research Specialist": "text-cyan-600 bg-cyan-50 border-cyan-200/60",
+  "Professional Reviewer": "text-blue-600 bg-blue-50 border-blue-200/60",
+  "Chief Strategist": "text-amber-600 bg-amber-50 border-amber-200/60 shadow-sm shadow-amber-200/50",
+  "Moderator": "text-zinc-500 bg-zinc-100 border-zinc-200/60",
+};
+
+const roleBadges: Record<AgentRole, string> = {
+  "Technical Analyst": "技术面专家",
+  "Fundamental Analyst": "基本面专家",
+  "Sentiment Analyst": "情绪面专家",
+  "Risk Manager": "风控专家",
+  "Contrarian Strategist": "逆向思考者",
+  "Deep Research Specialist": "深度研究员",
+  "Professional Reviewer": "合规评审",
+  "Chief Strategist": "首席策略师",
+  "Moderator": "主持人",
 };
 
 const roleNames: Record<AgentRole, string> = {
@@ -578,57 +590,59 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
   )}
   <AnimatePresence initial={false}>
     {messages.map((msg, i) => {
-      const msgKey = msg.id ? `msg-id-${msg.id}-${i}` : `msg-idx-${i}-${msg.role}-${msg.timestamp}-${Math.random().toString(36).slice(2, 7)}`;
+      const msgKey = msg.id 
+        ? `msg-id-${msg.id}` 
+        : `msg-idx-${i}-${msg.role}-${msg.timestamp || Date.now()}`;
       const showRoundDivider = msg.round != null && (i === 0 || messages[i - 1]?.round !== msg.round);
       return (
         <React.Fragment key={`frag-${msgKey}`}>
- {showRoundDivider && (
- <div key={`divider-${msgKey}`} className="flex items-center gap-3 my-4 max-w-4xl mx-auto">
- <div className="flex-1 h-px bg-indigo-200/40" />
- <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200/50 whitespace-nowrap">
- 第 {msg.round} 轮
- </span>
- <div className="flex-1 h-px bg-indigo-200/40" />
- </div>
- )}
- <motion.div
- key={`msg-div-${msgKey}`}
- initial={{ opacity: 0, x: -20 }}
- animate={{ opacity: 1, x: 0 }}
+          {showRoundDivider && (
+            <div key={`divider-${msgKey}-${msg.round}`} className="flex items-center gap-3 my-4 max-w-4xl mx-auto">
+              <div className="flex-1 h-px bg-indigo-200/40" />
+              <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200/50 whitespace-nowrap">
+                第 {msg.round} 轮
+              </span>
+              <div className="flex-1 h-px bg-indigo-200/40" />
+            </div>
+          )}
+          <motion.div
+            key={`msg-div-${msgKey}`}
+ initial={{ opacity: 0, y: 20 }}
+ animate={{ opacity: 1, y: 0 }}
  transition={{ type: "spring", stiffness: 100, damping: 15 }}
- className="flex gap-6 group max-w-4xl mx-auto"
+ className="flex gap-4 group max-w-4xl mx-auto"
  >
- <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 shadow-sm ${roleColors[msg.role] || "text-zinc-400 bg-white border-zinc-200/60"}`}>
+ <div className={`flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-500 group-hover:scale-110 shadow-sm group-hover:shadow-indigo-200/50 ${roleColors[msg.role] || "text-zinc-400 bg-white border-zinc-200/60"}`}>
  {roleIcons[msg.role] || <MessageSquare size={24} />}
  </div>
- <div className="flex-1 space-y-3">
+ <div className="flex-1 space-y-4">
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-3">
- <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-xl border shadow-sm ${roleColors[msg.role] || "text-zinc-500 bg-white border-zinc-200/60"}`}>
+ <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg border shadow-sm ${roleColors[msg.role] || "text-zinc-500 bg-white border-zinc-200/60"}`}>
  {roleNames[msg.role] || msg.role}
  </span>
  {getWeightInfo(msg.role)?.isExpert && (
- <span className="text-xs font-medium text-indigo-600 bg-indigo-600/8 px-3 py-1 rounded-xl border border-indigo-600/15 flex items-center gap-1.5 animate-pulse">
- <Award size={14} />
- 行业专家 ({getWeightInfo(msg.role)?.expertiseArea})
+ <span className="text-[10px] font-bold text-indigo-600 bg-indigo-600/5 px-3 py-1 rounded-lg border border-indigo-600/10 flex items-center gap-1.5">
+ <Award size={12} className="text-indigo-500" />
+ EXPERT: {getWeightInfo(msg.role)?.expertiseArea}
  </span>
  )}
  </div>
- <span className="text-xs text-zinc-400 font-mono font-medium">
+ <span className="text-[10px] text-zinc-300 font-mono font-bold tracking-widest">
  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
  </span>
  </div>
  <div className="relative">
  <div className={cn(
- "text-[15px] leading-7 p-6 rounded-2xl rounded-tl-none border transition-all duration-300 shadow-sm",
- msg.role === "Chief Strategist" ? "bg-amber-50/30 border-amber-200/60 ring-1 ring-amber-100/50" :
- msg.type === "research" ? "bg-cyan-50/30 border-cyan-200/60 text-zinc-700 hover:border-cyan-300" : 
- msg.type === "review" ? "bg-indigo-50/20 border-indigo-200/60 text-zinc-700 hover:border-indigo-300" : 
- msg.type === "fact_check" ? "bg-rose-50/30 border-rose-200/60 text-zinc-700 hover:border-rose-300" : 
+ "text-[15px] leading-relaxed p-8 rounded-3xl rounded-tl-none border transition-all duration-500 shadow-sm",
+ msg.role === "Chief Strategist" ? "bg-amber-50/20 border-amber-200/40 ring-1 ring-amber-100/30" :
+ msg.type === "research" ? "bg-cyan-50/20 border-cyan-200/40 text-zinc-700 hover:border-cyan-300/50" : 
+ msg.type === "review" ? "bg-indigo-50/10 border-indigo-200/40 text-zinc-700 hover:border-indigo-300/50" : 
+ msg.type === "fact_check" ? "bg-rose-50/20 border-rose-200/40 text-zinc-700 hover:border-rose-300/50" : 
  msg.type === "user_question" ? "bg-white border-zinc-200 text-zinc-600" : 
- "bg-white border-zinc-200/60 text-zinc-600 hover:border-zinc-300 hover:shadow-md"
+ "bg-white border-zinc-200/40 text-zinc-600 hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-100"
  )}>
- <div className="prose prose-sm md:prose-base max-w-none prose-zinc prose-headings:text-zinc-900 prose-headings:font-bold prose-p:text-zinc-600 prose-strong:text-zinc-900 prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1 prose-code:rounded prose-table:border prose-table:border-zinc-200 prose-th:bg-zinc-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2">
+ <div className="prose prose-sm md:prose-base max-w-none prose-zinc prose-headings:text-zinc-900 prose-headings:font-black prose-headings:tracking-tight prose-p:text-zinc-700 prose-p:leading-relaxed prose-strong:text-zinc-950 prose-strong:font-black prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-table:border prose-table:border-zinc-200 prose-th:bg-zinc-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2">
  <ReactMarkdown remarkPlugins={[remarkGfm]}>
  {msg.content}
  </ReactMarkdown>
@@ -643,7 +657,7 @@ export const DiscussionPanel: React.FC<DiscussionPanelProps> = ({
  <div className="flex flex-wrap gap-2">
  {msg.references.map((ref, idx) => (
  <a
- key={`ref-${idx}-${ref.url}-${Math.random().toString(36).slice(2, 7)}`}
+ key={`ref-${idx}-${ref.url}`}
  href={ref.url}
  target="_blank"
  rel="noopener noreferrer"

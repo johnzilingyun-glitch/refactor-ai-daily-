@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer utilities {
+  .premium-card {
+    @apply rounded-[2.5rem] border border-zinc-200/60 bg-white/80 backdrop-blur-2xl shadow-xl shadow-zinc-200/20 transition-all duration-500 hover:shadow-2xl hover:shadow-zinc-200/40;
+  }
+  
+  .glass-panel {
+    @apply bg-white/40 backdrop-blur-md border border-white/20 shadow-lg;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-br from-zinc-900 to-zinc-500;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-zinc-200 rounded-full hover:bg-zinc-300 transition-colors;
+  }
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased selection:bg-indigo-100 selection:text-indigo-900;
+}

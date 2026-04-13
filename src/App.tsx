@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useStockAnalysis, useDiscussion, useChat, useReporting, useMarketData } from './hooks';
 import { useUIStore } from './stores/useUIStore';
@@ -29,6 +29,12 @@ export default function App() {
 
   // Custom hooks for business logic
   const { handleSearch, resetToHome, fetchAdminData } = useStockAnalysis();
+
+  // Fetch initial history and logs on mount
+  useEffect(() => {
+    fetchAdminData();
+  }, [fetchAdminData]);
+
   const { handleDiscussionQuestion, handleGenerateNewConclusion } = useDiscussion(fetchAdminData);
   const { handleChat } = useChat(fetchAdminData);
   const { fetchMarketOverview } = useMarketData(fetchAdminData);

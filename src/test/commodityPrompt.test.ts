@@ -9,7 +9,6 @@ vi.mock('../services/geminiService', async () => {
   return {
     ...actual as any,
     generateContentWithUsage: vi.fn(),
-    generateAndParseJsonWithRetry: vi.fn(),
   };
 });
 
@@ -42,50 +41,34 @@ describe('AI Discussion Commodity Data Integration', () => {
     { name: 'LME铜 (HG)', symbol: 'HG=F', price: 10450.2, changePercent: 0.8, unit: '$/lb' }
   ];
 
-  const mockDiscussionResult = {
-    messages: [],
-    dataVerification: [],
-    finalConclusion: 'Test conclusion',
-    tradingPlan: {},
-    scenarios: [],
-    sensitivityFactors: [],
-    expectationGap: {},
-    controversialPoints: [],
-    calculations: []
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock fetch for commodities API — include .text() for adminService compatibility
-    (global.fetch as any).mockImplementation((url: string) => {
-      if (typeof url === 'string' && url.includes('history')) {
-        return Promise.resolve({ 
-          ok: true, 
-          headers: { get: () => 'application/json' },
-          json: async () => [],
-          text: async () => '[]',
-        });
-      }
-      return Promise.resolve({ 
-        ok: true, 
-        json: async () => mockCommodities,
-        text: async () => JSON.stringify(mockCommodities),
-      });
+    // Mock fetch for commodities API
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => mockCommodities
     });
     
-    // Mock AI response — mock generateAndParseJsonWithRetry directly
-    (geminiService.generateAndParseJsonWithRetry as any).mockResolvedValue(mockDiscussionResult);
-    
-    // Also mock generateContentWithUsage for prompt capture
+    // Mock AI response
     (geminiService.generateContentWithUsage as any).mockResolvedValue({
-      text: JSON.stringify(mockDiscussionResult)
+      text: JSON.stringify({
+        messages: [],
+        dataVerification: [],
+        finalConclusion: 'Test conclusion',
+        tradingPlan: {},
+        scenarios: [],
+        sensitivityFactors: [],
+        expectationGap: {},
+        controversialPoints: [],
+        calculations: []
+      })
     });
   });
 
   it('should include real-time commodity data in the prompt', async () => {
     await startAgentDiscussion(mockAnalysis);
     
-    const lastCall = (geminiService.generateAndParseJsonWithRetry as any).mock.calls[0];
+    const lastCall = (geminiService.generateContentWithUsage as any).mock.calls[0];
     const prompt = lastCall[1].contents;
     
     expect(prompt).toContain('REAL-TIME COMMODITY DATA (GROUND TRUTH -');
@@ -101,6 +84,6 @@ describe('AI Discussion Commodity Data Integration', () => {
 
   it('should fetch commodities from the correct API endpoint', async () => {
     await startAgentDiscussion(mockAnalysis);
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('commodities'));
+    expect(global.fetch).toHaveBeenCalledWith('/api/stock/commodities');
   });
 });
