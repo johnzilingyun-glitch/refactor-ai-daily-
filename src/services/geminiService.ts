@@ -731,6 +731,18 @@ export async function generateContentWithUsage(ai: any, params: any, priority: n
   const result = await requestScheduler.schedule(async () => {
     return await ai.models.generateContent(params);
   }, priority);
+
+  // Some models return empty .text when using tools (grounding/search).
+  // Extract text from candidates[0].content.parts as fallback.
+  if (!result.text && result.text !== '' && result.candidates?.length > 0) {
+    const parts = result.candidates[0]?.content?.parts;
+    if (Array.isArray(parts)) {
+      const textParts = parts.filter((p: any) => typeof p.text === 'string').map((p: any) => p.text);
+      if (textParts.length > 0) {
+        result.text = textParts.join('');
+      }
+    }
+  }
   
   if (isDebug) {
     await remoteLog('ai_response_raw', {
