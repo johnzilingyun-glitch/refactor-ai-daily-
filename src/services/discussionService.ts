@@ -107,6 +107,16 @@ export async function startMultiRoundDiscussion(
 
       const prompt = getExpertPrompt(role, analysis, allMessages, commoditiesData, backtest, language);
 
+      // Only roles that explicitly need Google Search get the tool.
+      // When tools are present, the SDK drops responseMimeType + responseSchema,
+      // causing the model to return free-form text instead of structured JSON.
+      const SEARCH_ROLES: Set<AgentRole> = new Set([
+        'Deep Research Specialist',
+        'Sentiment Analyst',
+        'Contrarian Strategist',
+      ]);
+      const needsSearch = SEARCH_ROLES.has(role);
+
       const invokeExpert = async (inputPrompt: string) => {
         return generateAndParseJsonWithRetry<any>(ai, {
           model: config?.model || GEMINI_MODEL,
@@ -116,12 +126,31 @@ export async function startMultiRoundDiscussion(
           baseDelayMs: 3000,
           responseMimeType: "application/json",
           responseSchema: getExpertResponseSchema(role),
-          tools: [{ googleSearch: {} }],
+          ...(needsSearch ? { tools: [{ googleSearch: {} }] } : {}),
           role
         });
       };
       let parsed = await invokeExpert(prompt);
       let content = String(parsed?.content || '').trim();
+
+      // When tools (googleSearch) strip the schema, the model may use a different
+      // field name for its text analysis. Try common alternatives before giving up.
+      if (!content && parsed && typeof parsed === 'object') {
+        const textCandidates = ['analysis', 'response', 'text', 'summary', 'answer', 'analysis_text', 'result'];
+        for (const key of textCandidates) {
+          if (typeof parsed[key] === 'string' && parsed[key].trim().length > 10) {
+            content = parsed[key].trim();
+            break;
+          }
+        }
+        // Last resort: concatenate all string values that look like analysis text
+        if (!content) {
+          const longStrings = Object.values(parsed)
+            .filter((v): v is string => typeof v === 'string' && v.trim().length > 50)
+            .join('\n\n');
+          if (longStrings.length > 50) content = longStrings;
+        }
+      }
 
       // One-shot corrective retry when content quality is insufficient
       const needsRetry =
@@ -155,7 +184,7 @@ export async function startMultiRoundDiscussion(
           const prefix = `[系统紧急修复: 结构化数据解析异常，已切换至纯文本分析模式] `;
           try {
             const lastDitch = await generateContentWithUsage(ai, {
-              model: config?.model || GEMINI_MODEL,
+              model: GEMINI_MODEL, // Always use default model — user's model may have zero quota
               contents: `你是${role}。请针对 ${analysis.stockInfo.name} (${analysis.stockInfo.symbol}) 给出一段 150 字左右的专业分析结论。严禁返回空内容。`,
             });
             content = prefix + (lastDitch.text || `${role} 认为当前市场环境下，该标的展现出复杂的博弈特征，建议维持审慎态度并关注量化指标的动态变化。`);
@@ -196,7 +225,26 @@ export async function startMultiRoundDiscussion(
       // Add inter-call delay to space out requests (skip before first call)
       if (i > 0) await delay(400);
       
-      const output = await callExpert(round.experts[i]);
+      let output: ExpertOutput | null = null;
+      try {
+        output = await callExpert(round.experts[i]);
+      } catch (expertErr) {
+        // Gracefully degrade: log the error and continue with remaining experts
+        console.error(`[Discussion] Expert ${round.experts[i]} failed:`, expertErr);
+        const errorMsg = expertErr instanceof Error ? expertErr.message : String(expertErr);
+        output = {
+          role: round.experts[i],
+          message: {
+            id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            role: round.experts[i],
+            content: `[${round.experts[i]} 分析暂时不可用] ${errorMsg.includes('quota') || errorMsg.includes('配额') ? '因 API 配额限制，该专家暂时无法提供分析。' : '该专家分析生成过程中出现异常，建议参考其他专家意见。'}`,
+            timestamp: new Date().toISOString(),
+            type: 'discussion',
+            round: roundNum,
+          },
+          structuredData: {},
+        };
+      }
       if (output) {
         results.push(output);
         // CRITICAL: Update allMessages IMMEDIATELY so the NEXT expert in the SAME round
