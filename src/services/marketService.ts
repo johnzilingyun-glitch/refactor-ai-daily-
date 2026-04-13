@@ -128,7 +128,7 @@ export async function getMarketOverview(config?: GeminiConfig, market: Market = 
     config: { 
       responseMimeType: "application/json"
     }
-  }, undefined, priority);
+  }, { transportRetries: 1, parseRetries: 1 }, priority);
 
   const overview = validateResponse(MarketOverviewSchema, raw, 'MarketOverview') as MarketOverview;
 

@@ -76,14 +76,15 @@ class RequestScheduler {
         }
       } else {
         // Free tier model-specific RPM logic
+        // 15 RPM → 60000/15 = 4000ms minimum; use 4200ms for safety margin
         if (model.includes('pro')) {
-          dynamicInterval = 2500;  // Modified: Allow 2.5s for fast multi-round fallback triggering
+          dynamicInterval = 12000;  // 5 RPM for pro models
         } else if (model.includes('flash-lite')) {
-          dynamicInterval = 3000;  // 15 RPM safety
+          dynamicInterval = 4200;  // 15 RPM → 4s + 200ms margin
         } else if (model.includes('flash')) {
-          dynamicInterval = 4000;  // 15 RPM safety
+          dynamicInterval = 4200;  // 15 RPM
         } else {
-          dynamicInterval = 4000;  // Default safety
+          dynamicInterval = 4200;  // Default safety
         }
       }
       

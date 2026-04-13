@@ -45,9 +45,9 @@ export async function analyzeStock(symbol: string, market: Market, config?: Gemi
       }
     },
     {
-      transportRetries: 4,
+      transportRetries: 2,
       baseDelayMs: 2500,
-      parseRetries: 2,
+      parseRetries: 1,
       parseDelayMs: 1200,
     }
   );

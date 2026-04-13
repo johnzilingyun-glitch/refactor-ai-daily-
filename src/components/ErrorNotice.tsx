@@ -3,8 +3,15 @@ import { AlertCircle, RefreshCw, Settings, HelpCircle } from 'lucide-react';
 
 function classifyError(message: string): { hint: string; action?: 'retry' | 'settings' } {
   const lower = message.toLowerCase();
-  if (lower.includes('配额') || lower.includes('quota') || lower.includes('429') || lower.includes('rate'))
-    return { hint: '请求过于频繁或配额耗尽。稍候片刻后重试，或在设置中切换模型。', action: 'settings' };
+  // Model not found: only match explicit 404/not-found indicators (avoid false positive from "所有模型均不可用")
+  if (lower.includes('404') || (lower.includes('not found') && lower.includes('模型')))
+    return { hint: '当前模型已下线或不存在。请在设置中切换到可用模型。', action: 'settings' };
+  if (lower.includes('配额') || lower.includes('quota') || lower.includes('429') || lower.includes('rate')) {
+    // If the error already includes diagnostic detail (原因/详情), use it as the hint
+    const detailMatch = message.match(/\n(原因|详情)[:：]\s*(.+)/);
+    const detail = detailMatch ? detailMatch[0].trim() : '';
+    return { hint: detail || '请求过于频繁或配额耗尽。稍候片刻后重试，或在设置中切换模型。', action: 'settings' };
+  }
   if (lower.includes('api key') || lower.includes('未配置') || lower.includes('apikey'))
     return { hint: '请在设置中填写 Gemini API Key。', action: 'settings' };
   if (lower.includes('无法获取') || lower.includes('not found') || lower.includes('拼写'))

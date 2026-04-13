@@ -112,7 +112,7 @@ export async function startMultiRoundDiscussion(
           model: config?.model || GEMINI_MODEL,
           contents: inputPrompt,
         }, { 
-          transportRetries: 3, 
+          transportRetries: 2, 
           baseDelayMs: 3000,
           responseMimeType: "application/json",
           responseSchema: getExpertResponseSchema(role),
