@@ -56,5 +56,32 @@ describe('AI Service Helpers', () => {
       const raw = '```json\n{"symbol": "AAPL", "price": 150\n```'; // Missing closing brace
       expect(() => parseJsonResponse(raw)).toThrow('Failed to parse Gemini JSON response');
     });
+
+    it('should handle trailing commas', () => {
+      const raw = '{"name": "test", "value": 42, }';
+      const result = parseJsonResponse<{ name: string; value: number }>(raw);
+      expect(result.name).toBe('test');
+      expect(result.value).toBe(42);
+    });
+
+    it('should handle unescaped double quotes inside string values', () => {
+      const raw = '{"summary": "The CEO said "growth is strong" in Q3", "score": 85}';
+      const result = parseJsonResponse<{ summary: string; score: number }>(raw);
+      expect(result.score).toBe(85);
+      expect(result.summary).toContain('growth is strong');
+    });
+
+    it('should handle trailing commas in arrays', () => {
+      const raw = '{"items": ["a", "b", "c", ], "count": 3}';
+      const result = parseJsonResponse<{ items: string[]; count: number }>(raw);
+      expect(result.items).toEqual(['a', 'b', 'c']);
+    });
+
+    it('should handle NaN and Infinity in values', () => {
+      const raw = '{"value": NaN, "max": Infinity, "min": -Infinity}';
+      const result = parseJsonResponse<any>(raw);
+      expect(result.value).toBeNull();
+      expect(result.max).toBeNull();
+    });
   });
 });

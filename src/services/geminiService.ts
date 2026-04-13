@@ -573,6 +573,77 @@ function sanitizeJsonControlCharacters(jsonText: string): string {
   return result.replace(/^\uFEFF/, '');
 }
 
+/**
+ * Attempt to repair common JSON issues from LLM output:
+ * - Trailing commas before } or ]
+ * - Unescaped double quotes inside string values
+ * - Single-quoted strings
+ * - NaN / Infinity literals
+ * - JavaScript-style comments
+ */
+function repairJson(json: string): string {
+  let repaired = json;
+
+  // 1. Strip JavaScript comments (// ... and /* ... */)
+  repaired = repaired.replace(/\/\/[^\n]*/g, '');
+  repaired = repaired.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // 2. Remove trailing commas before } or ] (with optional whitespace)
+  repaired = repaired.replace(/,\s*([\]}])/g, '$1');
+
+  // 3. Replace NaN / Infinity literals with null
+  repaired = repaired.replace(/:\s*NaN\b/g, ': null');
+  repaired = repaired.replace(/:\s*-?Infinity\b/g, ': null');
+
+  // 4. Fix unescaped double quotes inside string values using a state machine
+  let result = '';
+  let inString = false;
+  let escapeNext = false;
+  let lastStringStart = -1;
+
+  for (let i = 0; i < repaired.length; i++) {
+    const ch = repaired[i];
+
+    if (escapeNext) {
+      result += ch;
+      escapeNext = false;
+      continue;
+    }
+
+    if (ch === '\\' && inString) {
+      result += ch;
+      escapeNext = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      if (!inString) {
+        inString = true;
+        lastStringStart = i;
+        result += ch;
+      } else {
+        // Is this the closing quote? Look ahead for a valid JSON token after it.
+        const after = repaired.substring(i + 1).trimStart();
+        const nextChar = after[0];
+        if (nextChar === undefined || nextChar === ':' || nextChar === ',' ||
+            nextChar === '}' || nextChar === ']' || nextChar === '\n' || nextChar === '\r') {
+          // Valid closing quote
+          inString = false;
+          result += ch;
+        } else {
+          // Unescaped quote inside a string value — escape it
+          result += '\\"';
+        }
+      }
+      continue;
+    }
+
+    result += ch;
+  }
+
+  return result;
+}
+
 export function parseJsonResponse<T>(raw: string): T {
   try {
     const extracted = extractJsonBlock(raw);
@@ -581,7 +652,12 @@ export function parseJsonResponse<T>(raw: string): T {
     try {
       parsed = JSON.parse(extracted);
     } catch {
-      parsed = JSON.parse(sanitizeJsonControlCharacters(extracted));
+      try {
+        parsed = JSON.parse(sanitizeJsonControlCharacters(extracted));
+      } catch {
+        // Last resort: repair common LLM JSON issues (trailing commas, unescaped quotes, etc.)
+        parsed = JSON.parse(repairJson(sanitizeJsonControlCharacters(extracted)));
+      }
     }
 
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
