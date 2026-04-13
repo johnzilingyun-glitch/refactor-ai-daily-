@@ -14,23 +14,6 @@ export const MODEL_FALLBACK_CHAIN: string[] = [
 
 export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Track key-level quota exhaustion across calls.
-// Only set when a model confirms RPD (daily) exhaustion — NOT for RPM (per-minute) limits.
-let _keyQuotaExhaustedUntil = 0;
-
-export function isKeyQuotaExhausted(): boolean {
-  return Date.now() < _keyQuotaExhaustedUntil;
-}
-
-function markKeyQuotaExhausted() {
-  // Block all Gemini attempts for 10 seconds — short enough to recover from transient RPM hits
-  _keyQuotaExhaustedUntil = Date.now() + 10_000;
-}
-
-export function clearKeyQuotaExhausted() {
-  _keyQuotaExhaustedUntil = 0;
-}
-
 export function getApiKey(config?: { apiKey?: string }): string {
   // Priority: 1. Explicit config → 2. Store (user-set) → 3. Env var
   if (config?.apiKey) return config.apiKey;
@@ -58,7 +41,6 @@ export async function testGeminiApiKey(): Promise<void> {
     const apiKey = getApiKey();
     console.log(`[DiagnosticTest] API Key: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`);
     console.log(`[DiagnosticTest] Model: ${GEMINI_MODEL}`);
-    console.log(`[DiagnosticTest] Key quota exhausted: ${isKeyQuotaExhausted()}`);
     console.log(`[DiagnosticTest] Sending test request...`);
 
     const res = await fetch(
@@ -149,14 +131,6 @@ export async function generateAndParseJsonWithRetry<T>(
 
   let lastError: unknown;
   let consecutiveQuotaErrors = 0;
-
-  // Log if key was recently quota-exhausted (but DON'T bail out — let the scheduler handle pacing).
-  // Previous design blocked all calls for 10-30s after a single 429, which turned transient RPM
-  // hiccups into total blackouts. Now we always attempt the API; the scheduler's 4.2s interval
-  // naturally stays under 15 RPM.
-  if (isKeyQuotaExhausted()) {
-    console.warn('[QuotaGuard] Key quota was recently exhausted. Will still attempt API call (scheduler handles pacing).');
-  }
 
   // Token budget check — prevent runaway usage on free tier
   const { dailyTokenBudget, tokenUsage } = useConfigStore.getState();
@@ -283,11 +257,6 @@ export async function generateAndParseJsonWithRetry<T>(
 
   console.error(`[ModelFallback] All models exhausted. type=${isModelError ? 'ModelNotFound' : isQuotaError ? 'Quota' : 'Unknown'} lastError:`, lastError);
 
-  // Only mark key-level quota for actual quota errors, not model-not-found
-  if (isQuotaError) {
-    markKeyQuotaExhausted();
-  }
-
   // Try cross-provider fallback for quota errors only
   if (isQuotaError) {
     const fallbackProviders = getAvailableFallbackProviders();
@@ -351,8 +320,6 @@ export async function withRetry<T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const result = await fn();
-      // Success — clear key-level quota flag for fast recovery
-      clearKeyQuotaExhausted();
       return result;
     } catch (error: any) {
       lastError = error;

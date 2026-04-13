@@ -18,7 +18,6 @@ class RequestScheduler {
   private isProcessing: boolean = false;
   
   private lastRequestTime: number = 0;
-  private cooldownUntil: number = 0;
 
   private constructor() {}
 
@@ -49,17 +48,6 @@ class RequestScheduler {
 
     while (this.queue.length > 0) {
       const now = Date.now();
-      
-      // Scheduler-local cooldown is the single source of truth.
-      // store.cooldownUntil is only written by the scheduler for UI display (one-way).
-      const effectiveCooldown = this.cooldownUntil;
-      
-      if (now < effectiveCooldown) {
-        const waitTime = effectiveCooldown - now;
-        console.warn(`System is in cooldown. Waiting ${Math.round(waitTime/1000)}s...`);
-        await delay(Math.min(waitTime, 2000));
-        continue;
-      }
 
       // Determine interval based on tier and model
       const config = useConfigStore.getState().config;
@@ -100,28 +88,8 @@ class RequestScheduler {
         this.lastRequestTime = Date.now();
         try {
           const result = await item.task();
-          // Reset cooldown on successful request
-          this.cooldownUntil = 0;
-          if (useConfigStore.getState().cooldownUntil) {
-            useConfigStore.getState().setCooldownUntil(0);
-          }
           item.resolve(result);
         } catch (error: any) {
-          const errStr = String(error?.message || error || '');
-          const isQuota = errStr.includes('429') || errStr.includes('RESOURCE_EXHAUSTED') || errStr.toLowerCase().includes('quota');
-          
-          if (isQuota) {
-            const tier = useConfigStore.getState().config?.tier || 'free';
-            const cooldownDuration = tier === 'paid' ? 1000 : 2000;
-            const newCooldown = Date.now() + cooldownDuration;
-            
-            // Only update if the new cooldown is significantly further in the future
-            if (newCooldown > effectiveCooldown + 500) {
-              this.cooldownUntil = newCooldown;
-              // Sync to store for UI display (one-way: scheduler → store)
-              useConfigStore.getState().setCooldownUntil(newCooldown);
-            }
-          }
           item.reject(error);
         }
       }
@@ -138,7 +106,6 @@ class RequestScheduler {
     this.queue = [];
     this.isProcessing = false;
     this.lastRequestTime = 0;
-    this.cooldownUntil = 0;
   }
 }
 

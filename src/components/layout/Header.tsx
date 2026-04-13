@@ -21,26 +21,7 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
   const { isTriggeringReport, showAdminPanel, setShowAdminPanel, setIsSettingsOpen, analysisLevel, setAnalysisLevel } = useUIStore();
   const { dailyReport } = useMarketStore();
   const { symbol, setSymbol, market, setMarket } = useAnalysisStore();
-  const { language, setLanguage, cooldownUntil, setCooldownUntil } = useConfigStore();
-  const [cooldownRemaining, setCooldownRemaining] = useState(0);
-
-  useEffect(() => {
-    if (cooldownUntil <= Date.now()) {
-      setCooldownRemaining(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
-      setCooldownRemaining(remaining);
-      if (remaining <= 0) {
-        setCooldownUntil(0);
-        clearInterval(interval);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [cooldownUntil, setCooldownUntil]);
+  const { language, setLanguage } = useConfigStore();
 
   const isComposing = useRef(false);
   const [localSymbol, setLocalSymbol] = useState(symbol);
@@ -252,12 +233,6 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
 
       {/* Search Bar Container */}
       <div className="mt-12 flex flex-col gap-3">
-        {cooldownRemaining > 0 && (
-          <div className="flex items-center gap-2 text-rose-500 text-[11px] font-bold uppercase tracking-wider animate-pulse ml-1">
-            <Clock size={12} strokeWidth={2.5} />
-            <span>{t('header.quotaCooldown')}: {cooldownRemaining}s</span>
-          </div>
-        )}
         <form onSubmit={onSearch} className="flex flex-col gap-4 sm:flex-row items-stretch relative" ref={searchContainerRef}>
         <div className="relative group flex-shrink-0">
           <select
@@ -371,14 +346,9 @@ export const Header = memo(function Header({ onSearch, onResetToHome, onTriggerD
             <Loader2 className="animate-spin" size={20} />
           ) : (
             <div className="flex flex-col items-center">
-              <span className={cooldownRemaining > 0 ? "text-xs mb-0.5" : "text-sm font-semibold"}>
+              <span className="text-sm font-semibold">
                 {t('header.startAnalysis')}
               </span>
-              {cooldownRemaining > 0 && (
-                <span className="text-[9px] font-mono opacity-80 decoration-amber-400 decoration-wavy underline decoration-1">
-                  Wait {Math.ceil(cooldownRemaining / 1000)}s
-                </span>
-              )}
             </div>
           )}
         </button>
