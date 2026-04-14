@@ -81,7 +81,7 @@ export const MarketOverview = memo(function MarketOverview({ onFetchMarketOvervi
           fetch(`/api/stock/sectors`),
           fetch(`/api/stock/northbound`)
         ]);
-        if (sectorsRes.ok && !cancelled) setSectorFlow(await sectorsRes.json());
+        if (sectorsRes && sectorsRes.ok && !cancelled) setSectorFlow(await sectorsRes.json());
         if (northboundRes && northboundRes.ok && !cancelled) setNorthboundFlow(await northboundRes.json());
       } catch (e) {
         console.warn("Quantitative Data Fetch failed", e);
