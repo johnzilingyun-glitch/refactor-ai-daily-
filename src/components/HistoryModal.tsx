@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Search, Clock, BarChart3, ChevronRight, History as HistoryIcon, Globe } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Search, Clock, BarChart3, ChevronRight, History as HistoryIcon, Globe, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getHistoryContext } from '../services/aiService';
 import { generateHistoryItemKey } from '../services/dateUtils';
@@ -21,15 +21,19 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const fetchHistory = useCallback(() => {
+    setLoading(true);
+    getHistoryContext().then(data => {
+      setHistory(data);
+      setLoading(false);
+    });
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
-      setLoading(true);
-      getHistoryContext().then(data => {
-        setHistory(data);
-        setLoading(false);
-      });
+      fetchHistory();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchHistory]);
 
   const filteredHistory = history.filter(item => {
     const search = searchTerm.toLowerCase();
@@ -72,12 +76,22 @@ export function HistoryModal({ isOpen, onClose, onSelect }: HistoryModalProps) {
                   <p className="text-xs font-medium text-zinc-400 mt-0.5">Review your previous market and stock analysis</p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchHistory}
+                  disabled={loading}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-900 disabled:opacity-50"
+                  title="刷新历史记录"
+                >
+                  <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             
             {/* Search */}

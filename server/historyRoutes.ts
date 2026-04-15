@@ -34,7 +34,7 @@ export function addLogEntry(field: string, oldValue: any, newValue: any, descrip
 
 function saveAnalysis(type: 'market' | 'stock', data: any) {
   const id = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const dataWithId = { ...data, id };
+  const dataWithId = { ...data, id, type };
   const filename = `${type}_${new Date().toISOString().replace(/[:.]/g, '-')}_${Math.random().toString(36).substr(2, 5)}.json`;
   const filePath = path.join(HISTORY_DIR, filename);
   fs.writeFileSync(filePath, JSON.stringify(dataWithId, null, 2));
